@@ -1317,7 +1317,20 @@
       "syncOk": "Inwentarz odświeżony: {{count}} skrzynka(i).",
       "tokenHint": "Token jest szyfrowany na serwerze i nie jest ponownie wyświetlany.",
       "hostPh": "mail49.vietnix.vn",
-      "domainPh": "vienthongsg.com"
+      "domainPh": "vienthongsg.com",
+      "modeSingle": "Pojedynczo",
+      "modeBulk": "Wiele",
+      "modeCsv": "CSV",
+      "bulkPh": "support\nsales,,1024",
+      "csvChoose": "Wybierz plik CSV",
+      "bulkCreate": "Utwórz skrzynki",
+      "bulkCreating": "Tworzenie skrzynek…",
+      "bulkSummary": "Utworzono: {{created}}, błędów: {{failed}}",
+      "bulkFailure": "Wiersz {{row}}: {{error}}",
+      "bulkCopyCredentials": "Kopiuj wszystkie dane",
+      "bulkCredentialsCopied": "Dane skopiowane",
+      "bulkHint": "Jedna skrzynka w wierszu: nazwa[,hasło[,limit MB]]. Puste hasło zostanie wygenerowane.",
+      "csvHint": "Kolumny CSV: localPart lub email, password, quotaMb. Pierwszy wiersz może być nagłówkiem."
     },
     "systemEmail": {
       "tabUsers": "Użytkownicy i zaproszenia",

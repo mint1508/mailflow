@@ -1298,7 +1298,20 @@
       "syncOk": "Inventory refreshed: {{count}} mailbox(es).",
       "tokenHint": "The token is encrypted on the server and never shown again.",
       "hostPh": "mail49.vietnix.vn",
-      "domainPh": "vienthongsg.com"
+      "domainPh": "vienthongsg.com",
+      "modeSingle": "Single",
+      "modeBulk": "Bulk",
+      "modeCsv": "CSV",
+      "bulkPh": "support\nsales,,1024",
+      "csvChoose": "Choose CSV file",
+      "bulkCreate": "Create mailboxes",
+      "bulkCreating": "Creating mailboxes…",
+      "bulkSummary": "{{created}} created, {{failed}} failed",
+      "bulkFailure": "Row {{row}}: {{error}}",
+      "bulkCopyCredentials": "Copy all credentials",
+      "bulkCredentialsCopied": "Credentials copied",
+      "bulkHint": "One mailbox per line: name[,password[,quota MB]]. Leave password blank to generate one.",
+      "csvHint": "CSV columns: localPart or email, password, quotaMb. The first row may be a header."
     },
     "systemEmail": {
       "tabUsers": "Users & Invites",

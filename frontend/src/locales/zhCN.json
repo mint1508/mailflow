@@ -1298,7 +1298,20 @@
       "syncOk": "清单已刷新：{{count}} 个邮箱。",
       "tokenHint": "令牌会在服务器端加密保存，不会再次显示。",
       "hostPh": "mail49.vietnix.vn",
-      "domainPh": "vienthongsg.com"
+      "domainPh": "vienthongsg.com",
+      "modeSingle": "单个",
+      "modeBulk": "批量",
+      "modeCsv": "CSV",
+      "bulkPh": "support\nsales,,1024",
+      "csvChoose": "选择 CSV 文件",
+      "bulkCreate": "创建邮箱",
+      "bulkCreating": "正在创建邮箱…",
+      "bulkSummary": "已创建 {{created}} 个，失败 {{failed}} 个",
+      "bulkFailure": "第 {{row}} 行：{{error}}",
+      "bulkCopyCredentials": "复制全部凭据",
+      "bulkCredentialsCopied": "凭据已复制",
+      "bulkHint": "每行一个邮箱：名称[,密码[,配额 MB]]。密码留空会自动生成。",
+      "csvHint": "CSV 列：localPart 或 email、password、quotaMb。第一行可以是表头。"
     },
     "systemEmail": {
       "tabUsers": "用户与邀请",

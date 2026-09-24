@@ -1432,7 +1432,20 @@
       "syncOk": "Inventář obnoven: {{count}} schránek.",
       "tokenHint": "Token je na serveru šifrován a znovu se nezobrazí.",
       "hostPh": "mail49.vietnix.vn",
-      "domainPh": "vienthongsg.com"
+      "domainPh": "vienthongsg.com",
+      "modeSingle": "Jeden",
+      "modeBulk": "Více",
+      "modeCsv": "CSV",
+      "bulkPh": "support\nsales,,1024",
+      "csvChoose": "Vybrat soubor CSV",
+      "bulkCreate": "Vytvořit schránky",
+      "bulkCreating": "Vytváření schránek…",
+      "bulkSummary": "Vytvořeno: {{created}}, selhalo: {{failed}}",
+      "bulkFailure": "Řádek {{row}}: {{error}}",
+      "bulkCopyCredentials": "Kopírovat všechny údaje",
+      "bulkCredentialsCopied": "Údaje zkopírovány",
+      "bulkHint": "Jedna schránka na řádek: název[,heslo[,kvóta MB]]. Prázdné heslo se vygeneruje.",
+      "csvHint": "Sloupce CSV: localPart nebo email, password, quotaMb. První řádek může být záhlaví."
     },
     "systemEmail": {
       "tabUsers": "Uživatelé a pozvánky",

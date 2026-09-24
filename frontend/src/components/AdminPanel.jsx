@@ -34,6 +34,7 @@ import { getEffectiveShortcuts, getGroupedActions, ACTION_DEFS, SPECIAL_KEY_LABE
 import { isValidForwardAddress } from '../utils/ruleActions.js';
 import { folderParentLabel } from '../utils/folderDisplay.js';
 import SpamSettings from './SpamSettings.jsx';
+import { parseCpanelBulkRows } from '../utils/cpanelMailbox.js';
 
 // ─── Shared field component ───────────────────────────────────────────────────
 function Field({ label, required, children }) {
@@ -8618,6 +8619,11 @@ function CpanelTab() {
   const [mailboxes, setMailboxes] = useState([]);
   const [createForm, setCreateForm] = useState({ localPart: '', quotaMb: 1024, password: '' });
   const [createdMailbox, setCreatedMailbox] = useState(null);
+  const [provisionMode, setProvisionMode] = useState('single');
+  const [bulkText, setBulkText] = useState('');
+  const [bulkQuotaMb, setBulkQuotaMb] = useState(1024);
+  const [bulkResult, setBulkResult] = useState(null);
+  const csvInputRef = useRef(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState('');
   const [notice, setNotice] = useState(null);
@@ -8705,6 +8711,34 @@ function CpanelTab() {
     }
   };
 
+  const createBulk = async () => {
+    const items = parseCpanelBulkRows(bulkText, provisionMode);
+    if (!items.length) return;
+    setBusy('bulk');
+    setNotice(null);
+    setBulkResult(null);
+    try {
+      const result = await api.admin.cpanel.createMailboxesBulk({ items, quotaMb: bulkQuotaMb });
+      setBulkResult(result);
+      const inventory = await api.admin.cpanel.syncMailboxes();
+      setMailboxes(inventory.mailboxes || []);
+      setNotice({ type: result.failed.length ? 'error' : 'success', message: t('admin.cpanel.bulkSummary', { created: result.created.length, failed: result.failed.length }) });
+    } catch (error) {
+      setNotice({ type: 'error', message: error.message });
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const readCsv = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setBulkText(await file.text());
+    setProvisionMode('csv');
+    setBulkResult(null);
+    event.target.value = '';
+  };
+
   const credentialsText = createdMailbox
     ? `Email: ${createdMailbox.email}\nPassword: ${createdMailbox.password}\nQuota: ${createdMailbox.quotaMb} MB`
     : '';
@@ -8730,6 +8764,30 @@ function CpanelTab() {
     } else {
       await copyCredentials();
     }
+  };
+
+  const bulkCredentialsText = bulkResult?.created?.map(mailbox => (
+    `Email: ${mailbox.email}\nPassword: ${mailbox.password}\nQuota: ${mailbox.quotaMb} MB`
+  )).join('\n\n') || '';
+
+  const copyBulkCredentials = async () => {
+    const { ok } = await copyToClipboard(bulkCredentialsText);
+    setNotice({ type: ok ? 'success' : 'error', message: t(ok ? 'admin.cpanel.bulkCredentialsCopied' : 'admin.cpanel.credentialsCopyFailed') });
+  };
+
+  const saveBulkCredentials = () => {
+    const blob = new Blob([bulkCredentialsText], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'mailbox-credentials.txt';
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const shareBulkCredentials = async () => {
+    if (navigator.share) await navigator.share({ title: t('admin.cpanel.bulkCreate'), text: bulkCredentialsText }).catch(() => {});
+    else await copyBulkCredentials();
   };
 
   const bytes = (value) => {
@@ -8761,32 +8819,80 @@ function CpanelTab() {
       </div>
 
       <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 12, padding: 16, marginBottom: 20 }}>
-        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>{t('admin.cpanel.createTitle')}</div>
-        <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 14 }}>{t('admin.cpanel.passwordOptional')}</div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px', gap: 10 }}>
-          <Field label={t('admin.cpanel.localPart')} required>
-            <input value={createForm.localPart} onChange={e => setCreateForm(current => ({ ...current, localPart: e.target.value }))} placeholder={t('admin.cpanel.localPartPh')} style={inputStyle} />
-          </Field>
-          <Field label={t('admin.cpanel.quotaMb')} required>
-            <input type="number" min="1" value={createForm.quotaMb} onChange={e => setCreateForm(current => ({ ...current, quotaMb: Number(e.target.value) }))} style={inputStyle} />
-          </Field>
+        <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: 14 }}>
+          {[['single', t('admin.cpanel.modeSingle')], ['bulk', t('admin.cpanel.modeBulk')], ['csv', t('admin.cpanel.modeCsv')]].map(([mode, label]) => (
+            <button key={mode} onClick={() => { setProvisionMode(mode); setBulkResult(null); }} style={{ padding: '7px 11px', border: '1px solid var(--border)', borderRadius: 7, background: provisionMode === mode ? 'var(--accent)' : 'var(--bg-tertiary)', color: provisionMode === mode ? 'var(--accent-text)' : 'var(--text-secondary)', fontSize: 12 }}>
+              {label}
+            </button>
+          ))}
         </div>
-        <Field label={t('admin.cpanel.password')}>
-          <input type="password" value={createForm.password} onChange={e => setCreateForm(current => ({ ...current, password: e.target.value }))} placeholder="••••••••" style={inputStyle} />
-        </Field>
-        <button onClick={create} disabled={!!busy || !config?.configured || !createForm.localPart} style={{ padding: '9px 13px', background: 'var(--accent)', color: 'var(--accent-text)', border: 'none', borderRadius: 7, cursor: busy ? 'wait' : 'pointer', fontSize: 12 }}>
-          {busy === 'create' ? t('admin.cpanel.creating') : t('admin.cpanel.create')}
-        </button>
-        {createdMailbox && (
-          <div style={{ marginTop: 14, padding: 12, border: '1px solid var(--green)', borderRadius: 8, background: 'rgba(34,197,94,0.08)' }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 7 }}>{t('admin.cpanel.created')}</div>
-            <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-secondary)' }}>{credentialsText}</pre>
-            <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 10 }}>
-              <button onClick={copyCredentials} style={{ padding: '7px 10px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 11 }}>{t('admin.cpanel.copyCredentials')}</button>
-              <button onClick={saveCredentials} style={{ padding: '7px 10px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 11 }}>{t('admin.cpanel.saveCredentials')}</button>
-              <button onClick={shareCredentials} style={{ padding: '7px 10px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 11 }}>{t('admin.cpanel.shareCredentials')}</button>
+
+        {provisionMode === 'single' ? (
+          <>
+            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>{t('admin.cpanel.createTitle')}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 14 }}>{t('admin.cpanel.passwordOptional')}</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px', gap: 10 }}>
+              <Field label={t('admin.cpanel.localPart')} required>
+                <input value={createForm.localPart} onChange={e => setCreateForm(current => ({ ...current, localPart: e.target.value }))} placeholder={t('admin.cpanel.localPartPh')} style={inputStyle} />
+              </Field>
+              <Field label={t('admin.cpanel.quotaMb')} required>
+                <input type="number" min="1" value={createForm.quotaMb} onChange={e => setCreateForm(current => ({ ...current, quotaMb: Number(e.target.value) }))} style={inputStyle} />
+              </Field>
             </div>
-          </div>
+            <Field label={t('admin.cpanel.password')}>
+              <input type="password" value={createForm.password} onChange={e => setCreateForm(current => ({ ...current, password: e.target.value }))} placeholder="••••••••" style={inputStyle} />
+            </Field>
+            <button onClick={create} disabled={!!busy || !config?.configured || !createForm.localPart} style={{ padding: '9px 13px', background: 'var(--accent)', color: 'var(--accent-text)', border: 'none', borderRadius: 7, cursor: busy ? 'wait' : 'pointer', fontSize: 12 }}>
+              {busy === 'create' ? t('admin.cpanel.creating') : t('admin.cpanel.create')}
+            </button>
+            {createdMailbox && (
+              <div style={{ marginTop: 14, padding: 12, border: '1px solid var(--green)', borderRadius: 8, background: 'rgba(34,197,94,0.08)' }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 7 }}>{t('admin.cpanel.created')}</div>
+                <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-secondary)' }}>{credentialsText}</pre>
+                <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 10 }}>
+                  <button onClick={copyCredentials} style={{ padding: '7px 10px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 11 }}>{t('admin.cpanel.copyCredentials')}</button>
+                  <button onClick={saveCredentials} style={{ padding: '7px 10px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 11 }}>{t('admin.cpanel.saveCredentials')}</button>
+                  <button onClick={shareCredentials} style={{ padding: '7px 10px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 11 }}>{t('admin.cpanel.shareCredentials')}</button>
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>{t('admin.cpanel.bulkCreate')}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-tertiary)', lineHeight: 1.5, marginBottom: 10 }}>{provisionMode === 'csv' ? t('admin.cpanel.csvHint') : t('admin.cpanel.bulkHint')}</div>
+            <Field label={t('admin.cpanel.quotaMb')} required>
+              <input type="number" min="1" value={bulkQuotaMb} onChange={e => setBulkQuotaMb(Number(e.target.value))} style={{ ...inputStyle, maxWidth: 160 }} />
+            </Field>
+            <textarea value={bulkText} onChange={e => setBulkText(e.target.value)} placeholder={t('admin.cpanel.bulkPh')} rows={6} style={{ ...inputStyle, resize: 'vertical', fontFamily: 'var(--font-mono)', marginBottom: 10 }} />
+            {provisionMode === 'csv' && (
+              <label style={{ display: 'block', marginBottom: 10, color: 'var(--text-secondary)', fontSize: 12 }}>
+                {t('admin.cpanel.csvChoose')}
+                <input ref={csvInputRef} type="file" accept=".csv,text/csv" onChange={readCsv} style={{ display: 'block', marginTop: 5, color: 'var(--text-secondary)', fontSize: 12 }} />
+              </label>
+            )}
+            <button onClick={createBulk} disabled={!!busy || !config?.configured || !bulkText.trim()} style={{ padding: '9px 13px', background: 'var(--accent)', color: 'var(--accent-text)', border: 'none', borderRadius: 7, cursor: busy ? 'wait' : 'pointer', fontSize: 12 }}>
+              {busy === 'bulk' ? t('admin.cpanel.bulkCreating') : t('admin.cpanel.bulkCreate')}
+            </button>
+            {bulkResult && (
+              <div style={{ marginTop: 14, padding: 12, border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg-tertiary)' }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 7 }}>{t('admin.cpanel.bulkSummary', { created: bulkResult.created.length, failed: bulkResult.failed.length })}</div>
+                {bulkResult.failed.length > 0 && (
+                  <div style={{ color: 'var(--red)', fontSize: 11, whiteSpace: 'pre-wrap', marginBottom: 8 }}>
+                    {bulkResult.failed.map(row => t('admin.cpanel.bulkFailure', { row: row.index + 1, error: row.error })).join('\n')}
+                  </div>
+                )}
+                {bulkResult.created.length > 0 && <>
+                  <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-secondary)' }}>{bulkCredentialsText}</pre>
+                  <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 10 }}>
+                    <button onClick={copyBulkCredentials} style={{ padding: '7px 10px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: 11 }}>{t('admin.cpanel.bulkCopyCredentials')}</button>
+                    <button onClick={saveBulkCredentials} style={{ padding: '7px 10px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: 11 }}>{t('admin.cpanel.saveCredentials')}</button>
+                    <button onClick={shareBulkCredentials} style={{ padding: '7px 10px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: 11 }}>{t('admin.cpanel.shareCredentials')}</button>
+                  </div>
+                </>}
+              </div>
+            )}
+          </>
         )}
       </div>
 

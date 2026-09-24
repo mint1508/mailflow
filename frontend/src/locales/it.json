@@ -1298,7 +1298,20 @@
       "syncOk": "Inventario aggiornato: {{count}} caselle.",
       "tokenHint": "Il token è cifrato sul server e non verrà mostrato di nuovo.",
       "hostPh": "mail49.vietnix.vn",
-      "domainPh": "vienthongsg.com"
+      "domainPh": "vienthongsg.com",
+      "modeSingle": "Singola",
+      "modeBulk": "Multiple",
+      "modeCsv": "CSV",
+      "bulkPh": "support\nsales,,1024",
+      "csvChoose": "Scegli file CSV",
+      "bulkCreate": "Crea caselle",
+      "bulkCreating": "Creazione caselle…",
+      "bulkSummary": "{{created}} create, {{failed}} non riuscite",
+      "bulkFailure": "Riga {{row}}: {{error}}",
+      "bulkCopyCredentials": "Copia tutte le credenziali",
+      "bulkCredentialsCopied": "Credenziali copiate",
+      "bulkHint": "Una casella per riga: nome[,password[,quota MB]]. Lascia vuota la password per generarne una.",
+      "csvHint": "Colonne CSV: localPart o email, password, quotaMb. La prima riga può essere un’intestazione."
     },
     "systemEmail": {
       "tabUsers": "Utenti e inviti",

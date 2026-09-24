@@ -7,6 +7,7 @@ import {
   testCpanelConnection,
   syncCpanelMailboxes,
   createCpanelMailbox,
+  createCpanelMailboxes,
   resetCpanelMailboxPassword,
   setCpanelMailboxSuspended,
   deleteCpanelMailbox,
@@ -110,6 +111,21 @@ router.post('/mailboxes', async (req, res) => {
     res.status(201).json({ ok: true, mailbox: result });
   } catch (error) {
     await audit(req.session.userId, 'mailbox_created', false, { error: error.message });
+    res.status(400).json({ error: error.message });
+  }
+});
+
+router.post('/mailboxes/bulk', async (req, res) => {
+  try {
+    const result = await createCpanelMailboxes(req.body || {});
+    await audit(req.session.userId, 'mailboxes_bulk_created', result.failed.length === 0, {
+      requestedCount: result.requestedCount,
+      createdCount: result.created.length,
+      failedCount: result.failed.length,
+    });
+    res.json({ ok: result.failed.length === 0, ...result });
+  } catch (error) {
+    await audit(req.session.userId, 'mailboxes_bulk_created', false, { error: error.message });
     res.status(400).json({ error: error.message });
   }
 });

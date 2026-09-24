@@ -1227,7 +1227,20 @@
       "syncOk": "Inventar aktualisiert: {{count}} Mailbox(en).",
       "tokenHint": "Das Token wird auf dem Server verschlüsselt und nicht erneut angezeigt.",
       "hostPh": "mail49.vietnix.vn",
-      "domainPh": "vienthongsg.com"
+      "domainPh": "vienthongsg.com",
+      "modeSingle": "Einzeln",
+      "modeBulk": "Mehrere",
+      "modeCsv": "CSV",
+      "bulkPh": "support\nsales,,1024",
+      "csvChoose": "CSV-Datei auswählen",
+      "bulkCreate": "Postfächer erstellen",
+      "bulkCreating": "Postfächer werden erstellt…",
+      "bulkSummary": "{{created}} erstellt, {{failed}} fehlgeschlagen",
+      "bulkFailure": "Zeile {{row}}: {{error}}",
+      "bulkCopyCredentials": "Alle Zugangsdaten kopieren",
+      "bulkCredentialsCopied": "Zugangsdaten kopiert",
+      "bulkHint": "Ein Postfach pro Zeile: Name[,Passwort[,Kontingent MB]]. Passwort leer lassen, um eines zu erzeugen.",
+      "csvHint": "CSV-Spalten: localPart oder email, password, quotaMb. Die erste Zeile darf eine Kopfzeile sein."
     },
     "systemEmail": {
       "tabUsers": "Benutzer & Einladungen",

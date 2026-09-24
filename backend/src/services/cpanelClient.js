@@ -9,6 +9,8 @@ export const CPANEL_DEFAULT_PORT = 2083;
 const REQUEST_TIMEOUT_MS = 15_000;
 const DEFAULT_MAX_MAILBOXES = 15;
 const DEFAULT_MAX_QUOTA_MB = 10 * 1024;
+const DEFAULT_CREATE_QUOTA_MB = 1024;
+const MAX_BULK_ITEMS = 50;
 const MAX_CPANEL_ERROR_LENGTH = 500;
 
 function sameEndpoint(left, right) {
@@ -289,6 +291,37 @@ async function getProvisioningContext() {
   return { config, current, maxMailboxes };
 }
 
+function mailboxLocalPart(value, configuredDomain) {
+  const text = String(value || '').trim().toLowerCase();
+  if (!text) return '';
+  const at = text.lastIndexOf('@');
+  if (at === -1) return text;
+  const domain = text.slice(at + 1);
+  if (domain !== configuredDomain) throw new Error(`Mailbox must belong to ${configuredDomain}`);
+  return text.slice(0, at);
+}
+
+export function normalizeBulkMailboxInput(item, { domain, defaultQuotaMb = DEFAULT_CREATE_QUOTA_MB } = {}) {
+  const localPart = cleanLocalPart(mailboxLocalPart(item?.localPart ?? item?.email ?? item?.user, domain));
+  const password = item?.password ? validateMailboxPassword(item.password) : generateMailboxPassword();
+  const quotaMb = normalizeQuotaMb(item?.quotaMb ?? item?.quota ?? defaultQuotaMb);
+  return { localPart, password, quotaMb };
+}
+
+async function createMailboxWithContext(config, mailbox) {
+  await cpanelRequest(config, 'add_pop', {
+    email: mailbox.localPart,
+    password: mailbox.password,
+    quota: mailbox.quotaMb,
+    domain: config.domain,
+  });
+  return {
+    email: `${mailbox.localPart}@${config.domain}`,
+    password: mailbox.password,
+    quotaMb: mailbox.quotaMb,
+  };
+}
+
 export async function createCpanelMailbox({ localPart, password, quotaMb }) {
   const { config, current, maxMailboxes } = await getProvisioningContext();
   if (current.length >= maxMailboxes) throw new Error(`Mailbox limit reached (${maxMailboxes})`);
@@ -296,13 +329,37 @@ export async function createCpanelMailbox({ localPart, password, quotaMb }) {
   if (current.some(mailbox => mailbox.localPart === cleanPart)) throw new Error('Mailbox already exists');
   const cleanPassword = password ? validateMailboxPassword(password) : generateMailboxPassword();
   const cleanQuota = normalizeQuotaMb(quotaMb);
-  await cpanelRequest(config, 'add_pop', {
-    email: cleanPart,
-    password: cleanPassword,
-    quota: cleanQuota,
-    domain: config.domain,
-  });
-  return { email: `${cleanPart}@${config.domain}`, password: cleanPassword, quotaMb: cleanQuota };
+  return createMailboxWithContext(config, { localPart: cleanPart, password: cleanPassword, quotaMb: cleanQuota });
+}
+
+export async function createCpanelMailboxes({ items, quotaMb = DEFAULT_CREATE_QUOTA_MB } = {}) {
+  if (!Array.isArray(items) || items.length === 0) throw new Error('At least one mailbox is required');
+  if (items.length > MAX_BULK_ITEMS) throw new Error(`Bulk creation is limited to ${MAX_BULK_ITEMS} mailboxes per request`);
+
+  const { config, current, maxMailboxes } = await getProvisioningContext();
+  const knownLocalParts = new Set(current.map(mailbox => mailbox.localPart));
+  const created = [];
+  const failed = [];
+
+  for (const [index, item] of items.entries()) {
+    let mailbox;
+    try {
+      mailbox = normalizeBulkMailboxInput(item, { domain: config.domain, defaultQuotaMb: quotaMb });
+      if (knownLocalParts.has(mailbox.localPart)) throw new Error('Mailbox already exists');
+      if (current.length + created.length >= maxMailboxes) throw new Error(`Mailbox limit reached (${maxMailboxes})`);
+      const result = await createMailboxWithContext(config, mailbox);
+      created.push({ index, ...result });
+      knownLocalParts.add(mailbox.localPart);
+    } catch (error) {
+      failed.push({
+        index,
+        input: String(item?.localPart ?? item?.email ?? item?.user ?? '').trim().slice(0, 255),
+        error: String(error?.message || 'Mailbox creation failed').slice(0, MAX_CPANEL_ERROR_LENGTH),
+      });
+    }
+  }
+
+  return { requestedCount: items.length, created, failed, mailboxCount: current.length + created.length };
 }
 
 async function resolveMailboxTarget(email) {

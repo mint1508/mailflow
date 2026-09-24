@@ -1298,7 +1298,20 @@
       "syncOk": "Список обновлён. Ящиков: {{count}}.",
       "tokenHint": "Токен шифруется на сервере и больше не показывается.",
       "hostPh": "mail49.vietnix.vn",
-      "domainPh": "vienthongsg.com"
+      "domainPh": "vienthongsg.com",
+      "modeSingle": "Один",
+      "modeBulk": "Несколько",
+      "modeCsv": "CSV",
+      "bulkPh": "support\nsales,,1024",
+      "csvChoose": "Выбрать CSV-файл",
+      "bulkCreate": "Создать ящики",
+      "bulkCreating": "Создание ящиков…",
+      "bulkSummary": "Создано: {{created}}, ошибок: {{failed}}",
+      "bulkFailure": "Строка {{row}}: {{error}}",
+      "bulkCopyCredentials": "Скопировать все данные",
+      "bulkCredentialsCopied": "Данные скопированы",
+      "bulkHint": "Один ящик в строке: имя[,пароль[,квота МБ]]. Оставьте пароль пустым для генерации.",
+      "csvHint": "Столбцы CSV: localPart или email, password, quotaMb. Первая строка может быть заголовком."
     },
     "systemEmail": {
       "tabUsers": "Пользователи и приглашения",

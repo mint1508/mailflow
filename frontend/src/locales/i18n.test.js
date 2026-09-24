@@ -129,6 +129,8 @@ const SAME_VALUE_ALLOWED = {
   'admin.ai.chatgptModelPh':                 'any', // gpt-5.6-luna
   'admin.cpanel.domainPh':                   'any', // Example domain used in connector setup
   'admin.cpanel.hostPh':                     'any', // Example cPanel hostname
+  'admin.cpanel.modeCsv':                    'any', // CSV is a universal file format label
+  'admin.cpanel.bulkPh':                     'any', // Technical row-format example
   'admin.tabs.cpanel':                       'any', // cPanel product name
   'admin.cpanel.createTitle':               'any',
   'admin.cpanel.localPartPh':               'any',

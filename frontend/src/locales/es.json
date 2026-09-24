@@ -1298,7 +1298,20 @@
       "syncOk": "Inventario actualizado: {{count}} buzón(es).",
       "tokenHint": "El token se cifra en el servidor y no se muestra de nuevo.",
       "hostPh": "mail49.vietnix.vn",
-      "domainPh": "vienthongsg.com"
+      "domainPh": "vienthongsg.com",
+      "modeSingle": "Único",
+      "modeBulk": "Varios",
+      "modeCsv": "CSV",
+      "bulkPh": "support\nsales,,1024",
+      "csvChoose": "Elegir archivo CSV",
+      "bulkCreate": "Crear buzones",
+      "bulkCreating": "Creando buzones…",
+      "bulkSummary": "{{created}} creados, {{failed}} fallidos",
+      "bulkFailure": "Fila {{row}}: {{error}}",
+      "bulkCopyCredentials": "Copiar todas las credenciales",
+      "bulkCredentialsCopied": "Credenciales copiadas",
+      "bulkHint": "Un buzón por línea: nombre[,contraseña[,cuota MB]]. Deja la contraseña vacía para generar una.",
+      "csvHint": "Columnas CSV: localPart o email, password, quotaMb. La primera fila puede ser una cabecera."
     },
     "systemEmail": {
       "tabUsers": "Usuarios e invitaciones",

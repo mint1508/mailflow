@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { generateMailboxPassword, normalizeCpanelApiError, normalizeMailbox } from './cpanelClient.js';
+import { generateMailboxPassword, normalizeBulkMailboxInput, normalizeCpanelApiError, normalizeMailbox } from './cpanelClient.js';
 
 describe('cPanel mailbox normalization', () => {
   it('normalizes the list_pops_with_disk shape', () => {
@@ -49,6 +49,19 @@ describe('cPanel mailbox credentials', () => {
     expect(password).toHaveLength(24);
     // eslint-disable-next-line no-control-regex
     expect(password).not.toMatch(/[\u0000-\u001f\u007f]/);
+  });
+});
+
+describe('bulk mailbox input', () => {
+  it('accepts a full email and applies the default quota', () => {
+    const mailbox = normalizeBulkMailboxInput({ email: 'Support@Example.com' }, { domain: 'example.com' });
+    expect(mailbox).toMatchObject({ localPart: 'support', quotaMb: 1024 });
+    expect(mailbox.password).toHaveLength(20);
+  });
+
+  it('rejects a mailbox from another domain', () => {
+    expect(() => normalizeBulkMailboxInput({ email: 'support@other.example' }, { domain: 'example.com' }))
+      .toThrow('Mailbox must belong to example.com');
   });
 });
 
