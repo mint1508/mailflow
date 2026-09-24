@@ -1,17 +1,21 @@
-FROM --platform=$BUILDPLATFORM node:22-alpine AS deps
+ARG NODE_BASE=node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402
+FROM --platform=$BUILDPLATFORM ${NODE_BASE} AS deps
 
 WORKDIR /app
 
 COPY backend/package.json backend/package-lock.json ./
 RUN npm ci --omit=dev
 
-FROM node:22-alpine AS runtime
+FROM ${NODE_BASE} AS runtime
 
 WORKDIR /app
 
 ARG BUILD_SHA
 ARG APP_VERSION
+ARG UPSTREAM_SHA
 ENV BUILD_SHA=${BUILD_SHA:-dev}
+ENV APP_VERSION=${APP_VERSION:-}
+ENV UPSTREAM_SHA=${UPSTREAM_SHA:-unknown}
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . /repo

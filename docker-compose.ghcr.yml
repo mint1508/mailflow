@@ -1,13 +1,15 @@
 # MailFlow — pre-built image install
 #
 # Quick start:
-#   curl -o docker-compose.yml https://raw.githubusercontent.com/maathimself/mailflow/main/docker-compose.ghcr.yml
-#   curl -o .env               https://raw.githubusercontent.com/maathimself/mailflow/main/.env.example
+#   curl -o docker-compose.yml https://raw.githubusercontent.com/mint1508/mailflow/internal-main/docker-compose.ghcr.yml
+#   curl -o .env               https://raw.githubusercontent.com/mint1508/mailflow/internal-main/.env.example
 #   # edit .env, then:
 #   docker compose up -d
 #
-# To pin a specific version instead of latest, set MAILFLOW_VERSION in your .env:
-#   MAILFLOW_VERSION=1.0.0
+# Set the reviewed tag and image digests in your .env. Never use latest:
+#   MAILFLOW_VERSION=3.5.6-internal.1
+#   FRONTEND_IMAGE_DIGEST=sha256:<digest-from-published-fork-image>
+#   BACKEND_IMAGE_DIGEST=sha256:<digest-from-published-fork-image>
 
 services:
 
@@ -15,8 +17,8 @@ services:
   # Exposes HTTPS on APP_PORT and HTTP on APP_HTTP_PORT.
   # HTTP is intended for use behind a reverse proxy that terminates TLS.
   frontend:
-    image: ghcr.io/maathimself/mailflow-frontend:${MAILFLOW_VERSION:-latest}
-    container_name: mailflow-frontend
+    image: ghcr.io/${IMAGE_NAMESPACE:-mint1508}/mailflow-frontend:${MAILFLOW_VERSION:?MAILFLOW_VERSION must be set}@${FRONTEND_IMAGE_DIGEST:?FRONTEND_IMAGE_DIGEST must be set}
+    container_name: ${COMPOSE_PROJECT_NAME:-mailflow}-frontend
     restart: unless-stopped
     ports:
       - "${APP_PORT:-443}:443"
@@ -37,8 +39,8 @@ services:
 
   # ── Backend API ──────────────────────────────────────────────────────────────
   backend:
-    image: ghcr.io/maathimself/mailflow-backend:${MAILFLOW_VERSION:-latest}
-    container_name: mailflow-backend
+    image: ghcr.io/${IMAGE_NAMESPACE:-mint1508}/mailflow-backend:${MAILFLOW_VERSION:?MAILFLOW_VERSION must be set}@${BACKEND_IMAGE_DIGEST:?BACKEND_IMAGE_DIGEST must be set}
+    container_name: ${COMPOSE_PROJECT_NAME:-mailflow}-backend
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health || exit 1"]
@@ -49,6 +51,9 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
+      APP_VERSION: ${APP_VERSION:-}
+      BUILD_SHA: ${GIT_SHA:-unknown}
+      UPSTREAM_SHA: ${UPSTREAM_SHA:-unknown}
       SESSION_SECRET: ${SESSION_SECRET}
       APP_URL: ${APP_URL:-}
       FRONTEND_URL: ${APP_URL:-}
@@ -73,8 +78,8 @@ services:
 
   # ── PostgreSQL ───────────────────────────────────────────────────────────────
   postgres:
-    image: postgres:16-alpine
-    container_name: mailflow-postgres
+    image: ${POSTGRES_IMAGE:-postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea}
+    container_name: ${COMPOSE_PROJECT_NAME:-mailflow}-postgres
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${DB_NAME:-mailflow}
@@ -93,8 +98,8 @@ services:
 
   # ── Redis (sessions + caching) ───────────────────────────────────────────────
   redis:
-    image: redis:7-alpine
-    container_name: mailflow-redis
+    image: ${REDIS_IMAGE:-redis:7-alpine@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499}
+    container_name: ${COMPOSE_PROJECT_NAME:-mailflow}-redis
     restart: unless-stopped
     command: redis-server --save 60 1 --loglevel warning
     volumes:
@@ -114,8 +119,8 @@ services:
   # Requires DOMAIN, ACME_EMAIL, and APP_URL to be set in .env, and ports 80/443 open.
   caddy:
     profiles: ["https"]
-    image: caddy:2-alpine
-    container_name: mailflow-caddy
+    image: ${CADDY_IMAGE:-caddy:2-alpine@sha256:6aeddd44c3078b0f9a35206472a11420648a79c184603ef95957d0a20044cb2b}
+    container_name: ${COMPOSE_PROJECT_NAME:-mailflow}-caddy
     restart: unless-stopped
     ports:
       - "80:80"

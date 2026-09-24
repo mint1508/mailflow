@@ -16,6 +16,7 @@ import { loadAiConfig } from './aiProvider.js';
 import { getActivatedPlugins } from '../plugins/activation.js';
 import { getWarningsRaw, getConnectionStats, getSyncSignalsRaw } from './diagnosticsRing.js';
 import { getPerformanceSnapshot } from './performanceMetrics.js';
+import { readSchemaVersion } from './versionInfo.js';
 
 const packageMeta = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf-8'));
 const BACKEND_VERSION = (process.env.APP_VERSION || packageMeta.version || '0.0.0').replace(/^v[.]?/, '');
@@ -187,6 +188,7 @@ export async function buildServerReport(userId, salt) {
   try { await query('SELECT 1'); } catch { dbOk = false; }
   let redisOk = true;
   try { await redisClient.ping(); } catch { redisOk = false; }
+  const schemaVersion = await readSchemaVersion(query);
 
   // Recent categorized warnings, scoped to this user's accounts (account-less
   // server warnings are global). Account ids are hashed with the report salt.
@@ -214,7 +216,12 @@ export async function buildServerReport(userId, salt) {
     }));
 
   return {
-    versions: { backend: BACKEND_VERSION, gitSha: process.env.BUILD_SHA || 'dev' },
+    versions: {
+      backend: BACKEND_VERSION,
+      gitSha: process.env.BUILD_SHA || 'dev',
+      upstreamSha: process.env.UPSTREAM_SHA || 'unknown',
+      schemaVersion,
+    },
     server: { uptimeSeconds: Math.round(process.uptime()), dbOk, redisOk },
     accounts,
     folders,

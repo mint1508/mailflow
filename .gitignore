@@ -1,5 +1,7 @@
 # Environment — never commit real secrets
 .env
+.env.staging
+.env.production
 *.env.local
 
 # Local docker compose overrides (e.g. temporary LOG_LEVEL=debug for a soak) — never committed

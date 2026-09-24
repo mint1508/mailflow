@@ -11,8 +11,9 @@ services:
       args:
         VITE_BUILD_SHA: ${GIT_SHA:-dev}
         VITE_EMAIL_DIV_RENDER: ${VITE_EMAIL_DIV_RENDER:-false}
-        NGINX_BASE: ${NGINX_BASE:-nginx:alpine}
-    container_name: mailflow-frontend
+        NODE_BASE: ${NODE_BASE:-node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402}
+        NGINX_BASE: ${NGINX_BASE:-nginx:alpine@sha256:1ed1b0e1d7652937d6cbdaf4018c7b6fc009a7dd6c3047351e2eddda745de43f}
+    container_name: ${COMPOSE_PROJECT_NAME:-mailflow}-frontend
     restart: unless-stopped
     ports:
       - "${APP_PORT:-443}:443"
@@ -38,11 +39,17 @@ services:
       dockerfile: backend/Dockerfile
       args:
         BUILD_SHA: ${GIT_SHA:-dev}
-    container_name: mailflow-backend
+        UPSTREAM_SHA: ${UPSTREAM_SHA:-unknown}
+        APP_VERSION: ${APP_VERSION:-3.5.6}
+        NODE_BASE: ${NODE_BASE:-node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402}
+    container_name: ${COMPOSE_PROJECT_NAME:-mailflow}-backend
     restart: unless-stopped
     environment:
       NODE_ENV: production
       PORT: 3000
+      APP_VERSION: ${APP_VERSION:-3.5.6}
+      BUILD_SHA: ${GIT_SHA:-dev}
+      UPSTREAM_SHA: ${UPSTREAM_SHA:-unknown}
       SESSION_SECRET: ${SESSION_SECRET}
       APP_URL: ${APP_URL:-}
       FRONTEND_URL: ${APP_URL:-}
@@ -73,8 +80,8 @@ services:
 
   # ── PostgreSQL ───────────────────────────────────────────────────────────────
   postgres:
-    image: postgres:16-alpine
-    container_name: mailflow-postgres
+    image: ${POSTGRES_IMAGE:-postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea}
+    container_name: ${COMPOSE_PROJECT_NAME:-mailflow}-postgres
     restart: unless-stopped
     # PUID/PGID default to 0:0 (root), identical to the image's normal behaviour.
     # Set them (e.g. 99:100 on Unraid) only when bind-mounting POSTGRES_DATA to a host
@@ -87,7 +94,7 @@ services:
     volumes:
       - ${POSTGRES_DATA:-postgres_data}:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U mailflow -d mailflow"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-mailflow} -d ${DB_NAME:-mailflow}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -97,8 +104,8 @@ services:
 
   # ── Redis (sessions + caching) ───────────────────────────────────────────────
   redis:
-    image: redis:7-alpine
-    container_name: mailflow-redis
+    image: ${REDIS_IMAGE:-redis:7-alpine@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499}
+    container_name: ${COMPOSE_PROJECT_NAME:-mailflow}-redis
     restart: unless-stopped
     user: "${PUID:-0}:${PGID:-0}"
     command: redis-server --save 60 1 --loglevel warning
@@ -119,8 +126,8 @@ services:
   # Requires DOMAIN, ACME_EMAIL, and APP_URL to be set in .env, and ports 80/443 to be open.
   caddy:
     profiles: ["https"]
-    image: caddy:2-alpine
-    container_name: mailflow-caddy
+    image: ${CADDY_IMAGE:-caddy:2-alpine@sha256:6aeddd44c3078b0f9a35206472a11420648a79c184603ef95957d0a20044cb2b}
+    container_name: ${COMPOSE_PROJECT_NAME:-mailflow}-caddy
     restart: unless-stopped
     ports:
       - "80:80"

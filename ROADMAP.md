@@ -1,7 +1,7 @@
 # Mailflow Internal cPanel - Roadmap trien khai
 
-Trang thai: Da chot pham vi san pham. Phase 0 local hoan thanh ngay 2026-09-24;
-san sang bat dau Phase 1.
+Trang thai: Phase 0 hoan thanh. Nen tang repository/local cua Phase 1 hoan thanh
+ngay 2026-09-24; dang cho domain va thong tin VPS de dong gate staging that.
 
 ## 1. Muc tieu
 

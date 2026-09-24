@@ -116,9 +116,11 @@ There are three ways to run MailFlow. The pre-built image method is recommended 
 
 ---
 
-## Option A — Pre-built images (recommended)
+## Option A — Pre-built images (after fork packages are published)
 
-No cloning or building required. Docker pulls the pre-built images directly from GHCR.
+The fork must publish matching frontend and backend images to GHCR before this
+option is usable. For the current internal pilot, use **Option B — Build from
+source** so the running image is built from the reviewed fork commit.
 
 ### Prerequisites
 
@@ -127,8 +129,8 @@ No cloning or building required. Docker pulls the pre-built images directly from
 ### 1. Download the compose file and default config
 
 ```bash
-curl -o docker-compose.yml https://raw.githubusercontent.com/maathimself/mailflow/main/docker-compose.ghcr.yml
-curl -o .env               https://raw.githubusercontent.com/maathimself/mailflow/main/.env.example
+curl -o docker-compose.yml https://raw.githubusercontent.com/mint1508/mailflow/internal-main/docker-compose.ghcr.yml
+curl -o .env               https://raw.githubusercontent.com/mint1508/mailflow/internal-main/.env.example
 ```
 
 ### 2. Configure environment
@@ -160,7 +162,7 @@ MailFlow will be available on port 443 (HTTPS, self-signed certificate) and port
 **Optional — automatic HTTPS via Let's Encrypt:** set `DOMAIN` and `ACME_EMAIL` in `.env`, download the HTTPS overlay, then restart:
 
 ```bash
-curl -o docker-compose.https.yml https://raw.githubusercontent.com/maathimself/mailflow/main/docker-compose.https.yml
+curl -o docker-compose.https.yml https://raw.githubusercontent.com/mint1508/mailflow/internal-main/docker-compose.https.yml
 docker compose -f docker-compose.yml -f docker-compose.https.yml --profile https up -d
 ```
 
@@ -186,7 +188,7 @@ docker compose pull
 docker compose up -d
 ```
 
-To pin to a specific version instead of `latest`, add `MAILFLOW_VERSION=2.7.0` to your `.env`.
+Set `MAILFLOW_VERSION`, `FRONTEND_IMAGE_DIGEST`, and `BACKEND_IMAGE_DIGEST` to the reviewed release in `.env`.
 
 ---
 
@@ -199,7 +201,7 @@ To pin to a specific version instead of `latest`, add `MAILFLOW_VERSION=2.7.0` t
 ### 1. Get the code
 
 ```bash
-git clone https://github.com/maathimself/mailflow.git mailflow
+git clone --branch internal-main https://github.com/mint1508/mailflow.git mailflow
 cd mailflow
 ```
 
@@ -287,7 +289,7 @@ SQL
 ### 3. Get the code
 
 ```bash
-git clone https://github.com/maathimself/mailflow.git /opt/mailflow
+git clone --branch internal-main https://github.com/mint1508/mailflow.git /opt/mailflow
 cd /opt/mailflow
 ```
 
@@ -512,7 +514,7 @@ docker compose down
 # Stop and delete all data (destructive)
 docker compose down -v
 
-# Update to latest images (pre-built install)
+# Update to reviewed pinned images (pre-built install)
 docker compose pull && docker compose up -d
 
 # Rebuild after a code change (Docker build-from-source install)

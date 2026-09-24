@@ -6040,7 +6040,7 @@ function AboutTab() {
   ];
   const generalRows = [
     [t('admin.about.website'),    'https://mailflow.sh'],
-    [t('admin.about.sourceCode'), 'https://github.com/maathimself/mailflow'],
+    [t('admin.about.sourceCode'), 'https://github.com/mint1508/mailflow'],
   ];
   const supportRows = [
     [t('admin.about.kofi'),           'https://ko-fi.com/mailflow'],

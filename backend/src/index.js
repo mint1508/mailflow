@@ -46,6 +46,7 @@ import { setupWebSocket } from './services/websocket.js';
 import { ImapManager } from './services/imapManager.js';
 import { getUpdateStatus } from './services/updateCheck.js';
 import { recordHttp } from './services/performanceMetrics.js';
+import { readSchemaVersion } from './services/versionInfo.js';
 
 const packageMeta = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf-8'));
 let buildMeta = {};
@@ -55,6 +56,9 @@ try {
   // Local dev runs may not have build metadata yet.
 }
 const APP_VERSION = (process.env.APP_VERSION || buildMeta.version || packageMeta.version).replace(/^v[.]?/, '');
+const BUILD_SHA = process.env.BUILD_SHA || 'dev';
+const UPSTREAM_SHA = process.env.UPSTREAM_SHA || 'unknown';
+let schemaVersion = 'unavailable';
 
 const app = express();
 // Trust the nginx reverse proxy so req.secure reflects HTTPS correctly.
@@ -213,7 +217,12 @@ app.use('/carddav', carddavRouter);
 app.all('/.well-known/carddav', (req, res) => res.redirect(308, '/carddav/'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
-app.get('/api/version', (_req, res) => res.json({ version: APP_VERSION, sha: process.env.BUILD_SHA || 'dev' }));
+app.get('/api/version', (_req, res) => res.json({
+  version: APP_VERSION,
+  sha: BUILD_SHA,
+  upstreamSha: UPSTREAM_SHA,
+  schemaVersion,
+}));
 // Server-side update check (#261). Cached in updateCheck.js so repeated hits never
 // re-query GitHub; the browser only talks to MailFlow. Never throws into the response.
 app.get('/api/update', async (_req, res) => {
@@ -236,6 +245,7 @@ setupWebSocket(wss, sessionMiddleware, imapManager);
 
 // Run pending schema migrations then start
 await runMigrations();
+schemaVersion = await readSchemaVersion(query);
 
 // One-time backfill: populate photo_data from existing vcard column for contacts
 // that were synced before CardDAV PUT started persisting photo_data.
