@@ -8714,7 +8714,7 @@ function CpanelTab() {
     const password = linkPassword;
     if (!mailbox) return;
     if (!password) {
-      setNotice({ type: 'error', message: t('admin.cpanel.linkPasswordRequired') });
+      setNotice({ type: 'error', message: t('admin.accounts.errorPasswordRequired') });
       return;
     }
     setBusy(`link:${mailbox.email}`);
