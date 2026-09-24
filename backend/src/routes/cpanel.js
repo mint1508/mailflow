@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { requireMailboxManager } from '../middleware/auth.js';
+import { requireAdmin, requireMailboxManager } from '../middleware/auth.js';
 import { query } from '../services/db.js';
 import {
   getCpanelConfig,
@@ -54,7 +54,7 @@ router.get('/connection', async (_req, res) => {
   res.json({ config: publicConfig(config) });
 });
 
-router.put('/connection', async (req, res) => {
+router.put('/connection', requireAdmin, async (req, res) => {
   let existing = null;
   try { existing = await getCpanelConfig({ includeToken: true }); } catch (error) {
     if (!/not configured/i.test(error.message)) throw error;
@@ -69,7 +69,7 @@ router.put('/connection', async (req, res) => {
   }
 });
 
-router.post('/connection/test', async (req, res) => {
+router.post('/connection/test', requireAdmin, async (req, res) => {
   try {
     const hasInlineConfig = req.body && Object.keys(req.body).length > 0;
     const result = await testCpanelConnection(hasInlineConfig ? req.body : undefined);
