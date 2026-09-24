@@ -6,6 +6,10 @@ import {
   saveCpanelConfig,
   testCpanelConnection,
   syncCpanelMailboxes,
+  createCpanelMailbox,
+  resetCpanelMailboxPassword,
+  setCpanelMailboxSuspended,
+  deleteCpanelMailbox,
 } from '../services/cpanelClient.js';
 
 const router = Router();
@@ -95,6 +99,61 @@ router.post('/mailboxes/sync', async (req, res) => {
     res.json({ ok: true, mailboxCount: mailboxes.length, mailboxes: mailboxes.map(publicMailbox) });
   } catch (error) {
     await audit(req.session.userId, 'inventory_sync', false, { error: error.message });
+    res.status(400).json({ error: error.message });
+  }
+});
+
+router.post('/mailboxes', async (req, res) => {
+  try {
+    const result = await createCpanelMailbox(req.body || {});
+    await audit(req.session.userId, 'mailbox_created', true, { email: result.email, quotaMb: result.quotaMb });
+    res.status(201).json({ ok: true, mailbox: result });
+  } catch (error) {
+    await audit(req.session.userId, 'mailbox_created', false, { error: error.message });
+    res.status(400).json({ error: error.message });
+  }
+});
+
+router.post('/mailboxes/:email/password', async (req, res) => {
+  try {
+    const result = await resetCpanelMailboxPassword(req.params.email, req.body?.password);
+    await audit(req.session.userId, 'mailbox_password_reset', true, { email: result.email });
+    res.json({ ok: true, mailbox: result });
+  } catch (error) {
+    await audit(req.session.userId, 'mailbox_password_reset', false, { error: error.message });
+    res.status(400).json({ error: error.message });
+  }
+});
+
+router.post('/mailboxes/:email/suspend', async (req, res) => {
+  try {
+    const result = await setCpanelMailboxSuspended(req.params.email, true);
+    await audit(req.session.userId, 'mailbox_suspended', true, { email: result.email });
+    res.json({ ok: true, mailbox: result });
+  } catch (error) {
+    await audit(req.session.userId, 'mailbox_suspended', false, { error: error.message });
+    res.status(400).json({ error: error.message });
+  }
+});
+
+router.post('/mailboxes/:email/unsuspend', async (req, res) => {
+  try {
+    const result = await setCpanelMailboxSuspended(req.params.email, false);
+    await audit(req.session.userId, 'mailbox_unsuspended', true, { email: result.email });
+    res.json({ ok: true, mailbox: result });
+  } catch (error) {
+    await audit(req.session.userId, 'mailbox_unsuspended', false, { error: error.message });
+    res.status(400).json({ error: error.message });
+  }
+});
+
+router.delete('/mailboxes/:email', async (req, res) => {
+  try {
+    const result = await deleteCpanelMailbox(req.params.email);
+    await audit(req.session.userId, 'mailbox_deleted', true, { email: result.email });
+    res.json({ ok: true, mailbox: result });
+  } catch (error) {
+    await audit(req.session.userId, 'mailbox_deleted', false, { error: error.message });
     res.status(400).json({ error: error.message });
   }
 });

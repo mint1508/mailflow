@@ -8616,6 +8616,8 @@ function CpanelTab() {
   const [form, setForm] = useState({ host: '', port: 2083, username: '', domain: '', token: '' });
   const [config, setConfig] = useState(null);
   const [mailboxes, setMailboxes] = useState([]);
+  const [createForm, setCreateForm] = useState({ localPart: '', quotaMb: 1024, password: '' });
+  const [createdMailbox, setCreatedMailbox] = useState(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState('');
   const [notice, setNotice] = useState(null);
@@ -8685,6 +8687,51 @@ function CpanelTab() {
     }
   };
 
+  const create = async () => {
+    setBusy('create');
+    setNotice(null);
+    setCreatedMailbox(null);
+    try {
+      const result = await api.admin.cpanel.createMailbox(createForm);
+      setCreatedMailbox(result.mailbox);
+      setCreateForm(current => ({ ...current, localPart: '', password: '' }));
+      const inventory = await api.admin.cpanel.syncMailboxes();
+      setMailboxes(inventory.mailboxes || []);
+      setNotice({ type: 'success', message: t('admin.cpanel.created') });
+    } catch (error) {
+      setNotice({ type: 'error', message: error.message });
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const credentialsText = createdMailbox
+    ? `Email: ${createdMailbox.email}\nPassword: ${createdMailbox.password}\nQuota: ${createdMailbox.quotaMb} MB`
+    : '';
+
+  const copyCredentials = async () => {
+    const { ok } = await copyToClipboard(credentialsText);
+    setNotice({ type: ok ? 'success' : 'error', message: t(ok ? 'admin.cpanel.credentialsCopied' : 'admin.cpanel.credentialsCopyFailed') });
+  };
+
+  const saveCredentials = () => {
+    const blob = new Blob([credentialsText], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `${createdMailbox.email.replace(/[^a-z0-9@._-]/gi, '_')}-credentials.txt`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const shareCredentials = async () => {
+    if (navigator.share) {
+      await navigator.share({ title: createdMailbox.email, text: credentialsText }).catch(() => {});
+    } else {
+      await copyCredentials();
+    }
+  };
+
   const bytes = (value) => {
     if (value == null) return '—';
     const units = ['B', 'KB', 'MB', 'GB', 'TB'];
@@ -8711,6 +8758,36 @@ function CpanelTab() {
       <div style={{ marginBottom: 18 }}>
         <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>{t('admin.cpanel.title')}</div>
         <div style={{ fontSize: 12, color: 'var(--text-tertiary)', lineHeight: 1.5 }}>{t('admin.cpanel.description')}</div>
+      </div>
+
+      <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 12, padding: 16, marginBottom: 20 }}>
+        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>{t('admin.cpanel.createTitle')}</div>
+        <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 14 }}>{t('admin.cpanel.passwordOptional')}</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px', gap: 10 }}>
+          <Field label={t('admin.cpanel.localPart')} required>
+            <input value={createForm.localPart} onChange={e => setCreateForm(current => ({ ...current, localPart: e.target.value }))} placeholder={t('admin.cpanel.localPartPh')} style={inputStyle} />
+          </Field>
+          <Field label={t('admin.cpanel.quotaMb')} required>
+            <input type="number" min="1" value={createForm.quotaMb} onChange={e => setCreateForm(current => ({ ...current, quotaMb: Number(e.target.value) }))} style={inputStyle} />
+          </Field>
+        </div>
+        <Field label={t('admin.cpanel.password')}>
+          <input type="password" value={createForm.password} onChange={e => setCreateForm(current => ({ ...current, password: e.target.value }))} placeholder="••••••••" style={inputStyle} />
+        </Field>
+        <button onClick={create} disabled={!!busy || !config?.configured || !createForm.localPart} style={{ padding: '9px 13px', background: 'var(--accent)', color: 'var(--accent-text)', border: 'none', borderRadius: 7, cursor: busy ? 'wait' : 'pointer', fontSize: 12 }}>
+          {busy === 'create' ? t('admin.cpanel.creating') : t('admin.cpanel.create')}
+        </button>
+        {createdMailbox && (
+          <div style={{ marginTop: 14, padding: 12, border: '1px solid var(--green)', borderRadius: 8, background: 'rgba(34,197,94,0.08)' }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 7 }}>{t('admin.cpanel.created')}</div>
+            <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-secondary)' }}>{credentialsText}</pre>
+            <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 10 }}>
+              <button onClick={copyCredentials} style={{ padding: '7px 10px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 11 }}>{t('admin.cpanel.copyCredentials')}</button>
+              <button onClick={saveCredentials} style={{ padding: '7px 10px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 11 }}>{t('admin.cpanel.saveCredentials')}</button>
+              <button onClick={shareCredentials} style={{ padding: '7px 10px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 11 }}>{t('admin.cpanel.shareCredentials')}</button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 12, padding: 16, marginBottom: 20 }}>

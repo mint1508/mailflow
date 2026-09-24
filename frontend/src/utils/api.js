@@ -204,6 +204,11 @@ export const api = {
       testConnection: (data) => request('POST', '/admin/cpanel/connection/test', data),
       getMailboxes: () => request('GET', '/admin/cpanel/mailboxes'),
       syncMailboxes: () => request('POST', '/admin/cpanel/mailboxes/sync'),
+      createMailbox: (data) => request('POST', '/admin/cpanel/mailboxes', data),
+      resetMailboxPassword: (email, password) => request('POST', `/admin/cpanel/mailboxes/${encodeURIComponent(email)}/password`, { password }),
+      suspendMailbox: (email) => request('POST', `/admin/cpanel/mailboxes/${encodeURIComponent(email)}/suspend`),
+      unsuspendMailbox: (email) => request('POST', `/admin/cpanel/mailboxes/${encodeURIComponent(email)}/unsuspend`),
+      deleteMailbox: (email) => request('DELETE', `/admin/cpanel/mailboxes/${encodeURIComponent(email)}`),
       getAudit: (limit = 50) => request('GET', `/admin/cpanel/audit?limit=${encodeURIComponent(limit)}`),
     },
     oidc: {

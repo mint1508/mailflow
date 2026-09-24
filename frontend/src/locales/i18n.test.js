@@ -130,9 +130,23 @@ const SAME_VALUE_ALLOWED = {
   'admin.cpanel.domainPh':                   'any', // Example domain used in connector setup
   'admin.cpanel.hostPh':                     'any', // Example cPanel hostname
   'admin.tabs.cpanel':                       'any', // cPanel product name
+  'admin.cpanel.createTitle':               'any',
+  'admin.cpanel.localPartPh':               'any',
+  'admin.cpanel.passwordOptional':          'any',
   'admin.users.mailboxManagerBadge':         'any', // Permission label
   'admin.users.grantMailboxAccess':          'any', // Permission action label
   'admin.users.revokeMailboxAccess':         'any', // Permission action label
+  'admin.cpanel.localPart':                  'any',
+  'admin.cpanel.quotaMb':                    'any',
+  'admin.cpanel.password':                  'any',
+  'admin.cpanel.create':                    'any',
+  'admin.cpanel.creating':                  'any',
+  'admin.cpanel.created':                   'any',
+  'admin.cpanel.copyCredentials':           'any',
+  'admin.cpanel.saveCredentials':           'any',
+  'admin.cpanel.shareCredentials':          'any',
+  'admin.cpanel.credentialsCopied':         'any',
+  'admin.cpanel.credentialsCopyFailed':    'any',
   'admin.appearance.customCssPlaceholder':   'any', // CSS code snippet, same in all locales
   'admin.integrations.microsoft.clientIdPh':'any', // xxxxxxxx-xxxx-…
   'admin.integrations.microsoft.title':     'any', // Microsoft 365 / Outlook.com

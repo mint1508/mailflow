@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { query, withTransaction } from './db.js';
 import { decrypt, encrypt } from './encryption.js';
 import { validateHost } from './hostValidation.js';
@@ -6,6 +7,8 @@ import { safeFetch } from './safeFetch.js';
 export const CPANEL_SETTINGS_KEY = 'cpanel_connector';
 export const CPANEL_DEFAULT_PORT = 2083;
 const REQUEST_TIMEOUT_MS = 15_000;
+const DEFAULT_MAX_MAILBOXES = 15;
+const DEFAULT_MAX_QUOTA_MB = 10 * 1024;
 
 function sameEndpoint(left, right) {
   return left?.host === right?.host
@@ -26,6 +29,39 @@ function cleanDomain(value) {
     throw new Error('cPanel domain must be a valid hostname');
   }
   return domain;
+}
+
+function cleanLocalPart(value) {
+  const localPart = String(value || '').trim().toLowerCase();
+  if (!/^[a-z0-9](?:[a-z0-9._-]{0,63}[a-z0-9])?$/.test(localPart)) {
+    throw new Error('Mailbox name must use letters, numbers, dots, hyphens, or underscores');
+  }
+  return localPart;
+}
+
+function normalizeQuotaMb(value) {
+  const quotaMb = Number(value);
+  const maxQuotaMb = Number(process.env.CPANEL_MAX_QUOTA_MB || DEFAULT_MAX_QUOTA_MB);
+  if (!Number.isInteger(quotaMb) || quotaMb < 1 || quotaMb > maxQuotaMb) {
+    throw new Error(`Mailbox quota must be between 1 and ${maxQuotaMb} MB`);
+  }
+  return quotaMb;
+}
+
+function validateMailboxPassword(value) {
+  const password = String(value || '');
+  // Passwords must not contain control characters that can corrupt exports/logs.
+  // eslint-disable-next-line no-control-regex
+  if (password.length < 12 || password.length > 128 || /[\u0000-\u001f\u007f]/.test(password)) {
+    throw new Error('Mailbox password must be between 12 and 128 characters');
+  }
+  return password;
+}
+
+export function generateMailboxPassword(length = 20) {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^*-_';
+  const bytes = crypto.randomBytes(length);
+  return Array.from(bytes, byte => alphabet[byte % alphabet.length]).join('');
 }
 
 export async function normalizeCpanelConfig(input, { tokenRequired = true } = {}) {
@@ -179,6 +215,62 @@ async function cpanelRequest(config, functionName, params = {}) {
   } finally {
     clearTimeout(timer);
   }
+}
+
+async function getProvisioningContext() {
+  const config = await getCpanelConfig({ includeToken: true });
+  if (!config) throw new Error('cPanel connector is not configured');
+  const current = await fetchCpanelMailboxes(config);
+  const maxMailboxes = Number(process.env.CPANEL_MAX_MAILBOXES || DEFAULT_MAX_MAILBOXES);
+  return { config, current, maxMailboxes };
+}
+
+export async function createCpanelMailbox({ localPart, password, quotaMb }) {
+  const { config, current, maxMailboxes } = await getProvisioningContext();
+  if (current.length >= maxMailboxes) throw new Error(`Mailbox limit reached (${maxMailboxes})`);
+  const cleanPart = cleanLocalPart(localPart);
+  if (current.some(mailbox => mailbox.localPart === cleanPart)) throw new Error('Mailbox already exists');
+  const cleanPassword = password ? validateMailboxPassword(password) : generateMailboxPassword();
+  const cleanQuota = normalizeQuotaMb(quotaMb);
+  await cpanelRequest(config, 'add_pop', {
+    email: cleanPart,
+    password: cleanPassword,
+    quota: cleanQuota,
+    domain: config.domain,
+  });
+  return { email: `${cleanPart}@${config.domain}`, password: cleanPassword, quotaMb: cleanQuota };
+}
+
+async function resolveMailboxTarget(email) {
+  const config = await getCpanelConfig({ includeToken: true });
+  if (!config) throw new Error('cPanel connector is not configured');
+  const normalized = String(email || '').trim().toLowerCase();
+  const expectedSuffix = `@${config.domain}`;
+  if (!normalized.endsWith(expectedSuffix)) throw new Error('Mailbox must belong to the configured cPanel domain');
+  const localPart = cleanLocalPart(normalized.slice(0, -expectedSuffix.length));
+  return { config, localPart, email: `${localPart}${expectedSuffix}` };
+}
+
+export async function resetCpanelMailboxPassword(email, password) {
+  const { config, localPart } = await resolveMailboxTarget(email);
+  const cleanPassword = password ? validateMailboxPassword(password) : generateMailboxPassword();
+  await cpanelRequest(config, 'passwd_pop', { email: localPart, password: cleanPassword, domain: config.domain });
+  return { email: `${localPart}@${config.domain}`, password: cleanPassword };
+}
+
+export async function setCpanelMailboxSuspended(email, suspended) {
+  const { config, localPart } = await resolveMailboxTarget(email);
+  await cpanelRequest(config, suspended ? 'suspend_login' : 'unsuspend_login', {
+    email: localPart,
+    domain: config.domain,
+  });
+  return { email: `${localPart}@${config.domain}`, suspended };
+}
+
+export async function deleteCpanelMailbox(email) {
+  const { config, localPart } = await resolveMailboxTarget(email);
+  await cpanelRequest(config, 'delete_pop', { email: localPart, domain: config.domain });
+  return { email: `${localPart}@${config.domain}` };
 }
 
 export async function testCpanelConnection(configInput) {

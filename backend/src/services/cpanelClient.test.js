@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeMailbox } from './cpanelClient.js';
+import { generateMailboxPassword, normalizeMailbox } from './cpanelClient.js';
 
 describe('cPanel mailbox normalization', () => {
   it('normalizes the list_pops_with_disk shape', () => {
@@ -40,5 +40,14 @@ describe('cPanel mailbox normalization', () => {
 
   it('ignores rows returned for a different domain', () => {
     expect(normalizeMailbox({ user: 'support', domain: 'other.example' }, 'example.com')).toBeNull();
+  });
+});
+
+describe('cPanel mailbox credentials', () => {
+  it('generates a non-empty password of the requested length', () => {
+    const password = generateMailboxPassword(24);
+    expect(password).toHaveLength(24);
+    // eslint-disable-next-line no-control-regex
+    expect(password).not.toMatch(/[\u0000-\u001f\u007f]/);
   });
 });
