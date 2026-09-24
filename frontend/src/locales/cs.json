@@ -1448,7 +1448,10 @@
       "csvHint": "Sloupce CSV: localPart nebo email, password, quotaMb. První řádek může být záhlaví.",
       "statsTitle": "Statistiky",
       "statsEmailAccounts": "E-mailové účty",
-      "statsDiskUsage": "Využití disku"
+      "statsDiskUsage": "Využití disku",
+      "linkAccount": "Přidat k účtům",
+      "linkPasswordPrompt": "Zadejte heslo schránky {{email}}",
+      "linked": "Schránka byla přidána k účtům."
     },
     "systemEmail": {
       "tabUsers": "Uživatelé a pozvánky",

@@ -1314,7 +1314,10 @@
       "csvHint": "Columnas CSV: localPart o email, password, quotaMb. La primera fila puede ser una cabecera.",
       "statsTitle": "Estadísticas",
       "statsEmailAccounts": "Cuentas de correo",
-      "statsDiskUsage": "Uso de disco"
+      "statsDiskUsage": "Uso de disco",
+      "linkAccount": "Añadir a cuentas",
+      "linkPasswordPrompt": "Introduce la contraseña del buzón {{email}}",
+      "linked": "Buzón añadido a las cuentas."
     },
     "systemEmail": {
       "tabUsers": "Usuarios e invitaciones",

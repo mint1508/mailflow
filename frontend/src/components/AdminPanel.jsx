@@ -8614,6 +8614,7 @@ function LinkedIdentitiesSection() {
 
 function CpanelTab() {
   const { t } = useTranslation();
+  const accounts = useStore(state => state.accounts);
   const [form, setForm] = useState({ host: '', port: 2083, username: '', domain: '', token: '' });
   const [config, setConfig] = useState(null);
   const [mailboxes, setMailboxes] = useState([]);
@@ -8628,6 +8629,8 @@ function CpanelTab() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState('');
   const [notice, setNotice] = useState(null);
+  const [linkTarget, setLinkTarget] = useState(null);
+  const [linkPassword, setLinkPassword] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -8692,6 +8695,55 @@ function CpanelTab() {
       setNotice({ type: 'error', message: error.message });
     } finally {
       setBusy('');
+    }
+  };
+
+  const openLinkMailbox = (mailbox) => {
+    const existing = accounts.find(account => account.email_address?.toLowerCase() === mailbox.email.toLowerCase());
+    if (existing) {
+      setNotice({ type: 'success', message: t('admin.cpanel.linked') });
+      return;
+    }
+    setNotice(null);
+    setLinkTarget(mailbox);
+    setLinkPassword('');
+  };
+
+  const linkMailbox = async () => {
+    const mailbox = linkTarget;
+    const password = linkPassword;
+    if (!mailbox) return;
+    if (!password) {
+      setNotice({ type: 'error', message: t('admin.cpanel.linkPasswordRequired') });
+      return;
+    }
+    setBusy(`link:${mailbox.email}`);
+    setNotice(null);
+    try {
+      await api.addAccount({
+        name: mailbox.email,
+        email_address: mailbox.email,
+        color: '#6366f1',
+        protocol: 'imap',
+        imap_host: config.host,
+        imap_port: 993,
+        imap_skip_tls_verify: false,
+        smtp_host: config.host,
+        smtp_port: 465,
+        smtp_tls: 'SSL',
+        auth_user: mailbox.email,
+        auth_pass: password,
+        smtp_auth_user: mailbox.email,
+        smtp_auth_pass: password,
+      });
+      window.dispatchEvent(new CustomEvent('mailflow:accounts_refresh'));
+      setNotice({ type: 'success', message: t('admin.cpanel.linked') });
+    } catch (error) {
+      setNotice({ type: 'error', message: error.message });
+    } finally {
+      setBusy('');
+      setLinkTarget(null);
+      setLinkPassword('');
     }
   };
 
@@ -8960,7 +9012,7 @@ function CpanelTab() {
         <div style={{ overflowX: 'auto', border: '1px solid var(--border-subtle)', borderRadius: 9 }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead><tr style={{ borderBottom: '1px solid var(--border)' }}>
-              {[t('admin.cpanel.email'), t('admin.cpanel.quota'), t('admin.cpanel.used'), t('admin.cpanel.status')].map(label => <th key={label} style={{ textAlign: 'left', padding: '8px 10px', color: 'var(--text-tertiary)', fontWeight: 500 }}>{label}</th>)}
+              {[t('admin.cpanel.email'), t('admin.cpanel.quota'), t('admin.cpanel.used'), t('admin.cpanel.status'), t('admin.cpanel.linkAccount')].map(label => <th key={label} style={{ textAlign: 'left', padding: '8px 10px', color: 'var(--text-tertiary)', fontWeight: 500 }}>{label}</th>)}
             </tr></thead>
             <tbody>{mailboxes.map(mailbox => (
               <tr key={mailbox.email} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
@@ -8968,9 +9020,40 @@ function CpanelTab() {
                 <td style={{ padding: '9px 10px', color: 'var(--text-secondary)' }}>{bytes(mailbox.quota_bytes)}</td>
                 <td style={{ padding: '9px 10px', color: 'var(--text-secondary)' }}>{bytes(mailbox.disk_used_bytes)}</td>
                 <td style={{ padding: '9px 10px', color: mailbox.suspended || !mailbox.is_present ? 'var(--red)' : 'var(--green)' }}>{mailbox.suspended ? t('admin.cpanel.suspended') : mailbox.is_present ? t('admin.cpanel.present') : t('admin.cpanel.missing')}</td>
+                <td style={{ padding: '9px 10px' }}>
+                  <button
+                    onClick={() => openLinkMailbox(mailbox)}
+                    disabled={!!busy || !config?.configured || !!mailbox.suspended || !mailbox.is_present}
+                    style={{ padding: '6px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 11, cursor: busy ? 'wait' : 'pointer', opacity: busy ? 0.65 : 1 }}
+                  >
+                    {busy === `link:${mailbox.email}` ? t('admin.accounts.saving') : t('admin.cpanel.linkAccount')}
+                  </button>
+                </td>
               </tr>
             ))}</tbody>
           </table>
+        </div>
+      )}
+
+      {linkTarget && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, background: 'rgba(0,0,0,0.48)' }}>
+          <div role="dialog" aria-modal="true" style={{ width: 'min(420px, 100%)', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: 12, padding: 18, boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+            <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>{t('admin.cpanel.linkAccount')}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 14 }}>{t('admin.cpanel.linkPasswordPrompt', { email: linkTarget.email })}</div>
+            <input
+              autoFocus
+              type="password"
+              value={linkPassword}
+              onChange={event => setLinkPassword(event.target.value)}
+              onKeyDown={event => { if (event.key === 'Enter') linkMailbox(); }}
+              autoComplete="current-password"
+              style={inputStyle}
+            />
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
+              <button onClick={() => { setLinkTarget(null); setLinkPassword(''); }} disabled={!!busy} style={{ padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 7, background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', fontSize: 12 }}>{t('common.cancel')}</button>
+              <button onClick={linkMailbox} disabled={!!busy || !linkPassword} style={{ padding: '8px 12px', border: 'none', borderRadius: 7, background: 'var(--accent)', color: 'var(--accent-text)', fontSize: 12, cursor: busy ? 'wait' : 'pointer' }}>{busy ? t('admin.accounts.saving') : t('admin.cpanel.linkAccount')}</button>
+            </div>
+          </div>
         </div>
       )}
     </div>

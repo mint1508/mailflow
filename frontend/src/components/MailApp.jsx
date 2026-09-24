@@ -454,10 +454,15 @@ export default function MailApp() {
     });
 
     window.addEventListener('mailflow:counts_refresh', refreshCounts);
+    const refreshAccounts = () => {
+      api.getAccounts().then(setAccounts).catch(console.error);
+    };
+    window.addEventListener('mailflow:accounts_refresh', refreshAccounts);
     return () => {
       clearInterval(interval);
       stopResume();
       window.removeEventListener('mailflow:counts_refresh', refreshCounts);
+      window.removeEventListener('mailflow:accounts_refresh', refreshAccounts);
     };
   }, [setAccounts, setUnreadCounts, setTodoistConnected]);
 

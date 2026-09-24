@@ -1314,7 +1314,10 @@
       "csvHint": "Столбцы CSV: localPart или email, password, quotaMb. Первая строка может быть заголовком.",
       "statsTitle": "Статистика",
       "statsEmailAccounts": "Почтовые ящики",
-      "statsDiskUsage": "Использование диска"
+      "statsDiskUsage": "Использование диска",
+      "linkAccount": "Добавить в аккаунты",
+      "linkPasswordPrompt": "Введите пароль ящика {{email}}",
+      "linked": "Ящик добавлен в аккаунты."
     },
     "systemEmail": {
       "tabUsers": "Пользователи и приглашения",

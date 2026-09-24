@@ -1314,7 +1314,10 @@
       "csvHint": "CSV 列：localPart 或 email、password、quotaMb。第一行可以是表头。",
       "statsTitle": "统计",
       "statsEmailAccounts": "邮箱账户",
-      "statsDiskUsage": "磁盘使用量"
+      "statsDiskUsage": "磁盘使用量",
+      "linkAccount": "添加到账户",
+      "linkPasswordPrompt": "输入邮箱 {{email}} 的密码",
+      "linked": "邮箱已添加到账户。"
     },
     "systemEmail": {
       "tabUsers": "用户与邀请",

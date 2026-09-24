@@ -1243,7 +1243,10 @@
       "csvHint": "CSV-Spalten: localPart oder email, password, quotaMb. Die erste Zeile darf eine Kopfzeile sein.",
       "statsTitle": "Statistik",
       "statsEmailAccounts": "E-Mail-Konten",
-      "statsDiskUsage": "Festplattennutzung"
+      "statsDiskUsage": "Festplattennutzung",
+      "linkAccount": "Zu Konten hinzufügen",
+      "linkPasswordPrompt": "Passwort für {{email}} eingeben",
+      "linked": "Postfach zu Konten hinzugefügt."
     },
     "systemEmail": {
       "tabUsers": "Benutzer & Einladungen",
