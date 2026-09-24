@@ -24,6 +24,15 @@ function publicConfig(config) {
   };
 }
 
+function publicMailbox(mailbox) {
+  return {
+    ...mailbox,
+    quota_bytes: mailbox.quota_bytes ?? mailbox.quotaBytes ?? null,
+    disk_used_bytes: mailbox.disk_used_bytes ?? mailbox.diskUsedBytes ?? null,
+    is_present: mailbox.is_present ?? true,
+  };
+}
+
 function audit(actorUserId, action, success, detail = {}) {
   return query(
     `INSERT INTO cpanel_audit_events (actor_user_id, action, success, detail)
@@ -78,7 +87,7 @@ router.get('/mailboxes', async (_req, res) => {
 router.post('/mailboxes/sync', async (req, res) => {
   try {
     const mailboxes = await syncCpanelMailboxes(req.session.userId);
-    res.json({ ok: true, mailboxCount: mailboxes.length, mailboxes });
+    res.json({ ok: true, mailboxCount: mailboxes.length, mailboxes: mailboxes.map(publicMailbox) });
   } catch (error) {
     await audit(req.session.userId, 'inventory_sync', false, { error: error.message });
     res.status(400).json({ error: error.message });
