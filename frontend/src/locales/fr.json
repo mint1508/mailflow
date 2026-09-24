@@ -1311,7 +1311,10 @@
       "bulkCopyCredentials": "Copier tous les identifiants",
       "bulkCredentialsCopied": "Identifiants copiés",
       "bulkHint": "Une boîte par ligne : nom[,mot de passe[,quota Mo]]. Laissez le mot de passe vide pour en générer un.",
-      "csvHint": "Colonnes CSV : localPart ou email, password, quotaMb. La première ligne peut être un en-tête."
+      "csvHint": "Colonnes CSV : localPart ou email, password, quotaMb. La première ligne peut être un en-tête.",
+      "statsTitle": "Statistiques",
+      "statsEmailAccounts": "Comptes e-mail",
+      "statsDiskUsage": "Utilisation du disque"
     },
     "systemEmail": {
       "tabUsers": "Utilisateurs et invitations",

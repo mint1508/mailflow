@@ -1240,7 +1240,10 @@
       "bulkCopyCredentials": "Alle Zugangsdaten kopieren",
       "bulkCredentialsCopied": "Zugangsdaten kopiert",
       "bulkHint": "Ein Postfach pro Zeile: Name[,Passwort[,Kontingent MB]]. Passwort leer lassen, um eines zu erzeugen.",
-      "csvHint": "CSV-Spalten: localPart oder email, password, quotaMb. Die erste Zeile darf eine Kopfzeile sein."
+      "csvHint": "CSV-Spalten: localPart oder email, password, quotaMb. Die erste Zeile darf eine Kopfzeile sein.",
+      "statsTitle": "Statistik",
+      "statsEmailAccounts": "E-Mail-Konten",
+      "statsDiskUsage": "Festplattennutzung"
     },
     "systemEmail": {
       "tabUsers": "Benutzer & Einladungen",

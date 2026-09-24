@@ -1311,7 +1311,10 @@
       "bulkCopyCredentials": "复制全部凭据",
       "bulkCredentialsCopied": "凭据已复制",
       "bulkHint": "每行一个邮箱：名称[,密码[,配额 MB]]。密码留空会自动生成。",
-      "csvHint": "CSV 列：localPart 或 email、password、quotaMb。第一行可以是表头。"
+      "csvHint": "CSV 列：localPart 或 email、password、quotaMb。第一行可以是表头。",
+      "statsTitle": "统计",
+      "statsEmailAccounts": "邮箱账户",
+      "statsDiskUsage": "磁盘使用量"
     },
     "systemEmail": {
       "tabUsers": "用户与邀请",

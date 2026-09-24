@@ -13,6 +13,13 @@ const DEFAULT_CREATE_QUOTA_MB = 1024;
 const MAX_BULK_ITEMS = 50;
 const MAX_CPANEL_ERROR_LENGTH = 500;
 
+export function getCpanelLimits() {
+  return {
+    maxMailboxes: Number(process.env.CPANEL_MAX_MAILBOXES || DEFAULT_MAX_MAILBOXES),
+    maxQuotaMb: Number(process.env.CPANEL_MAX_QUOTA_MB || DEFAULT_MAX_QUOTA_MB),
+  };
+}
+
 function sameEndpoint(left, right) {
   return left?.host === right?.host
     && Number(left?.port || CPANEL_DEFAULT_PORT) === Number(right?.port || CPANEL_DEFAULT_PORT)
@@ -287,7 +294,7 @@ async function getProvisioningContext() {
   const config = await getCpanelConfig({ includeToken: true });
   if (!config) throw new Error('cPanel connector is not configured');
   const current = await fetchCpanelMailboxes(config);
-  const maxMailboxes = Number(process.env.CPANEL_MAX_MAILBOXES || DEFAULT_MAX_MAILBOXES);
+  const { maxMailboxes } = getCpanelLimits();
   return { config, current, maxMailboxes };
 }
 

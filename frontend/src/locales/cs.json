@@ -1445,7 +1445,10 @@
       "bulkCopyCredentials": "Kopírovat všechny údaje",
       "bulkCredentialsCopied": "Údaje zkopírovány",
       "bulkHint": "Jedna schránka na řádek: název[,heslo[,kvóta MB]]. Prázdné heslo se vygeneruje.",
-      "csvHint": "Sloupce CSV: localPart nebo email, password, quotaMb. První řádek může být záhlaví."
+      "csvHint": "Sloupce CSV: localPart nebo email, password, quotaMb. První řádek může být záhlaví.",
+      "statsTitle": "Statistiky",
+      "statsEmailAccounts": "E-mailové účty",
+      "statsDiskUsage": "Využití disku"
     },
     "systemEmail": {
       "tabUsers": "Uživatelé a pozvánky",

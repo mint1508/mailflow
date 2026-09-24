@@ -11,6 +11,7 @@ import {
   resetCpanelMailboxPassword,
   setCpanelMailboxSuspended,
   deleteCpanelMailbox,
+  getCpanelLimits,
 } from '../services/cpanelClient.js';
 
 const router = Router();
@@ -82,7 +83,7 @@ router.post('/connection/test', async (req, res) => {
 
 router.get('/mailboxes', async (_req, res) => {
   const config = await getCpanelConfig();
-  if (!config) return res.json({ domain: null, mailboxes: [] });
+  if (!config) return res.json({ domain: null, mailboxes: [], limits: getCpanelLimits() });
   const result = await query(
     `SELECT id, email, domain, local_part, quota_bytes, quota_raw,
             disk_used_bytes, disk_used_raw, suspended, is_present, synced_at, updated_at
@@ -91,7 +92,7 @@ router.get('/mailboxes', async (_req, res) => {
      ORDER BY email ASC`,
     [config.domain],
   );
-  res.json({ domain: config?.domain || null, mailboxes: result.rows });
+  res.json({ domain: config?.domain || null, mailboxes: result.rows, limits: getCpanelLimits() });
 });
 
 router.post('/mailboxes/sync', async (req, res) => {

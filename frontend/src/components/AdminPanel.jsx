@@ -8617,6 +8617,7 @@ function CpanelTab() {
   const [form, setForm] = useState({ host: '', port: 2083, username: '', domain: '', token: '' });
   const [config, setConfig] = useState(null);
   const [mailboxes, setMailboxes] = useState([]);
+  const [limits, setLimits] = useState({ maxMailboxes: 15, maxQuotaMb: 10240 });
   const [createForm, setCreateForm] = useState({ localPart: '', quotaMb: 1024, password: '' });
   const [createdMailbox, setCreatedMailbox] = useState(null);
   const [provisionMode, setProvisionMode] = useState('single');
@@ -8640,6 +8641,7 @@ function CpanelTab() {
         setForm(current => ({ ...current, ...connection.config, token: '' }));
       }
       setMailboxes(inventory.mailboxes || []);
+      if (inventory.limits) setLimits(inventory.limits);
     } catch (error) {
       setNotice({ type: 'error', message: error.message });
     } finally {
@@ -8799,6 +8801,14 @@ function CpanelTab() {
     return `${n >= 10 || i === 0 ? Math.round(n) : n.toFixed(1)} ${units[i]}`;
   };
 
+  const usedBytes = mailboxes.reduce((total, mailbox) => total + (Number(mailbox.disk_used_bytes) || 0), 0);
+  const assignedQuotaBytes = mailboxes.reduce((total, mailbox) => (
+    total + (Number(mailbox.quota_bytes) || Number(limits.maxQuotaMb) * 1024 * 1024)
+  ), 0);
+  const mailboxPercent = limits.maxMailboxes > 0 ? (mailboxes.length / limits.maxMailboxes) * 100 : 0;
+  const diskPercent = assignedQuotaBytes > 0 ? (usedBytes / assignedQuotaBytes) * 100 : 0;
+  const percent = value => `${value.toFixed(2)}%`;
+
   const input = (key, type = 'text', placeholder = '') => (
     <input
       type={type}
@@ -8926,6 +8936,22 @@ function CpanelTab() {
         <button onClick={sync} disabled={!!busy || !config?.configured} style={{ padding: '7px 11px', background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: 7, cursor: busy ? 'wait' : 'pointer', fontSize: 12 }}>
           {t('admin.cpanel.sync')}
         </button>
+      </div>
+
+      <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 12, padding: 16, marginBottom: 20 }}>
+        <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 14 }}>{t('admin.cpanel.statsTitle')}</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 10 }}>
+          <div style={{ border: '1px solid var(--border)', borderRadius: 9, padding: 12 }}>
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 7 }}>{t('admin.cpanel.statsEmailAccounts')}</div>
+            <div style={{ fontSize: 22, color: 'var(--text-primary)', lineHeight: 1.1 }}>{mailboxes.length} / {limits.maxMailboxes}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 5 }}>{percent(mailboxPercent)}</div>
+          </div>
+          <div style={{ border: '1px solid var(--border)', borderRadius: 9, padding: 12 }}>
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 7 }}>{t('admin.cpanel.statsDiskUsage')}</div>
+            <div style={{ fontSize: 22, color: 'var(--text-primary)', lineHeight: 1.1 }}>{bytes(usedBytes)} / {bytes(assignedQuotaBytes)}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 5 }}>{percent(diskPercent)}</div>
+          </div>
+        </div>
       </div>
 
       {mailboxes.length === 0 ? (

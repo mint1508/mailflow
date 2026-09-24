@@ -1311,7 +1311,10 @@
       "bulkCopyCredentials": "Copia tutte le credenziali",
       "bulkCredentialsCopied": "Credenziali copiate",
       "bulkHint": "Una casella per riga: nome[,password[,quota MB]]. Lascia vuota la password per generarne una.",
-      "csvHint": "Colonne CSV: localPart o email, password, quotaMb. La prima riga può essere un’intestazione."
+      "csvHint": "Colonne CSV: localPart o email, password, quotaMb. La prima riga può essere un’intestazione.",
+      "statsTitle": "Statistiche",
+      "statsEmailAccounts": "Account email",
+      "statsDiskUsage": "Utilizzo disco"
     },
     "systemEmail": {
       "tabUsers": "Utenti e inviti",

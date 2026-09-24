@@ -1311,7 +1311,10 @@
       "bulkCopyCredentials": "Copiar todas las credenciales",
       "bulkCredentialsCopied": "Credenciales copiadas",
       "bulkHint": "Un buzón por línea: nombre[,contraseña[,cuota MB]]. Deja la contraseña vacía para generar una.",
-      "csvHint": "Columnas CSV: localPart o email, password, quotaMb. La primera fila puede ser una cabecera."
+      "csvHint": "Columnas CSV: localPart o email, password, quotaMb. La primera fila puede ser una cabecera.",
+      "statsTitle": "Estadísticas",
+      "statsEmailAccounts": "Cuentas de correo",
+      "statsDiskUsage": "Uso de disco"
     },
     "systemEmail": {
       "tabUsers": "Usuarios e invitaciones",

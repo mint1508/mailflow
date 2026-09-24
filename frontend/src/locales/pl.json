@@ -1330,7 +1330,10 @@
       "bulkCopyCredentials": "Kopiuj wszystkie dane",
       "bulkCredentialsCopied": "Dane skopiowane",
       "bulkHint": "Jedna skrzynka w wierszu: nazwa[,hasło[,limit MB]]. Puste hasło zostanie wygenerowane.",
-      "csvHint": "Kolumny CSV: localPart lub email, password, quotaMb. Pierwszy wiersz może być nagłówkiem."
+      "csvHint": "Kolumny CSV: localPart lub email, password, quotaMb. Pierwszy wiersz może być nagłówkiem.",
+      "statsTitle": "Statystyki",
+      "statsEmailAccounts": "Konta e-mail",
+      "statsDiskUsage": "Użycie dysku"
     },
     "systemEmail": {
       "tabUsers": "Użytkownicy i zaproszenia",

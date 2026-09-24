@@ -1311,7 +1311,10 @@
       "bulkCopyCredentials": "Скопировать все данные",
       "bulkCredentialsCopied": "Данные скопированы",
       "bulkHint": "Один ящик в строке: имя[,пароль[,квота МБ]]. Оставьте пароль пустым для генерации.",
-      "csvHint": "Столбцы CSV: localPart или email, password, quotaMb. Первая строка может быть заголовком."
+      "csvHint": "Столбцы CSV: localPart или email, password, quotaMb. Первая строка может быть заголовком.",
+      "statsTitle": "Статистика",
+      "statsEmailAccounts": "Почтовые ящики",
+      "statsDiskUsage": "Использование диска"
     },
     "systemEmail": {
       "tabUsers": "Пользователи и приглашения",

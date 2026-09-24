@@ -1311,7 +1311,10 @@
       "bulkCopyCredentials": "Copy all credentials",
       "bulkCredentialsCopied": "Credentials copied",
       "bulkHint": "One mailbox per line: name[,password[,quota MB]]. Leave password blank to generate one.",
-      "csvHint": "CSV columns: localPart or email, password, quotaMb. The first row may be a header."
+      "csvHint": "CSV columns: localPart or email, password, quotaMb. The first row may be a header.",
+      "statsTitle": "Statistics",
+      "statsEmailAccounts": "Email accounts",
+      "statsDiskUsage": "Disk usage"
     },
     "systemEmail": {
       "tabUsers": "Users & Invites",
