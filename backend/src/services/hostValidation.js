@@ -30,11 +30,13 @@ function isPrivateIPv4(ip) {
 function isPrivateIPv6(ip) {
   const h = ip.toLowerCase();
   if (h === '::1' || h.startsWith('fc') || h.startsWith('fd') || h.startsWith('fe80')) return true;
-  // IPv4-mapped IPv6 (::ffff:x.x.x.x) — check the embedded IPv4 address.
-  // Without this, ::ffff:127.0.0.1 bypasses the IPv4 private-range checks.
-  if (h.startsWith('::ffff:')) {
-    const embedded = h.slice(7);
-    if (isIPv4(embedded)) return isPrivateIPv4(embedded);
+  // IPv4-mapped/compatible IPv6 can be written in hexadecimal form, such as
+  // ::ffff:7f00:1 or ::7f00:1. Expand the address before checking the embedded
+  // IPv4 value so those forms cannot bypass the private-range guard.
+  const groups = parseIPv6Groups(h);
+  if (groups && groups.slice(0, 5).every(group => group === 0)) {
+    const embedded = `${groups[6] >> 8}.${groups[6] & 0xff}.${groups[7] >> 8}.${groups[7] & 0xff}`;
+    if (groups[5] === 0 || groups[5] === 0xffff) return isPrivateIPv4(embedded);
   }
   // 6to4 (2002::/16) — embeds an IPv4 address in bits 16-47.
   // e.g. 2002:7f00:0001:: wraps 127.0.0.1 and bypasses IPv4 checks without this guard.
@@ -49,6 +51,31 @@ function isPrivateIPv6(ip) {
   // and can reach private ranges via the embedded server/client address fields.
   if (/^2001:0{1,4}:/.test(h)) return true;
   return false;
+}
+
+function parseIPv6Groups(value) {
+  const h = value.replace(/^\[|\]$/g, '').split('%', 1)[0];
+  if (!h || h.includes(':::')) return null;
+  const [left, right, ...extra] = h.split('::');
+  if (extra.length) return null;
+  const expand = part => {
+    if (!part) return [];
+    const pieces = part.split(':');
+    const last = pieces[pieces.length - 1];
+    if (last.includes('.')) {
+      if (!isIPv4(last)) return null;
+      const octets = last.split('.').map(Number);
+      pieces.splice(-1, 1, ((octets[0] << 8) | octets[1]).toString(16), ((octets[2] << 8) | octets[3]).toString(16));
+    }
+    if (pieces.some(piece => !/^[0-9a-f]{1,4}$/i.test(piece))) return null;
+    return pieces.map(piece => parseInt(piece, 16));
+  };
+  const leftGroups = expand(left);
+  const rightGroups = expand(right);
+  if (!leftGroups || !rightGroups) return null;
+  const missing = 8 - leftGroups.length - rightGroups.length;
+  if (missing < 1) return null;
+  return [...leftGroups, ...Array(missing).fill(0), ...rightGroups];
 }
 
 // Synchronous check: literal IPs and reserved hostnames.

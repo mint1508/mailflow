@@ -9,7 +9,7 @@ describe('cPanel mailbox normalization', () => {
       diskquota: '10 GB',
       diskused: '512 MB',
       suspended_login: 0,
-    }, 'fallback.example')).toMatchObject({
+    }, 'example.com')).toMatchObject({
       email: 'support@example.com',
       domain: 'example.com',
       localPart: 'support',
@@ -36,5 +36,9 @@ describe('cPanel mailbox normalization', () => {
 
   it('ignores malformed rows without an email', () => {
     expect(normalizeMailbox({ user: '', domain: '' }, 'example.com')).toBeNull();
+  });
+
+  it('ignores rows returned for a different domain', () => {
+    expect(normalizeMailbox({ user: 'support', domain: 'other.example' }, 'example.com')).toBeNull();
   });
 });

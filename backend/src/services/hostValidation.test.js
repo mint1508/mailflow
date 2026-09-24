@@ -79,6 +79,8 @@ describe('validateHostLiteral', () => {
     ['::ffff:127.0.0.1'], // IPv4-mapped loopback
     ['::ffff:192.168.1.1'], // IPv4-mapped private
     ['::ffff:10.0.0.1'],  // IPv4-mapped private
+    ['::ffff:7f00:1'],    // IPv4-mapped loopback in hexadecimal form
+    ['::7f00:1'],         // IPv4-compatible loopback in hexadecimal form
   ])('blocks private IPv6 %s', ip => {
     expect(validateHostLiteral(ip)).toMatch(/private|reserved/i);
   });

@@ -7,6 +7,13 @@ export const CPANEL_SETTINGS_KEY = 'cpanel_connector';
 export const CPANEL_DEFAULT_PORT = 2083;
 const REQUEST_TIMEOUT_MS = 15_000;
 
+function sameEndpoint(left, right) {
+  return left?.host === right?.host
+    && Number(left?.port || CPANEL_DEFAULT_PORT) === Number(right?.port || CPANEL_DEFAULT_PORT)
+    && left?.username === right?.username
+    && left?.domain === right?.domain;
+}
+
 function cleanHost(value) {
   const host = String(value || '').trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '');
   if (!host || host.includes('/') || host.includes('@')) throw new Error('cPanel host must be a hostname');
@@ -54,9 +61,9 @@ export async function getCpanelConfig({ includeToken = false } = {}) {
   };
 }
 
-export async function saveCpanelConfig(input, { existingToken = null } = {}) {
-  const normalized = await normalizeCpanelConfig(input, { tokenRequired: !existingToken });
-  const token = normalized.token || existingToken;
+export async function saveCpanelConfig(input, { existingConfig = null } = {}) {
+  const normalized = await normalizeCpanelConfig(input, { tokenRequired: false });
+  const token = normalized.token || (sameEndpoint(normalized, existingConfig) ? existingConfig?.token : null);
   if (!token) throw new Error('cPanel API token is required');
   const stored = {
     host: normalized.host,
@@ -73,6 +80,19 @@ export async function saveCpanelConfig(input, { existingToken = null } = {}) {
     [CPANEL_SETTINGS_KEY, JSON.stringify(stored)],
   );
   return { ...normalized, tokenPresent: true, token: undefined, updatedAt: stored.updatedAt };
+}
+
+async function resolveCpanelConfig(configInput) {
+  if (!configInput?.host) return getCpanelConfig({ includeToken: true });
+
+  const normalized = await normalizeCpanelConfig(configInput, { tokenRequired: false });
+  if (normalized.token) return normalized;
+
+  const saved = await getCpanelConfig({ includeToken: true });
+  if (!saved || !sameEndpoint(normalized, saved)) {
+    throw new Error('A new cPanel API token is required when the connection target changes');
+  }
+  return { ...normalized, token: saved.token };
 }
 
 function parseBytes(value) {
@@ -92,6 +112,13 @@ function firstValue(row, keys) {
   return null;
 }
 
+const INVENTORY_ROW_KEYS = [
+  'email', 'email_address', 'address', 'user', 'login', 'local_part', 'name', 'domain',
+  'diskquota', 'quota', 'quota_bytes', 'humandiskquota', 'diskused', 'disk_used',
+  'diskused_bytes', 'humandiskused', 'suspended', 'suspended_login',
+  'suspended_outgoing', 'suspended_incoming',
+];
+
 export function normalizeMailbox(row, configuredDomain) {
   const domain = String(firstValue(row, ['domain']) || configuredDomain).trim().toLowerCase();
   const explicitEmail = firstValue(row, ['email', 'email_address', 'address']);
@@ -101,6 +128,7 @@ export function normalizeMailbox(row, configuredDomain) {
   const at = email.lastIndexOf('@');
   const normalizedLocalPart = email.slice(0, at);
   const normalizedDomain = email.slice(at + 1) || domain;
+  if (normalizedDomain !== String(configuredDomain || '').trim().toLowerCase()) return null;
   const quotaRaw = firstValue(row, ['diskquota', 'quota', 'quota_bytes', 'humandiskquota']);
   const diskUsedRaw = firstValue(row, ['diskused', 'disk_used', 'diskused_bytes', 'humandiskused']);
   const suspended = ['suspended', 'suspended_login', 'suspended_outgoing', 'suspended_incoming']
@@ -114,7 +142,10 @@ export function normalizeMailbox(row, configuredDomain) {
     diskUsedBytes: parseBytes(diskUsedRaw),
     diskUsedRaw: diskUsedRaw == null ? null : String(diskUsedRaw),
     suspended,
-    raw: row && typeof row === 'object' ? row : {},
+    raw: INVENTORY_ROW_KEYS.reduce((safe, key) => {
+      if (row?.[key] !== undefined && row?.[key] !== null) safe[key] = row[key];
+      return safe;
+    }, {}),
   };
 }
 
@@ -151,26 +182,14 @@ async function cpanelRequest(config, functionName, params = {}) {
 }
 
 export async function testCpanelConnection(configInput) {
-  let config;
-  if (configInput?.host) {
-    const saved = configInput.token ? null : await getCpanelConfig({ includeToken: true });
-    config = await normalizeCpanelConfig({ ...configInput, token: configInput.token || saved?.token }, { tokenRequired: true });
-  } else {
-    config = await getCpanelConfig({ includeToken: true });
-  }
+  const config = await resolveCpanelConfig(configInput);
   if (!config) throw new Error('cPanel connector is not configured');
   const result = await cpanelRequest(config, 'list_pops_with_disk', { domain: config.domain });
   return { ok: true, mailboxCount: Array.isArray(result.data) ? result.data.length : 0 };
 }
 
 export async function fetchCpanelMailboxes(configInput) {
-  let config;
-  if (configInput?.host) {
-    const saved = configInput.token ? null : await getCpanelConfig({ includeToken: true });
-    config = await normalizeCpanelConfig({ ...configInput, token: configInput.token || saved?.token }, { tokenRequired: true });
-  } else {
-    config = await getCpanelConfig({ includeToken: true });
-  }
+  const config = await resolveCpanelConfig(configInput);
   if (!config) throw new Error('cPanel connector is not configured');
   const result = await cpanelRequest(config, 'list_pops_with_disk', { domain: config.domain });
   const rows = Array.isArray(result.data) ? result.data : [];
@@ -178,9 +197,10 @@ export async function fetchCpanelMailboxes(configInput) {
 }
 
 export async function syncCpanelMailboxes(actorUserId = null) {
-  const mailboxes = await fetchCpanelMailboxes();
+  const config = await getCpanelConfig({ includeToken: true });
+  if (!config) throw new Error('cPanel connector is not configured');
+  const mailboxes = await fetchCpanelMailboxes(config);
   await withTransaction(async client => {
-    const config = await getCpanelConfig();
     const domain = config.domain;
     await client.query('UPDATE cpanel_mailboxes SET is_present = false, updated_at = NOW() WHERE domain = $1', [domain]);
     for (const mailbox of mailboxes) {

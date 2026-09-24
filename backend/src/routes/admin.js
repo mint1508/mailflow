@@ -92,7 +92,10 @@ router.delete('/users/:id', async (req, res) => {
 router.get('/settings', async (req, res) => {
   const result = await query('SELECT key, value FROM system_settings');
   const settings = {};
-  for (const row of result.rows) settings[row.key] = row.value;
+  const sensitiveKeys = new Set(['cpanel_connector', 'system_email_config']);
+  for (const row of result.rows) {
+    if (!sensitiveKeys.has(row.key)) settings[row.key] = row.value;
+  }
   res.json({ settings });
 });
 

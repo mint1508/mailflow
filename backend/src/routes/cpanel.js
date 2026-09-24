@@ -25,8 +25,10 @@ function publicConfig(config) {
 }
 
 function publicMailbox(mailbox) {
+  const safeMailbox = { ...mailbox };
+  delete safeMailbox.raw;
   return {
-    ...mailbox,
+    ...safeMailbox,
     quota_bytes: mailbox.quota_bytes ?? mailbox.quotaBytes ?? null,
     disk_used_bytes: mailbox.disk_used_bytes ?? mailbox.diskUsedBytes ?? null,
     is_present: mailbox.is_present ?? true,
@@ -52,7 +54,7 @@ router.put('/connection', async (req, res) => {
     if (!/not configured/i.test(error.message)) throw error;
   }
   try {
-    const config = await saveCpanelConfig(req.body, { existingToken: existing?.token || null });
+    const config = await saveCpanelConfig(req.body, { existingConfig: existing });
     await audit(req.session.userId, 'connection_saved', true, { host: config.host, port: config.port, domain: config.domain });
     res.json({ config: publicConfig(config) });
   } catch (error) {
@@ -74,13 +76,16 @@ router.post('/connection/test', async (req, res) => {
 });
 
 router.get('/mailboxes', async (_req, res) => {
+  const config = await getCpanelConfig();
+  if (!config) return res.json({ domain: null, mailboxes: [] });
   const result = await query(
     `SELECT id, email, domain, local_part, quota_bytes, quota_raw,
             disk_used_bytes, disk_used_raw, suspended, is_present, synced_at, updated_at
      FROM cpanel_mailboxes
+     WHERE domain = $1
      ORDER BY email ASC`,
+    [config.domain],
   );
-  const config = await getCpanelConfig();
   res.json({ domain: config?.domain || null, mailboxes: result.rows });
 });
 
