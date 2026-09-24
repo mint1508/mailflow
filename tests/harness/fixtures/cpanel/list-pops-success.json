@@ -1,0 +1,28 @@
+{
+  "apiversion": 3,
+  "func": "list_pops_with_disk",
+  "module": "Email",
+  "result": {
+    "data": [
+      {
+        "email": "member@example.test",
+        "login": "member@example.test",
+        "domain": "example.test",
+        "user": "member",
+        "humandiskquota": "2 GB",
+        "humandiskused": "12 MB",
+        "diskquota": 2048,
+        "diskused": 12,
+        "suspended_login": 0,
+        "suspended_incoming": 0,
+        "suspended_outgoing": 0
+      }
+    ],
+    "errors": null,
+    "messages": null,
+    "metadata": {},
+    "status": 1,
+    "warnings": null
+  }
+}
+

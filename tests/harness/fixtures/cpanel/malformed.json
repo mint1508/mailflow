@@ -1,0 +1,7 @@
+{
+  "unexpected": true,
+  "result": {
+    "status": "yes",
+    "data": "not-an-array"
+  }
+}

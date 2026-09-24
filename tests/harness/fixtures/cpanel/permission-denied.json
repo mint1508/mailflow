@@ -1,0 +1,11 @@
+{
+  "result": {
+    "data": null,
+    "errors": ["The API token does not have permission to call this function."],
+    "messages": null,
+    "metadata": {},
+    "status": 0,
+    "warnings": null
+  }
+}
+

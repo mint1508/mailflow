@@ -1,0 +1,19 @@
+services:
+  greenmail:
+    image: greenmail/standalone:2.1.5
+    environment:
+      GREENMAIL_OPTS: >-
+        -Dgreenmail.setup.test.all
+        -Dgreenmail.hostname=0.0.0.0
+        -Dgreenmail.users=sender:secret@internal.test,recipient:secret@internal.test
+    healthcheck:
+      test: ["CMD", "bash", "-c", "</dev/tcp/127.0.0.1/3143"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    networks:
+      - harness
+
+networks:
+  harness:
+    name: mailflow-harness
