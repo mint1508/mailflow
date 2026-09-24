@@ -63,6 +63,13 @@ describe('cPanel API error normalization', () => {
       .toBe('cPanel rejected the API request: token [redacted] is invalid');
   });
 
+  it('understands top-level and legacy cPanel result envelopes', () => {
+    expect(normalizeCpanelApiError({ status: 0, errors: ['Access denied'] }))
+      .toBe('cPanel rejected the API request: Access denied');
+    expect(normalizeCpanelApiError({ cpanelresult: { status: 0, errors: ['Access denied'] } }))
+      .toBe('cPanel rejected the API request: Access denied');
+  });
+
   it('reports non-JSON and HTTP failures without exposing the response body', () => {
     expect(normalizeCpanelApiError(null)).toMatch(/invalid or non-JSON/);
     expect(normalizeCpanelApiError({ result: { errors: ['Forbidden'] } }, { httpStatus: 403 }))

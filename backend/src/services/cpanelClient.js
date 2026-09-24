@@ -205,10 +205,18 @@ function collectCpanelErrorText(value, output = [], seen = new Set()) {
   return output;
 }
 
+function extractCpanelResult(body) {
+  if (body?.result && typeof body.result === 'object') return body.result;
+  if (body?.cpanelresult?.result && typeof body.cpanelresult.result === 'object') return body.cpanelresult.result;
+  if (body?.cpanelresult && typeof body.cpanelresult === 'object') return body.cpanelresult;
+  if (body && typeof body === 'object' && ('status' in body || 'data' in body || 'errors' in body)) return body;
+  return null;
+}
+
 // cPanel has returned errors as arrays, strings, and nested objects across API versions.
 // Keep the useful part of the provider response while avoiding raw bodies in the UI/audit log.
 export function normalizeCpanelApiError(body, { httpStatus = null, token = '' } = {}) {
-  const result = body?.result;
+  const result = extractCpanelResult(body);
   const values = collectCpanelErrorText([
     result?.errors,
     result?.messages,
@@ -260,10 +268,11 @@ async function cpanelRequest(config, functionName, params = {}) {
       }
     }
     if (!response.ok) throw new Error(normalizeCpanelApiError(body, { httpStatus: response.status, token: config.token }));
-    if (!body?.result || body.result.status !== 1) {
+    const result = extractCpanelResult(body);
+    if (!result || Number(result.status) !== 1) {
       throw new Error(normalizeCpanelApiError(body, { token: config.token }));
     }
-    return body.result;
+    return result;
   } catch (error) {
     if (error?.name === 'AbortError') throw new Error('cPanel request timed out', { cause: error });
     throw error;
