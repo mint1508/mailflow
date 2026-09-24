@@ -247,7 +247,18 @@ async function cpanelRequest(config, functionName, params = {}) {
       },
       signal: controller.signal,
     }, { requireHttps: true });
-    const body = await response.json().catch(() => null);
+    const responseText = await response.text();
+    let body = null;
+    try {
+      body = responseText ? JSON.parse(responseText) : null;
+    } catch {
+      // Some cPanel auth failures return plain text instead of JSON; preserve only
+      // that bounded text so the caller can see the provider's reason.
+      const trimmed = responseText.trim();
+      if (trimmed && !/^<!doctype html|^<html[\s>]/i.test(trimmed)) {
+        body = { message: trimmed.slice(0, MAX_CPANEL_ERROR_LENGTH) };
+      }
+    }
     if (!response.ok) throw new Error(normalizeCpanelApiError(body, { httpStatus: response.status, token: config.token }));
     if (!body?.result || body.result.status !== 1) {
       throw new Error(normalizeCpanelApiError(body, { token: config.token }));

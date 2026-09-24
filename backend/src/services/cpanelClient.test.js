@@ -67,5 +67,7 @@ describe('cPanel API error normalization', () => {
     expect(normalizeCpanelApiError(null)).toMatch(/invalid or non-JSON/);
     expect(normalizeCpanelApiError({ result: { errors: ['Forbidden'] } }, { httpStatus: 403 }))
       .toBe('cPanel returned HTTP 403: Forbidden');
+    expect(normalizeCpanelApiError({ message: 'Access denied' }, { httpStatus: 403 }))
+      .toBe('cPanel returned HTTP 403: Access denied');
   });
 });
