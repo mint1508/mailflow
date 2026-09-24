@@ -181,7 +181,7 @@ router.post('/register', authLimiter, async (req, res) => {
     }
 
     const result = await client.query(
-      'INSERT INTO users (username, password_hash, is_admin) VALUES ($1, $2, $3) RETURNING id, username, is_admin',
+      'INSERT INTO users (username, password_hash, is_admin) VALUES ($1, $2, $3) RETURNING id, username, is_admin, can_manage_mailboxes',
       [username.toLowerCase().trim(), hash, isFirstUser]
     );
     const newUser = result.rows[0];
@@ -215,7 +215,7 @@ router.post('/register', authLimiter, async (req, res) => {
     req.session.username = newUser.username;
     req.session.isAdmin = newUser.is_admin;
     imapManager.connectAllForUser(newUser.id);
-    res.json({ user: { id: newUser.id, username: newUser.username, displayName: null, avatar: null, isAdmin: newUser.is_admin, totpEnabled: false } });
+    res.json({ user: { id: newUser.id, username: newUser.username, displayName: null, avatar: null, isAdmin: newUser.is_admin, canManageMailboxes: newUser.can_manage_mailboxes, totpEnabled: false } });
   } catch (err) {
     await client.query('ROLLBACK').catch(rbErr => console.error('Registration ROLLBACK error:', rbErr.message));
     if (err.code === '23505') return res.status(409).json({ error: 'Username already taken' });
@@ -281,7 +281,7 @@ router.post('/login', authLimiter, async (req, res) => {
         imapManager.connectAllForUser(user.id);
         logAuthEvent('login_success', { username: user.username, userId: user.id, ip: req.ip, success: true });
         res.locals.resetRateLimit?.();
-        return res.json({ user: { id: user.id, username: user.username, displayName: user.display_name, avatar: user.avatar, isAdmin: user.is_admin, totpEnabled: user.totp_enabled } });
+        return res.json({ user: { id: user.id, username: user.username, displayName: user.display_name, avatar: user.avatar, isAdmin: user.is_admin, canManageMailboxes: user.can_manage_mailboxes, totpEnabled: user.totp_enabled } });
       }
     }
 
@@ -329,7 +329,7 @@ router.post('/login', authLimiter, async (req, res) => {
 
     logAuthEvent('login_success', { username: user.username, userId: user.id, ip: req.ip, success: true });
     res.locals.resetRateLimit?.();
-    res.json({ user: { id: user.id, username: user.username, displayName: user.display_name, avatar: user.avatar, isAdmin: user.is_admin, totpEnabled: user.totp_enabled } });
+    res.json({ user: { id: user.id, username: user.username, displayName: user.display_name, avatar: user.avatar, isAdmin: user.is_admin, canManageMailboxes: user.can_manage_mailboxes, totpEnabled: user.totp_enabled } });
   } catch {
     res.status(500).json({ error: 'Login failed' });
   }
@@ -395,7 +395,7 @@ router.post('/2fa/challenge', authLimiter, async (req, res) => {
   logAuthEvent('totp_success', { username: user.username, userId: user.id, ip: req.ip, success: true });
   res.locals.resetRateLimit?.();
   rlReset(`totp:${uid}`);
-  res.json({ user: { id: user.id, username: user.username, displayName: user.display_name, avatar: user.avatar, isAdmin: user.is_admin, totpEnabled: user.totp_enabled } });
+  res.json({ user: { id: user.id, username: user.username, displayName: user.display_name, avatar: user.avatar, isAdmin: user.is_admin, canManageMailboxes: user.can_manage_mailboxes, totpEnabled: user.totp_enabled } });
 });
 
 // Helper: generate and store an email OTP, send it to the given address
@@ -511,7 +511,7 @@ router.post('/2fa/verify-email-otp', authLimiter, async (req, res) => {
   logAuthEvent('totp_success', { username: user.username, userId: user.id, ip: req.ip, success: true });
   res.locals.resetRateLimit?.();
   rlReset(`totp:${uid}`);
-  res.json({ user: { id: user.id, username: user.username, displayName: user.display_name, avatar: user.avatar, isAdmin: user.is_admin, totpEnabled: user.totp_enabled } });
+  res.json({ user: { id: user.id, username: user.username, displayName: user.display_name, avatar: user.avatar, isAdmin: user.is_admin, canManageMailboxes: user.can_manage_mailboxes, totpEnabled: user.totp_enabled } });
 });
 
 // GET /api/auth/2fa/enrollment/setup — generate TOTP QR for forced enrollment
@@ -581,7 +581,7 @@ router.post('/2fa/enrollment/enable', authLimiter, async (req, res) => {
   logAuthEvent('totp_success', { username: user.username, userId: user.id, ip: req.ip, success: true });
   res.locals.resetRateLimit?.();
   rlReset(`totp:${uid}`);
-  res.json({ user: { id: user.id, username: user.username, displayName: user.display_name, avatar: user.avatar, isAdmin: user.is_admin, totpEnabled: true } });
+  res.json({ user: { id: user.id, username: user.username, displayName: user.display_name, avatar: user.avatar, isAdmin: user.is_admin, canManageMailboxes: user.can_manage_mailboxes, totpEnabled: true } });
 });
 
 router.post('/logout', async (req, res) => {
@@ -616,11 +616,11 @@ router.post('/logout', async (req, res) => {
 
 router.get('/me', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
-  const result = await query('SELECT id, username, display_name, avatar, is_admin, totp_enabled, password_hash, lock_pin_hash FROM users WHERE id = $1', [req.session.userId]);
+  const result = await query('SELECT id, username, display_name, avatar, is_admin, can_manage_mailboxes, totp_enabled, password_hash, lock_pin_hash FROM users WHERE id = $1', [req.session.userId]);
   const user = result.rows[0];
   if (!user) return res.status(401).json({ error: 'Not authenticated' });
   req.session.isAdmin = user.is_admin;
-  res.json({ user: { id: user.id, username: user.username, displayName: user.display_name, avatar: user.avatar, isAdmin: user.is_admin, totpEnabled: user.totp_enabled, hasPassword: !!user.password_hash, hasLockPin: !!user.lock_pin_hash, locked: !!req.session.locked } });
+  res.json({ user: { id: user.id, username: user.username, displayName: user.display_name, avatar: user.avatar, isAdmin: user.is_admin, canManageMailboxes: user.can_manage_mailboxes, totpEnabled: user.totp_enabled, hasPassword: !!user.password_hash, hasLockPin: !!user.lock_pin_hash, locked: !!req.session.locked } });
 });
 
 // ── Screen-lock PIN (#235) ──────────────────────────────────────────────────

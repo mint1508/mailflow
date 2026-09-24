@@ -24,13 +24,13 @@ router.get('/users', async (req, res) => {
   const offset = Math.max(parseInt(req.query.offset) || 0,   0);
   const [result, countResult] = await Promise.all([
     query(
-      'SELECT id, username, is_admin, totp_enabled, created_at FROM users ORDER BY created_at ASC LIMIT $1 OFFSET $2',
+      'SELECT id, username, is_admin, can_manage_mailboxes, totp_enabled, created_at FROM users ORDER BY created_at ASC LIMIT $1 OFFSET $2',
       [limit, offset],
     ),
     query('SELECT COUNT(*) AS total FROM users'),
   ]);
   res.json({
-    users: result.rows.map(u => ({ ...u, isAdmin: u.is_admin, totpEnabled: u.totp_enabled })),
+    users: result.rows.map(u => ({ ...u, isAdmin: u.is_admin, canManageMailboxes: u.can_manage_mailboxes, totpEnabled: u.totp_enabled })),
     total: parseInt(countResult.rows[0].total),
   });
 });
@@ -49,7 +49,7 @@ router.post('/users/:id/totp/disable', async (req, res) => {
 
 router.patch('/users/:id', async (req, res) => {
   const { id } = req.params;
-  const { isAdmin } = req.body;
+  const { isAdmin, canManageMailboxes } = req.body;
 
   // Prevent removing your own admin status
   if (id === req.session.userId && isAdmin === false) {
@@ -59,7 +59,12 @@ router.patch('/users/:id', async (req, res) => {
   const target = await query('SELECT username FROM users WHERE id = $1', [id]);
   if (!target.rows.length) return res.status(404).json({ error: 'User not found' });
 
-  await query('UPDATE users SET is_admin = $1 WHERE id = $2', [isAdmin, id]);
+  if (typeof isAdmin === 'boolean') {
+    await query('UPDATE users SET is_admin = $1 WHERE id = $2', [isAdmin, id]);
+  }
+  if (typeof canManageMailboxes === 'boolean') {
+    await query('UPDATE users SET can_manage_mailboxes = $1 WHERE id = $2', [canManageMailboxes, id]);
+  }
   console.log(`[admin] ${req.session.username} set is_admin=${isAdmin} for user ${target.rows[0].username} (${id})`);
 
   // If user is currently logged in, their session isAdmin will be refreshed on next /me call

@@ -5063,6 +5063,12 @@ function UsersAndInvitesPanel() {
     setUsers(us => us.map(x => x.id === u.id ? { ...x, isAdmin: newVal } : x));
   };
 
+  const handleToggleMailboxAccess = async (u) => {
+    const newVal = !u.canManageMailboxes;
+    await api.admin.updateUser(u.id, { canManageMailboxes: newVal });
+    setUsers(us => us.map(x => x.id === u.id ? { ...x, canManageMailboxes: newVal } : x));
+  };
+
   const handleDeleteUser = (u) => {
     setConfirmDialog({
       title: t('admin.users.deleteConfirmTitle', { username: u.username }),
@@ -5179,6 +5185,16 @@ function UsersAndInvitesPanel() {
                     {t('admin.users.adminBadge')}
                   </span>
                 )}
+                {u.canManageMailboxes && !u.isAdmin && (
+                  <span style={{
+                    fontSize: 10, padding: '2px 6px', borderRadius: 20,
+                    background: 'rgba(34,197,94,0.12)', color: 'var(--green)',
+                    border: '1px solid rgba(34,197,94,0.25)', fontWeight: 600,
+                    letterSpacing: '0.04em', textTransform: 'uppercase',
+                  }}>
+                    {t('admin.users.mailboxManagerBadge')}
+                  </span>
+                )}
                 {u.id === currentUser?.id && (
                   <span style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>{t('admin.users.you')}</span>
                 )}
@@ -5204,6 +5220,21 @@ function UsersAndInvitesPanel() {
                   onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
                 >
                   {u.isAdmin ? t('admin.users.removeAdmin') : t('admin.users.makeAdmin')}
+                </button>
+                <button
+                  onClick={() => handleToggleMailboxAccess(u)}
+                  title={u.canManageMailboxes ? t('admin.users.revokeMailboxAccess') : t('admin.users.grantMailboxAccess')}
+                  style={{
+                    padding: '5px 10px', borderRadius: 6, fontSize: 11, fontWeight: 500,
+                    border: '1px solid var(--border)',
+                    background: u.canManageMailboxes ? 'var(--bg-elevated)' : 'transparent',
+                    color: u.canManageMailboxes ? 'var(--text-secondary)' : 'var(--green)',
+                    cursor: 'pointer', transition: 'all 0.1s',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--green)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; }}
+                >
+                  {u.canManageMailboxes ? t('admin.users.revokeMailboxAccess') : t('admin.users.grantMailboxAccess')}
                 </button>
                 {u.totpEnabled && (
                   <IconBtn onClick={() => handleDisableTotp(u)} title={t('admin.users.disable2fa')}>
@@ -7139,7 +7170,7 @@ const TABS = [
   // Admin
   {
     id: 'cpanel', labelKey: 'admin.tabs.cpanel',
-    adminOnly: true,
+    mailboxManager: true,
     icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h5"/></svg>,
   },
   {
@@ -8747,7 +8778,7 @@ function makeSearchIndex(t) {
     // Accounts
     { label: t('admin.accounts.title'), keywords: ['account', 'email', 'imap', 'smtp', 'gmail', 'yahoo', 'icloud', 'password', 'add account', 'connect'], tab: 'accounts', breadcrumb: tabLabel('accounts') },
     { label: t('admin.accounts.signatureSection'), keywords: ['signature', 'sign off', 'footer', 'alias', 'send as'], tab: 'accounts', breadcrumb: tabLabel('accounts') },
-    { label: t('admin.cpanel.title'), keywords: ['cpanel', 'mailbox', 'quota', 'api token', 'inventory'], tab: 'cpanel', breadcrumb: tabLabel('cpanel') },
+    { label: t('admin.cpanel.title'), keywords: ['cpanel', 'mailbox', 'quota', 'api token', 'inventory'], tab: 'cpanel', mailboxManager: true, breadcrumb: tabLabel('cpanel') },
     // Rules
     { label: t('admin.rules.title'), keywords: ['rule', 'filter', 'condition', 'action', 'move', 'auto', 'automate', 'inbox rule', 'sort'], tab: 'rules', subtab: 'rules', breadcrumb: `${tabLabel('rules')} › ${t('admin.rules.subTabRules')}` },
     { label: t('admin.rules.subTabBlockList'), keywords: ['block', 'blocked', 'sender', 'blacklist', 'spam', 'domain'], tab: 'rules', subtab: 'block-list', breadcrumb: `${tabLabel('rules')} › ${t('admin.rules.subTabBlockList')}` },
@@ -8837,7 +8868,8 @@ export default function AdminPanel() {
   const { t } = useTranslation();
   const { setShowAdmin, adminTab, setAdminTab, user } = useStore();
   const isMobile = useMobile();
-  const visibleTabs = TABS.filter(tab => (!tab.adminOnly || user?.isAdmin) && (!tab.mobileHidden || !isMobile));
+  const canManageMailboxes = !!(user?.isAdmin || user?.canManageMailboxes);
+  const visibleTabs = TABS.filter(tab => (!tab.adminOnly || user?.isAdmin) && (!tab.mailboxManager || canManageMailboxes) && (!tab.mobileHidden || !isMobile));
 
   const tabScrollRef = useRef(null);
   const [tabRightOverflow, setTabRightOverflow] = useState(false);
@@ -8868,6 +8900,7 @@ export default function AdminPanel() {
   const searchResults = searchQuery.trim()
     ? searchIndex.filter(item => {
         if (item.adminOnly && !user?.isAdmin) return false;
+        if (item.mailboxManager && !canManageMailboxes) return false;
         if (item.mobileHidden && isMobile) return false;
         const q = searchQuery.toLowerCase();
         return item.label.toLowerCase().includes(q) || item.keywords.some(k => k.includes(q));

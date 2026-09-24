@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { requireAdmin } from '../middleware/auth.js';
+import { requireMailboxManager } from '../middleware/auth.js';
 import { query } from '../services/db.js';
 import {
   getCpanelConfig,
@@ -9,7 +9,7 @@ import {
 } from '../services/cpanelClient.js';
 
 const router = Router();
-router.use(requireAdmin);
+router.use(requireMailboxManager);
 
 function publicConfig(config) {
   if (!config) return { configured: false };

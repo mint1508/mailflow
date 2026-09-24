@@ -35,3 +35,24 @@ export async function requireAdmin(req, res, next) {
     next(err);
   }
 }
+
+// Mailbox managers may operate the cPanel connector without receiving the
+// broader user, authentication, SSO, and system-settings admin powers.
+export async function requireMailboxManager(req, res, next) {
+  if (!req.session?.userId) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  try {
+    const result = await query(
+      'SELECT is_admin, can_manage_mailboxes FROM users WHERE id = $1',
+      [req.session.userId],
+    );
+    const user = result.rows[0];
+    if (!user?.is_admin && !user?.can_manage_mailboxes) {
+      return res.status(403).json({ error: 'Mailbox management access required' });
+    }
+    next();
+  } catch (err) {
+    next(err);
+  }
+}
