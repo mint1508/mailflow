@@ -127,6 +127,9 @@ const SAME_VALUE_ALLOWED = {
   'admin.accounts.smtpHostPh':              'any', // smtp.gmail.com
   'admin.ai.baseUrlPh':                      'any', // http://localhost:11434/v1
   'admin.ai.chatgptModelPh':                 'any', // gpt-5.6-luna
+  'admin.cpanel.domainPh':                   'any', // Example domain used in connector setup
+  'admin.cpanel.hostPh':                     'any', // Example cPanel hostname
+  'admin.tabs.cpanel':                       'any', // cPanel product name
   'admin.appearance.customCssPlaceholder':   'any', // CSS code snippet, same in all locales
   'admin.integrations.microsoft.clientIdPh':'any', // xxxxxxxx-xxxx-…
   'admin.integrations.microsoft.title':     'any', // Microsoft 365 / Outlook.com
@@ -143,6 +146,16 @@ const SAME_VALUE_ALLOWED = {
   // ── Specific language groups ───────────────────────────────────────────────
   // "Version" — same spelling in de, en, fr
   'admin.about.version': [['de', 'en', 'fr']],
+  // Common technical labels and legitimate shared translations in cPanel setup.
+  'admin.cpanel.configured': [['es', 'ptBR']],
+  'admin.cpanel.email': [['cs', 'fr', 'pl', 'ptBR'], ['en', 'it']],
+  'admin.cpanel.host': 'any',
+  'admin.cpanel.port': [['cs', 'de', 'en', 'fr', 'pl'], ['it', 'ptBR']],
+  'admin.cpanel.present': [['es', 'it', 'ptBR']],
+  'admin.cpanel.quota': [['de', 'en', 'fr', 'it']],
+  'admin.cpanel.status': [['de', 'en', 'ptBR']],
+  'admin.cpanel.token': [['cs', 'it', 'pl'], ['es', 'ptBR']],
+  'admin.cpanel.used': [['es', 'ptBR']],
   // "via" (on-behalf-of sender, #366) — identical preposition in en and fr
   'message.via': [['en', 'fr', 'ptBR']],
   // "Account" — identical in en/it; "Konto" — identical in de/pl

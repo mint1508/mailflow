@@ -646,6 +646,7 @@
     "title": "Configurações",
     "close": "Fechar",
     "tabs": {
+      "cpanel": "cPanel",
       "cleanup": "Limpeza",
       "accounts": "Contas",
       "rules": "Regras",
@@ -1252,6 +1253,35 @@
         "imported": "{{name}} importado — passe o mouse na prévia para vê-lo se mexer.",
         "importFailed": "Não foi possível importar esse mascote."
       }
+    },
+    "cpanel": {
+      "title": "Conector cPanel",
+      "description": "Conecte o cPanel para ler o inventário de caixas. Esta fase é somente leitura.",
+      "host": "Host",
+      "port": "Porta",
+      "username": "Usuário do cPanel",
+      "domain": "Domínio de e-mail",
+      "token": "Token de API",
+      "save": "Salvar conexão",
+      "test": "Testar conexão",
+      "sync": "Atualizar inventário",
+      "configured": "Conectado",
+      "notConfigured": "Não configurado",
+      "mailboxCount": "{{count}} caixa(s)",
+      "empty": "Ainda não há inventário. Salve a conexão e atualize.",
+      "email": "E-mail",
+      "quota": "Cota",
+      "used": "Usado",
+      "status": "Status",
+      "present": "Presente",
+      "missing": "Ausente",
+      "suspended": "Suspenso",
+      "saved": "Conexão do cPanel salva.",
+      "testOk": "Conexão bem-sucedida. {{count}} caixa(s) encontrada(s).",
+      "syncOk": "Inventário atualizado: {{count}} caixa(s).",
+      "tokenHint": "O token é criptografado no servidor e nunca é exibido novamente.",
+      "hostPh": "mail49.vietnix.vn",
+      "domainPh": "vienthongsg.com"
     },
     "systemEmail": {
       "tabUsers": "Usuários e convites",

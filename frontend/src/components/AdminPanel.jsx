@@ -7075,7 +7075,7 @@ const TAB_GROUPS = [
   { id: 'account-mail', labelKey: 'admin.tabs.groupAccountMail', tabIds: ['accounts', 'notifications', 'rules', 'categories', 'cleanup', 'antispam'] },
   { id: 'display', labelKey: 'admin.tabs.groupDisplay', tabIds: ['appearance', 'shortcuts'] },
   { id: 'security-integrations', labelKey: 'admin.tabs.groupSecurityIntegrations', tabIds: ['security', 'integrations', 'ai', 'ai-actions', 'plugins'] },
-  { id: 'admin', labelKey: 'admin.tabs.groupAdmin', tabIds: ['users', 'sso'] },
+  { id: 'admin', labelKey: 'admin.tabs.groupAdmin', tabIds: ['cpanel', 'users', 'sso'] },
 ];
 
 const TABS = [
@@ -7137,6 +7137,11 @@ const TABS = [
     icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3v6M18 3v6M6 21v-6M18 21v-6M4 9h16v3a6 6 0 01-6 6h-4a6 6 0 01-6-6V9z"/></svg>,
   },
   // Admin
+  {
+    id: 'cpanel', labelKey: 'admin.tabs.cpanel',
+    adminOnly: true,
+    icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h5"/></svg>,
+  },
   {
     id: 'users', labelKey: 'admin.tabs.users',
     adminOnly: true,
@@ -8575,6 +8580,163 @@ function LinkedIdentitiesSection() {
   );
 }
 
+function CpanelTab() {
+  const { t } = useTranslation();
+  const [form, setForm] = useState({ host: '', port: 2083, username: '', domain: '', token: '' });
+  const [config, setConfig] = useState(null);
+  const [mailboxes, setMailboxes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState('');
+  const [notice, setNotice] = useState(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [connection, inventory] = await Promise.all([
+        api.admin.cpanel.getConnection(),
+        api.admin.cpanel.getMailboxes(),
+      ]);
+      setConfig(connection.config);
+      if (connection.config?.configured) {
+        setForm(current => ({ ...current, ...connection.config, token: '' }));
+      }
+      setMailboxes(inventory.mailboxes || []);
+    } catch (error) {
+      setNotice({ type: 'error', message: error.message });
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const set = (key, value) => setForm(current => ({ ...current, [key]: value }));
+
+  const save = async () => {
+    setBusy('save');
+    setNotice(null);
+    try {
+      const result = await api.admin.cpanel.saveConnection(form);
+      setConfig(result.config);
+      setForm(current => ({ ...current, ...result.config, token: '' }));
+      setNotice({ type: 'success', message: t('admin.cpanel.saved') });
+    } catch (error) {
+      setNotice({ type: 'error', message: error.message });
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const test = async () => {
+    setBusy('test');
+    setNotice(null);
+    try {
+      const result = await api.admin.cpanel.testConnection({ ...form, token: form.token || undefined });
+      setNotice({ type: 'success', message: t('admin.cpanel.testOk', { count: result.mailboxCount }) });
+    } catch (error) {
+      setNotice({ type: 'error', message: error.message });
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const sync = async () => {
+    setBusy('sync');
+    setNotice(null);
+    try {
+      const result = await api.admin.cpanel.syncMailboxes();
+      setMailboxes(result.mailboxes || []);
+      setNotice({ type: 'success', message: t('admin.cpanel.syncOk', { count: result.mailboxCount }) });
+    } catch (error) {
+      setNotice({ type: 'error', message: error.message });
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const bytes = (value) => {
+    if (value == null) return '—';
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    let n = Number(value);
+    let i = 0;
+    while (n >= 1024 && i < units.length - 1) { n /= 1024; i += 1; }
+    return `${n >= 10 || i === 0 ? Math.round(n) : n.toFixed(1)} ${units[i]}`;
+  };
+
+  const input = (key, type = 'text', placeholder = '') => (
+    <input
+      type={type}
+      value={form[key] ?? ''}
+      onChange={e => set(key, type === 'number' ? Number(e.target.value) : e.target.value)}
+      placeholder={placeholder}
+      style={inputStyle}
+    />
+  );
+
+  if (loading) return <div style={{ color: 'var(--text-tertiary)', fontSize: 13 }}>{t('admin.accounts.loading')}</div>;
+
+  return (
+    <div>
+      <div style={{ marginBottom: 18 }}>
+        <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>{t('admin.cpanel.title')}</div>
+        <div style={{ fontSize: 12, color: 'var(--text-tertiary)', lineHeight: 1.5 }}>{t('admin.cpanel.description')}</div>
+      </div>
+
+      <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 12, padding: 16, marginBottom: 20 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 90px', gap: 10 }}>
+          <Field label={t('admin.cpanel.host')} required>{input('host', 'text', t('admin.cpanel.hostPh'))}</Field>
+          <Field label={t('admin.cpanel.port')} required>{input('port', 'number', '2083')}</Field>
+        </div>
+        <Field label={t('admin.cpanel.username')} required>{input('username', 'text', 'cpanel-user')}</Field>
+        <Field label={t('admin.cpanel.domain')} required>{input('domain', 'text', t('admin.cpanel.domainPh'))}</Field>
+        <Field label={t('admin.cpanel.token')} required={!config?.tokenPresent}>
+          {input('token', 'password', config?.tokenPresent ? '••••••••' : '')}
+        </Field>
+        <div style={{ fontSize: 11, color: 'var(--text-tertiary)', lineHeight: 1.5, marginBottom: 14 }}>{t('admin.cpanel.tokenHint')}</div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button onClick={save} disabled={!!busy} style={{ padding: '9px 13px', background: 'var(--accent)', color: 'var(--accent-text)', border: 'none', borderRadius: 7, cursor: busy ? 'wait' : 'pointer', fontSize: 12 }}>
+            {t('admin.cpanel.save')}
+          </button>
+          <button onClick={test} disabled={!!busy} style={{ padding: '9px 13px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '1px solid var(--border)', borderRadius: 7, cursor: busy ? 'wait' : 'pointer', fontSize: 12 }}>
+            {t('admin.cpanel.test')}
+          </button>
+        </div>
+        {notice && <div style={{ marginTop: 12, fontSize: 12, color: notice.type === 'error' ? 'var(--red)' : 'var(--green)' }}>{notice.message}</div>}
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 10 }}>
+        <div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{t('admin.cpanel.mailboxCount', { count: mailboxes.length })}</div>
+          <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>{config?.configured ? t('admin.cpanel.configured') : t('admin.cpanel.notConfigured')}</div>
+        </div>
+        <button onClick={sync} disabled={!!busy || !config?.configured} style={{ padding: '7px 11px', background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: 7, cursor: busy ? 'wait' : 'pointer', fontSize: 12 }}>
+          {t('admin.cpanel.sync')}
+        </button>
+      </div>
+
+      {mailboxes.length === 0 ? (
+        <div style={{ color: 'var(--text-tertiary)', fontSize: 13, padding: '18px 0' }}>{t('admin.cpanel.empty')}</div>
+      ) : (
+        <div style={{ overflowX: 'auto', border: '1px solid var(--border-subtle)', borderRadius: 9 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+            <thead><tr style={{ borderBottom: '1px solid var(--border)' }}>
+              {[t('admin.cpanel.email'), t('admin.cpanel.quota'), t('admin.cpanel.used'), t('admin.cpanel.status')].map(label => <th key={label} style={{ textAlign: 'left', padding: '8px 10px', color: 'var(--text-tertiary)', fontWeight: 500 }}>{label}</th>)}
+            </tr></thead>
+            <tbody>{mailboxes.map(mailbox => (
+              <tr key={mailbox.email} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                <td style={{ padding: '9px 10px', color: 'var(--text-primary)' }}>{mailbox.email}</td>
+                <td style={{ padding: '9px 10px', color: 'var(--text-secondary)' }}>{bytes(mailbox.quota_bytes)}</td>
+                <td style={{ padding: '9px 10px', color: 'var(--text-secondary)' }}>{bytes(mailbox.disk_used_bytes)}</td>
+                <td style={{ padding: '9px 10px', color: mailbox.suspended || !mailbox.is_present ? 'var(--red)' : 'var(--green)' }}>{mailbox.suspended ? t('admin.cpanel.suspended') : mailbox.is_present ? t('admin.cpanel.present') : t('admin.cpanel.missing')}</td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function makeSearchIndex(t) {
   const tabLabel = (id) => t(`admin.tabs.${id}`);
   const layoutCrumb = `${tabLabel('appearance')} › ${t('admin.appearance.layout')}`;
@@ -8585,6 +8747,7 @@ function makeSearchIndex(t) {
     // Accounts
     { label: t('admin.accounts.title'), keywords: ['account', 'email', 'imap', 'smtp', 'gmail', 'yahoo', 'icloud', 'password', 'add account', 'connect'], tab: 'accounts', breadcrumb: tabLabel('accounts') },
     { label: t('admin.accounts.signatureSection'), keywords: ['signature', 'sign off', 'footer', 'alias', 'send as'], tab: 'accounts', breadcrumb: tabLabel('accounts') },
+    { label: t('admin.cpanel.title'), keywords: ['cpanel', 'mailbox', 'quota', 'api token', 'inventory'], tab: 'cpanel', breadcrumb: tabLabel('cpanel') },
     // Rules
     { label: t('admin.rules.title'), keywords: ['rule', 'filter', 'condition', 'action', 'move', 'auto', 'automate', 'inbox rule', 'sort'], tab: 'rules', subtab: 'rules', breadcrumb: `${tabLabel('rules')} › ${t('admin.rules.subTabRules')}` },
     { label: t('admin.rules.subTabBlockList'), keywords: ['block', 'blocked', 'sender', 'blacklist', 'spam', 'domain'], tab: 'rules', subtab: 'block-list', breadcrumb: `${tabLabel('rules')} › ${t('admin.rules.subTabBlockList')}` },
@@ -8764,6 +8927,7 @@ export default function AdminPanel() {
       {adminTab === 'ai' && <AISection />}
       {adminTab === 'ai-actions' && <AiActionsTab />}
       {adminTab === 'plugins' && <PluginsSection onNavigate={navigateTo} />}
+      {adminTab === 'cpanel' && <CpanelTab />}
       {adminTab === 'about' && <AboutTab />}
     </>
   );

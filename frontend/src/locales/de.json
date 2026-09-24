@@ -646,6 +646,7 @@
     "title": "Einstellungen",
     "close": "Schließen",
     "tabs": {
+      "cpanel": "cPanel",
       "cleanup": "Aufräumen",
       "accounts": "Konten",
       "appearance": "Darstellung",
@@ -1181,6 +1182,35 @@
         "imported": "{{name}} importiert — bewege den Mauszeiger über die Vorschau, um es zu sehen.",
         "importFailed": "Dieses Tier konnte nicht importiert werden."
       }
+    },
+    "cpanel": {
+      "title": "cPanel-Verbindung",
+      "description": "cPanel verbinden, um das Mailbox-Inventar zu lesen. Diese Phase ist schreibgeschützt.",
+      "host": "Host",
+      "port": "Port",
+      "username": "cPanel-Benutzername",
+      "domain": "Mail-Domain",
+      "token": "API-Token",
+      "save": "Verbindung speichern",
+      "test": "Verbindung testen",
+      "sync": "Inventar aktualisieren",
+      "configured": "Verbunden",
+      "notConfigured": "Nicht konfiguriert",
+      "mailboxCount": "{{count}} Mailbox(en)",
+      "empty": "Noch kein Mailbox-Inventar. Verbindung speichern und aktualisieren.",
+      "email": "E-Mail",
+      "quota": "Quota",
+      "used": "Verwendet",
+      "status": "Status",
+      "present": "Vorhanden",
+      "missing": "Fehlt",
+      "suspended": "Gesperrt",
+      "saved": "cPanel-Verbindung gespeichert.",
+      "testOk": "Verbindung erfolgreich. {{count}} Mailbox(en) gefunden.",
+      "syncOk": "Inventar aktualisiert: {{count}} Mailbox(en).",
+      "tokenHint": "Das Token wird auf dem Server verschlüsselt und nicht erneut angezeigt.",
+      "hostPh": "mail49.vietnix.vn",
+      "domainPh": "vienthongsg.com"
     },
     "systemEmail": {
       "tabUsers": "Benutzer & Einladungen",

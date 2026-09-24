@@ -198,6 +198,14 @@ export const api = {
     testSystemEmail: () => request('POST', '/admin/system-email/test'),
     deleteSystemEmail: () => request('DELETE', '/admin/system-email'),
     getAuthEvents: (params) => request('GET', '/admin/auth-events?' + new URLSearchParams(params)),
+    cpanel: {
+      getConnection: () => request('GET', '/admin/cpanel/connection'),
+      saveConnection: (data) => request('PUT', '/admin/cpanel/connection', data),
+      testConnection: (data) => request('POST', '/admin/cpanel/connection/test', data),
+      getMailboxes: () => request('GET', '/admin/cpanel/mailboxes'),
+      syncMailboxes: () => request('POST', '/admin/cpanel/mailboxes/sync'),
+      getAudit: (limit = 50) => request('GET', `/admin/cpanel/audit?limit=${encodeURIComponent(limit)}`),
+    },
     oidc: {
       getProviders: () => request('GET', '/admin/oidc'),
       createProvider: (data) => request('POST', '/admin/oidc', data),

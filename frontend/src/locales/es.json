@@ -646,6 +646,7 @@
     "title": "Ajustes",
     "close": "Cerrar",
     "tabs": {
+      "cpanel": "cPanel",
       "cleanup": "Limpieza",
       "accounts": "Cuentas",
       "rules": "Reglas",
@@ -1252,6 +1253,35 @@
         "imported": "{{name}} importada: pasa el cursor sobre la vista previa para verla moverse.",
         "importFailed": "No se pudo importar esa mascota."
       }
+    },
+    "cpanel": {
+      "title": "Conector de cPanel",
+      "description": "Conecta cPanel para leer el inventario de buzones. Esta fase es de solo lectura.",
+      "host": "Servidor",
+      "port": "Puerto",
+      "username": "Usuario de cPanel",
+      "domain": "Dominio de correo",
+      "token": "Token de API",
+      "save": "Guardar conexión",
+      "test": "Probar conexión",
+      "sync": "Actualizar inventario",
+      "configured": "Conectado",
+      "notConfigured": "No configurado",
+      "mailboxCount": "{{count}} buzón(es)",
+      "empty": "Aún no hay inventario. Guarda la conexión y actualiza.",
+      "email": "Correo",
+      "quota": "Cuota",
+      "used": "Usado",
+      "status": "Estado",
+      "present": "Presente",
+      "missing": "Falta",
+      "suspended": "Suspendido",
+      "saved": "Conexión de cPanel guardada.",
+      "testOk": "Conexión correcta. Se encontraron {{count}} buzón(es).",
+      "syncOk": "Inventario actualizado: {{count}} buzón(es).",
+      "tokenHint": "El token se cifra en el servidor y no se muestra de nuevo.",
+      "hostPh": "mail49.vietnix.vn",
+      "domainPh": "vienthongsg.com"
     },
     "systemEmail": {
       "tabUsers": "Usuarios e invitaciones",

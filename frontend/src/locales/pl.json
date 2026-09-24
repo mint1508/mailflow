@@ -662,6 +662,7 @@
     "title": "Ustawienia",
     "close": "Zamknij",
     "tabs": {
+      "cpanel": "cPanel",
       "cleanup": "Porządki",
       "accounts": "Konta",
       "rules": "Reguły",
@@ -1271,6 +1272,35 @@
         "imported": "Zaimportowano {{name}} — najedź na podgląd, aby zobaczyć animację.",
         "importFailed": "Nie udało się zaimportować tego zwierzaka."
       }
+    },
+    "cpanel": {
+      "title": "Połączenie cPanel",
+      "description": "Połącz cPanel, aby odczytać inwentarz skrzynek. Ten etap jest tylko do odczytu.",
+      "host": "Host",
+      "port": "Port",
+      "username": "Nazwa użytkownika cPanel",
+      "domain": "Domena pocztowa",
+      "token": "Token API",
+      "save": "Zapisz połączenie",
+      "test": "Testuj połączenie",
+      "sync": "Odśwież inwentarz",
+      "configured": "Połączono",
+      "notConfigured": "Nie skonfigurowano",
+      "mailboxCount": "{{count}} skrzynka(i)",
+      "empty": "Brak inwentarza. Zapisz połączenie i odśwież.",
+      "email": "E-mail",
+      "quota": "Limit",
+      "used": "Użyto",
+      "status": "Stan",
+      "present": "Obecna",
+      "missing": "Brak",
+      "suspended": "Zawieszona",
+      "saved": "Połączenie cPanel zapisane.",
+      "testOk": "Połączenie udane. Znaleziono {{count}} skrzynka(i).",
+      "syncOk": "Inwentarz odświeżony: {{count}} skrzynka(i).",
+      "tokenHint": "Token jest szyfrowany na serwerze i nie jest ponownie wyświetlany.",
+      "hostPh": "mail49.vietnix.vn",
+      "domainPh": "vienthongsg.com"
     },
     "systemEmail": {
       "tabUsers": "Użytkownicy i zaproszenia",

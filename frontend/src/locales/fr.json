@@ -646,6 +646,7 @@
     "title": "Paramètres",
     "close": "Fermer",
     "tabs": {
+      "cpanel": "cPanel",
       "cleanup": "Nettoyage",
       "accounts": "Comptes",
       "rules": "Règles",
@@ -1252,6 +1253,35 @@
         "imported": "{{name}} importée — survolez l’aperçu pour la voir bouger.",
         "importFailed": "Impossible d’importer cette mascotte."
       }
+    },
+    "cpanel": {
+      "title": "Connecteur cPanel",
+      "description": "Connectez cPanel pour lire l’inventaire des boîtes. Cette phase est en lecture seule.",
+      "host": "Hôte",
+      "port": "Port",
+      "username": "Nom d’utilisateur cPanel",
+      "domain": "Domaine de messagerie",
+      "token": "Jeton API",
+      "save": "Enregistrer la connexion",
+      "test": "Tester la connexion",
+      "sync": "Actualiser l’inventaire",
+      "configured": "Connecté",
+      "notConfigured": "Non configuré",
+      "mailboxCount": "{{count}} boîte(s)",
+      "empty": "Aucun inventaire. Enregistrez la connexion puis actualisez.",
+      "email": "E-mail",
+      "quota": "Quota",
+      "used": "Utilisé",
+      "status": "État",
+      "present": "Présent",
+      "missing": "Manquant",
+      "suspended": "Suspendu",
+      "saved": "Connexion cPanel enregistrée.",
+      "testOk": "Connexion réussie. {{count}} boîte(s) trouvée(s).",
+      "syncOk": "Inventaire actualisé : {{count}} boîte(s).",
+      "tokenHint": "Le jeton est chiffré sur le serveur et ne sera plus affiché.",
+      "hostPh": "mail49.vietnix.vn",
+      "domainPh": "vienthongsg.com"
     },
     "systemEmail": {
       "tabUsers": "Utilisateurs et invitations",

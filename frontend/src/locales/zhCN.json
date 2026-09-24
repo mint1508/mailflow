@@ -646,6 +646,7 @@
     "title": "设置",
     "close": "关闭",
     "tabs": {
+      "cpanel": "cPanel",
       "cleanup": "清理",
       "accounts": "账户",
       "rules": "规则",
@@ -1252,6 +1253,35 @@
         "imported": "已导入 {{name}}，将鼠标悬停在预览上即可看到动画。",
         "importFailed": "无法导入该宠物。"
       }
+    },
+    "cpanel": {
+      "title": "cPanel 连接",
+      "description": "连接 cPanel 以读取邮箱清单。此阶段仅支持读取。",
+      "host": "主机",
+      "port": "端口",
+      "username": "cPanel 用户名",
+      "domain": "邮件域名",
+      "token": "API 令牌",
+      "save": "保存连接",
+      "test": "测试连接",
+      "sync": "刷新清单",
+      "configured": "已连接",
+      "notConfigured": "未配置",
+      "mailboxCount": "{{count}} 个邮箱",
+      "empty": "还没有邮箱清单。保存连接后刷新。",
+      "email": "邮箱",
+      "quota": "配额",
+      "used": "已使用",
+      "status": "状态",
+      "present": "存在",
+      "missing": "缺失",
+      "suspended": "已暂停",
+      "saved": "cPanel 连接已保存。",
+      "testOk": "连接成功，找到 {{count}} 个邮箱。",
+      "syncOk": "清单已刷新：{{count}} 个邮箱。",
+      "tokenHint": "令牌会在服务器端加密保存，不会再次显示。",
+      "hostPh": "mail49.vietnix.vn",
+      "domainPh": "vienthongsg.com"
     },
     "systemEmail": {
       "tabUsers": "用户与邀请",

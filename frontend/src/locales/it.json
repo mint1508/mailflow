@@ -646,6 +646,7 @@
     "title": "Impostazioni",
     "close": "Chiudi",
     "tabs": {
+      "cpanel": "cPanel",
       "cleanup": "Pulizia",
       "accounts": "Account",
       "rules": "Regole",
@@ -1252,6 +1253,35 @@
         "imported": "{{name}} importata: passa il mouse sull’anteprima per vederla muoversi.",
         "importFailed": "Impossibile importare questa mascotte."
       }
+    },
+    "cpanel": {
+      "title": "Connettore cPanel",
+      "description": "Collega cPanel per leggere l’inventario delle caselle. Questa fase è di sola lettura.",
+      "host": "Host",
+      "port": "Porta",
+      "username": "Nome utente cPanel",
+      "domain": "Dominio email",
+      "token": "Token API",
+      "save": "Salva connessione",
+      "test": "Testa connessione",
+      "sync": "Aggiorna inventario",
+      "configured": "Connesso",
+      "notConfigured": "Non configurato",
+      "mailboxCount": "{{count}} casella/e",
+      "empty": "Nessun inventario. Salva la connessione e aggiorna.",
+      "email": "Email",
+      "quota": "Quota",
+      "used": "Usato",
+      "status": "Stato",
+      "present": "Presente",
+      "missing": "Mancante",
+      "suspended": "Sospeso",
+      "saved": "Connessione cPanel salvata.",
+      "testOk": "Connessione riuscita. Trovate {{count}} caselle.",
+      "syncOk": "Inventario aggiornato: {{count}} caselle.",
+      "tokenHint": "Il token è cifrato sul server e non verrà mostrato di nuovo.",
+      "hostPh": "mail49.vietnix.vn",
+      "domainPh": "vienthongsg.com"
     },
     "systemEmail": {
       "tabUsers": "Utenti e inviti",

@@ -646,6 +646,7 @@
     "title": "Settings",
     "close": "Close",
     "tabs": {
+      "cpanel": "cPanel",
       "cleanup": "Cleanup",
       "accounts": "Accounts",
       "rules": "Rules",
@@ -1252,6 +1253,35 @@
         "imported": "Imported {{name}} — hover the preview to see it move.",
         "importFailed": "Couldn't import that pet."
       }
+    },
+    "cpanel": {
+      "title": "cPanel connector",
+      "description": "Connect cPanel to read the mailbox inventory. This phase is read-only.",
+      "host": "Host",
+      "port": "Port",
+      "username": "cPanel username",
+      "domain": "Mail domain",
+      "token": "API token",
+      "save": "Save connection",
+      "test": "Test connection",
+      "sync": "Refresh inventory",
+      "configured": "Connected",
+      "notConfigured": "Not configured",
+      "mailboxCount": "{{count}} mailbox(es)",
+      "empty": "No mailbox inventory yet. Save the connector and refresh.",
+      "email": "Email",
+      "quota": "Quota",
+      "used": "Used",
+      "status": "Status",
+      "present": "Present",
+      "missing": "Missing",
+      "suspended": "Suspended",
+      "saved": "cPanel connection saved.",
+      "testOk": "Connection successful. Found {{count}} mailbox(es).",
+      "syncOk": "Inventory refreshed: {{count}} mailbox(es).",
+      "tokenHint": "The token is encrypted on the server and never shown again.",
+      "hostPh": "mail49.vietnix.vn",
+      "domainPh": "vienthongsg.com"
     },
     "systemEmail": {
       "tabUsers": "Users & Invites",
