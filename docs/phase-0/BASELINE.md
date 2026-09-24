@@ -4,13 +4,15 @@
 
 - Repository: `https://github.com/maathimself/mailflow.git`
 - Remote: `upstream`
+- Fork: `https://github.com/mint1508/mailflow.git`
+- Remote: `origin`
 - Release: `v3.5.6`
 - Commit: `c034f33f8f07bf90af8de496828bd97458b411ac`
 - Baseline date: 2026-09-24
 - Runtime: Node 22, PostgreSQL 16, Redis 7
 
-The working branch is `internal-main`. Add the user's GitHub fork as `origin` when
-its URL exists; do not point `origin` at upstream. The local tag
+The working branch is `internal-main`. `origin` points to the internal fork and
+`upstream` points to the original repository. The local tag
 `internal-baseline-v3.5.6` marks the unmodified application baseline.
 
 ## Verification evidence

@@ -5,6 +5,7 @@ Status: complete for the local baseline on 2026-09-24.
 ## Gate
 
 - [x] Upstream source is checked out on `internal-main` at pinned tag `v3.5.6`.
+- [x] GitHub fork `mint1508/mailflow` is configured as `origin`; source is pushed.
 - [x] AGPL and commercial license files remain unchanged.
 - [x] Frontend and backend tests, lints, and builds pass under Node 22.
 - [x] Frontend, backend, PostgreSQL, and Redis run healthy in Docker Compose.
@@ -16,6 +17,5 @@ Status: complete for the local baseline on 2026-09-24.
 
 ## Deferred inputs
 
-- Configure `origin` after the user creates or supplies the GitHub fork URL.
 - Real cPanel mutation tests wait for a dedicated test Mailbox and direct token entry path.
 - VPS staging, domain, TLS, and Cloudflare work begins in Phase 1.
