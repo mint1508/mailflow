@@ -37,9 +37,9 @@ import SpamSettings from './SpamSettings.jsx';
 import { parseCpanelBulkRows } from '../utils/cpanelMailbox.js';
 
 // ─── Shared field component ───────────────────────────────────────────────────
-function Field({ label, required, children }) {
+function Field({ label, required, children, style }) {
   return (
-    <div style={{ marginBottom: 14 }}>
+    <div style={{ marginBottom: 14, ...style }}>
       <label style={{ display: 'block', fontSize: 12, color: 'var(--text-secondary)', marginBottom: 5 }}>
         {label} {required && <span style={{ color: 'var(--red)' }}>*</span>}
       </label>
@@ -77,15 +77,16 @@ function isMicrosoftImapHost(host) {
   return h.includes('.outlook.com') || h.includes('office365.com') || h.includes('.hotmail.com') || h.includes('.live.com');
 }
 
-function AccountForm({ initial, onSave, onCancel }) {
+function AccountForm({ initial, onSave, onCancel, cpanelConfig = null }) {
   const { t } = useTranslation();
   const { categorizationEnabled } = useStore();
 
   const isEdit = !!initial?.id;
+  const cpanelMode = !isEdit && !!cpanelConfig?.configured;
   const [form, setForm] = useState(initial || {
     name: '', email_address: '', color: '#6366f1', protocol: 'imap',
-    imap_host: '', imap_port: 993, imap_skip_tls_verify: false,
-    smtp_host: '', smtp_port: 587, smtp_tls: 'STARTTLS',
+    imap_host: cpanelConfig?.host || '', imap_port: 993, imap_skip_tls_verify: false,
+    smtp_host: cpanelConfig?.host || '', smtp_port: cpanelMode ? 465 : 587, smtp_tls: cpanelMode ? 'SSL' : 'STARTTLS',
     smtp_auth_user: '', smtp_auth_pass: '',
     auth_user: '', auth_pass: '', categorization_enabled: false, antispam_enabled: false,
     trusted_authserv_id: '',
@@ -100,6 +101,18 @@ function AccountForm({ initial, onSave, onCancel }) {
   const [showSmtpPass, setShowSmtpPass] = useState(false);
   const [selectedPreset, setSelectedPreset] = useState(null);
   const [mailPolicy, setMailPolicy] = useState({ allowPrivateHosts: false, allowInsecureTls: false, allowNonstandardPorts: false });
+
+  useEffect(() => {
+    if (!cpanelMode || !cpanelConfig?.host) return;
+    setForm(current => ({
+      ...current,
+      imap_host: cpanelConfig.host,
+      imap_port: 993,
+      smtp_host: cpanelConfig.host,
+      smtp_port: 465,
+      smtp_tls: 'SSL',
+    }));
+  }, [cpanelMode, cpanelConfig?.host]);
 
   useEffect(() => {
     api.admin.getSettings()
@@ -135,18 +148,21 @@ function AccountForm({ initial, onSave, onCancel }) {
   };
 
   const handleSubmit = async () => {
-    if (!form.email_address || !form.auth_user || !form.imap_host) {
+    const submission = cpanelMode
+      ? { ...form, name: form.name || form.email_address, auth_user: form.email_address, smtp_auth_user: form.email_address, imap_host: cpanelConfig.host, imap_port: 993, smtp_host: cpanelConfig.host, smtp_port: 465, smtp_tls: 'SSL' }
+      : form;
+    if (!submission.email_address || !submission.auth_user || !submission.imap_host) {
       setError(t('admin.accounts.errorRequired'));
       return;
     }
-    if (!isEdit && !form.auth_pass) {
+    if (!isEdit && !submission.auth_pass) {
       setError(t('admin.accounts.errorPasswordRequired'));
       return;
     }
     setSaving(true);
     setError('');
     try {
-      await onSave(form);
+      await onSave(submission);
     } catch (err) {
       setError(err.message);
       setSaving(false);
@@ -158,7 +174,7 @@ function AccountForm({ initial, onSave, onCancel }) {
       {/* Presets (add only) */}
       {!isEdit && (
         <div style={{ display: 'flex', gap: 6, marginBottom: 18, flexWrap: 'wrap' }}>
-          {Object.entries(PRESETS).map(([key]) => {
+          {!cpanelMode && Object.entries(PRESETS).map(([key]) => {
             const active = selectedPreset === key;
             const presetLabel = key === 'gmail' ? t('admin.accounts.presetGmail') : key === 'yahoo' ? t('admin.accounts.presetYahoo') : key === 'icloud' ? t('admin.accounts.presetIcloud') : t('admin.accounts.presetCustom');
             return (
@@ -206,19 +222,32 @@ function AccountForm({ initial, onSave, onCancel }) {
 
       {!isEdit && (
         <Field label={t('admin.accounts.email')} required>
-          <input value={form.email_address || ''} onChange={e => set('email_address', e.target.value)}
+          <input value={form.email_address || ''} onChange={e => {
+            const email = e.target.value;
+            setForm(current => ({
+              ...current,
+              email_address: email,
+              ...(cpanelMode ? { auth_user: email, smtp_auth_user: email } : {}),
+            }));
+          }}
             placeholder={t('admin.accounts.emailPh')} style={inputStyle}
             onFocus={e => e.target.style.borderColor = 'var(--accent)'}
             onBlur={e => e.target.style.borderColor = 'var(--border)'} />
         </Field>
       )}
 
-      <div style={{ height: 1, background: 'var(--border-subtle)', margin: '16px 0' }} />
-      <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 10, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+      {cpanelMode && (
+        <div style={{ marginBottom: 16, padding: '10px 12px', border: '1px solid var(--border-subtle)', borderRadius: 8, background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', fontSize: 12, lineHeight: 1.5 }}>
+          {t('admin.cpanel.configured')}: {cpanelConfig.host}
+        </div>
+      )}
+
+      <div style={{ display: cpanelMode ? 'none' : undefined, height: 1, background: 'var(--border-subtle)', margin: '16px 0' }} />
+      <div style={{ display: cpanelMode ? 'none' : undefined, fontSize: 11, color: 'var(--text-secondary)', marginBottom: 10, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
         {t('admin.accounts.imapSection')}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 90px', gap: 10 }}>
+      <div style={{ display: cpanelMode ? 'none' : 'grid', gridTemplateColumns: '1fr 90px', gap: 10 }}>
         <Field label={t('admin.accounts.imapHost')} required>
           <input value={form.imap_host || ''} onChange={e => set('imap_host', e.target.value)}
             placeholder={t('admin.accounts.imapHostPh')} style={inputStyle}
@@ -236,7 +265,7 @@ function AccountForm({ initial, onSave, onCancel }) {
         </Field>
       </div>
 
-      <Field label={t('admin.accounts.authUser')} required>
+      <Field label={t('admin.accounts.authUser')} required style={{ display: cpanelMode ? 'none' : undefined }}>
         <input value={form.auth_user || ''} onChange={e => set('auth_user', e.target.value)}
           placeholder={t('admin.accounts.authUserPh')} style={inputStyle}
           onFocus={e => e.target.style.borderColor = 'var(--accent)'}
@@ -266,7 +295,7 @@ function AccountForm({ initial, onSave, onCancel }) {
         </div>
       </Field>
 
-      {mailPolicy.allowInsecureTls && (
+      {mailPolicy.allowInsecureTls && !cpanelMode && (
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginTop: 10 }}>
           <button
             type="button"
@@ -289,7 +318,7 @@ function AccountForm({ initial, onSave, onCancel }) {
         </div>
       )}
 
-      {isMicrosoftImapHost(form.imap_host) && (
+      {isMicrosoftImapHost(form.imap_host) && !cpanelMode && (
         <div style={{
           display: 'flex', alignItems: 'flex-start', gap: 10,
           padding: '10px 14px', marginTop: 10,
@@ -307,12 +336,12 @@ function AccountForm({ initial, onSave, onCancel }) {
         </div>
       )}
 
-      <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 0 16px', marginTop: isMicrosoftImapHost(form.imap_host) ? 16 : '4px' }} />
-      <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 10, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+      <div style={{ display: cpanelMode ? 'none' : undefined, height: 1, background: 'var(--border-subtle)', margin: '4px 0 16px', marginTop: isMicrosoftImapHost(form.imap_host) ? 16 : '4px' }} />
+      <div style={{ display: cpanelMode ? 'none' : undefined, fontSize: 11, color: 'var(--text-secondary)', marginBottom: 10, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
         {t('admin.accounts.smtpSection')}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 90px', gap: 10 }}>
+      <div style={{ display: cpanelMode ? 'none' : 'grid', gridTemplateColumns: '1fr 90px', gap: 10 }}>
         <Field label={t('admin.accounts.smtpHost')}>
           <input value={form.smtp_host || ''} onChange={e => set('smtp_host', e.target.value)}
             placeholder={t('admin.accounts.smtpHostPh')} style={inputStyle}
@@ -330,16 +359,16 @@ function AccountForm({ initial, onSave, onCancel }) {
         </Field>
       </div>
 
-      <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 12, marginBottom: 4, lineHeight: 1.5 }}>
+      <div style={{ display: cpanelMode ? 'none' : undefined, fontSize: 11, color: 'var(--text-tertiary)', marginTop: 12, marginBottom: 4, lineHeight: 1.5 }}>
         {t('admin.accounts.smtpAuthNote')}
       </div>
-      <Field label={t('admin.accounts.smtpAuthUser')}>
+      <Field label={t('admin.accounts.smtpAuthUser')} style={{ display: cpanelMode ? 'none' : undefined }}>
         <input value={form.smtp_auth_user || ''} onChange={e => set('smtp_auth_user', e.target.value)}
           placeholder={t('admin.accounts.smtpAuthUserPh')} style={inputStyle}
           onFocus={e => e.target.style.borderColor = 'var(--accent)'}
           onBlur={e => e.target.style.borderColor = 'var(--border)'} />
       </Field>
-      <Field label={t('admin.accounts.smtpAuthPass')}>
+      <Field label={t('admin.accounts.smtpAuthPass')} style={{ display: cpanelMode ? 'none' : undefined }}>
         <div style={{ position: 'relative' }}>
           <input type={showSmtpPass ? 'text' : 'password'}
             value={form.smtp_auth_pass || ''} onChange={e => set('smtp_auth_pass', e.target.value)}
@@ -563,6 +592,13 @@ function AccountsTab() {
   const [foldersLoading, setFoldersLoading] = useState(false);
   const [foldersSaving, setFoldersSaving] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState(null);
+  const [cpanelConfig, setCpanelConfig] = useState(null);
+
+  useEffect(() => {
+    api.admin.cpanel.getConnection()
+      .then(result => setCpanelConfig(result.config?.configured ? result.config : null))
+      .catch(() => setCpanelConfig(null));
+  }, []);
 
   // Alias form state
   const [aliasFormMode, setAliasFormMode] = useState(null); // null | 'add' | 'edit'
@@ -749,7 +785,7 @@ function AccountsTab() {
         <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 20 }}>
           {t('admin.accounts.addTitle')}
         </div>
-        <AccountForm onSave={handleAdd} onCancel={() => setSubview('list')} />
+        <AccountForm cpanelConfig={cpanelConfig} onSave={handleAdd} onCancel={() => setSubview('list')} />
       </div>
     );
   }
