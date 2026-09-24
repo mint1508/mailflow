@@ -9,6 +9,7 @@ export const CPANEL_DEFAULT_PORT = 2083;
 const REQUEST_TIMEOUT_MS = 15_000;
 const DEFAULT_MAX_MAILBOXES = 15;
 const DEFAULT_MAX_QUOTA_MB = 10 * 1024;
+const MAX_CPANEL_ERROR_LENGTH = 500;
 
 function sameEndpoint(left, right) {
   return left?.host === right?.host
@@ -185,6 +186,50 @@ export function normalizeMailbox(row, configuredDomain) {
   };
 }
 
+function collectCpanelErrorText(value, output = [], seen = new Set()) {
+  if (value == null || output.length >= 10) return output;
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    const text = String(value).replace(/\s+/g, ' ').trim();
+    if (text) output.push(text);
+    return output;
+  }
+  if (typeof value !== 'object' || seen.has(value)) return output;
+  seen.add(value);
+  if (Array.isArray(value)) {
+    for (const item of value) collectCpanelErrorText(item, output, seen);
+    return output;
+  }
+  for (const key of ['message', 'error', 'errors', 'messages', 'reason', 'statusmsg']) {
+    if (value[key] !== undefined) collectCpanelErrorText(value[key], output, seen);
+  }
+  return output;
+}
+
+// cPanel has returned errors as arrays, strings, and nested objects across API versions.
+// Keep the useful part of the provider response while avoiding raw bodies in the UI/audit log.
+export function normalizeCpanelApiError(body, { httpStatus = null, token = '' } = {}) {
+  const result = body?.result;
+  const values = collectCpanelErrorText([
+    result?.errors,
+    result?.messages,
+    body?.errors,
+    body?.messages,
+    body?.error,
+    body?.message,
+  ]);
+  const unique = [...new Set(values)];
+  const redact = text => token ? text.split(token).join('[redacted]') : text;
+  const details = unique.map(redact).join('; ').slice(0, MAX_CPANEL_ERROR_LENGTH);
+  const status = Number(httpStatus);
+
+  if (status >= 400) {
+    return details ? `cPanel returned HTTP ${status}: ${details}` : `cPanel returned HTTP ${status}`;
+  }
+  if (details) return `cPanel rejected the API request: ${details}`;
+  if (body == null) return 'cPanel returned an invalid or non-JSON response. Check the host, port, and API token.';
+  return 'cPanel rejected the API request without a reason. Check the cPanel username, API token, and domain.';
+}
+
 async function cpanelRequest(config, functionName, params = {}) {
   const url = new URL(`https://${config.host}:${config.port}/execute/Email/${functionName}`);
   url.searchParams.set('api.version', '1');
@@ -203,10 +248,9 @@ async function cpanelRequest(config, functionName, params = {}) {
       signal: controller.signal,
     }, { requireHttps: true });
     const body = await response.json().catch(() => null);
-    if (!response.ok) throw new Error(`cPanel returned HTTP ${response.status}`);
+    if (!response.ok) throw new Error(normalizeCpanelApiError(body, { httpStatus: response.status, token: config.token }));
     if (!body?.result || body.result.status !== 1) {
-      const details = body?.result?.errors?.filter(Boolean).join('; ');
-      throw new Error(details || 'cPanel rejected the API request');
+      throw new Error(normalizeCpanelApiError(body, { token: config.token }));
     }
     return body.result;
   } catch (error) {

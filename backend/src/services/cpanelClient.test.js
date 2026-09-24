@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { generateMailboxPassword, normalizeMailbox } from './cpanelClient.js';
+import { generateMailboxPassword, normalizeCpanelApiError, normalizeMailbox } from './cpanelClient.js';
 
 describe('cPanel mailbox normalization', () => {
   it('normalizes the list_pops_with_disk shape', () => {
@@ -49,5 +49,23 @@ describe('cPanel mailbox credentials', () => {
     expect(password).toHaveLength(24);
     // eslint-disable-next-line no-control-regex
     expect(password).not.toMatch(/[\u0000-\u001f\u007f]/);
+  });
+});
+
+describe('cPanel API error normalization', () => {
+  it('includes array errors returned by UAPI', () => {
+    expect(normalizeCpanelApiError({ result: { status: 0, errors: ['Access denied'] } }))
+      .toBe('cPanel rejected the API request: Access denied');
+  });
+
+  it('handles string messages and redacts the API token', () => {
+    expect(normalizeCpanelApiError({ result: { status: 0, messages: 'token abc123 is invalid' } }, { token: 'abc123' }))
+      .toBe('cPanel rejected the API request: token [redacted] is invalid');
+  });
+
+  it('reports non-JSON and HTTP failures without exposing the response body', () => {
+    expect(normalizeCpanelApiError(null)).toMatch(/invalid or non-JSON/);
+    expect(normalizeCpanelApiError({ result: { errors: ['Forbidden'] } }, { httpStatus: 403 }))
+      .toBe('cPanel returned HTTP 403: Forbidden');
   });
 });
