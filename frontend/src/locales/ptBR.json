@@ -1265,6 +1265,7 @@
       "quotaMb": "Quota (MB)",
       "password": "Initial password",
       "passwordOptional": "Leave blank to generate a secure password. The password is shown once and is not stored by MailFlow.",
+      "generatePassword": "Gerar senha",
       "create": "Create mailbox",
       "creating": "Creating…",
       "created": "Mailbox created",
@@ -1316,7 +1317,6 @@
       "statsEmailAccounts": "Contas de e-mail",
       "statsDiskUsage": "Uso do disco",
       "linkAccount": "Adicionar às contas",
-      "linkPasswordPrompt": "Digite a senha da caixa {{email}}",
       "linked": "Caixa adicionada às contas."
     },
     "systemEmail": {

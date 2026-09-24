@@ -63,6 +63,32 @@ const COLORS = [
   '#f97316','#eab308','#22c55e','#06b6d4','#3b82f6','#14b8a6',
 ];
 
+function generateMailboxPassword() {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^*-_';
+  const values = new Uint32Array(24);
+  window.crypto.getRandomValues(values);
+  return Array.from(values, value => alphabet[value % alphabet.length]).join('');
+}
+
+function cpanelAccountPayload(host, email, password) {
+  return {
+    name: email,
+    email_address: email,
+    color: '#6366f1',
+    protocol: 'imap',
+    imap_host: host,
+    imap_port: 993,
+    imap_skip_tls_verify: false,
+    smtp_host: host,
+    smtp_port: 465,
+    smtp_tls: 'SSL',
+    auth_user: email,
+    auth_pass: password,
+    smtp_auth_user: email,
+    smtp_auth_pass: password,
+  };
+}
+
 // ─── IMAP presets ─────────────────────────────────────────────────────────────
 const PRESETS = {
   gmail:   { label: 'Gmail',   imap_host: 'imap.gmail.com',        imap_port: 993, smtp_host: 'smtp.gmail.com',        smtp_port: 587 },
@@ -83,6 +109,7 @@ function AccountForm({ initial, onSave, onCancel, cpanelConfig = null }) {
 
   const isEdit = !!initial?.id;
   const cpanelMode = !isEdit && !!cpanelConfig?.configured;
+  const cpanelMailbox = initial?.cpanelMailbox || null;
   const [form, setForm] = useState(initial || {
     name: '', email_address: '', color: '#6366f1', protocol: 'imap',
     imap_host: cpanelConfig?.host || '', imap_port: 993, imap_skip_tls_verify: false,
@@ -155,14 +182,21 @@ function AccountForm({ initial, onSave, onCancel, cpanelConfig = null }) {
       setError(t('admin.accounts.errorRequired'));
       return;
     }
-    if (!isEdit && !submission.auth_pass) {
+    if (!isEdit && !submission.auth_pass && !cpanelMailbox) {
       setError(t('admin.accounts.errorPasswordRequired'));
       return;
     }
     setSaving(true);
     setError('');
     try {
-      await onSave(submission);
+      let savedSubmission = submission;
+      let generatedPassword = null;
+      if (cpanelMailbox) {
+        const result = await api.admin.cpanel.resetMailboxPassword(cpanelMailbox, submission.auth_pass || undefined);
+        generatedPassword = result.mailbox.password;
+        savedSubmission = cpanelAccountPayload(cpanelConfig.host, cpanelMailbox, generatedPassword);
+      }
+      await onSave(savedSubmission, generatedPassword ? { email: cpanelMailbox, password: generatedPassword } : null);
     } catch (err) {
       setError(err.message);
       setSaving(false);
@@ -222,24 +256,22 @@ function AccountForm({ initial, onSave, onCancel, cpanelConfig = null }) {
 
       {!isEdit && (
         <Field label={t('admin.accounts.email')} required>
-          <input value={form.email_address || ''} onChange={e => {
-            const email = e.target.value;
-            setForm(current => ({
-              ...current,
-              email_address: email,
-              ...(cpanelMode ? { auth_user: email, smtp_auth_user: email } : {}),
-            }));
-          }}
-            placeholder={t('admin.accounts.emailPh')} style={inputStyle}
-            onFocus={e => e.target.style.borderColor = 'var(--accent)'}
-            onBlur={e => e.target.style.borderColor = 'var(--border)'} />
+          {cpanelMode ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+              <input value={(form.email_address || '').split('@')[0]} onChange={e => {
+                const localPart = e.target.value.replace(/@.*$/, '');
+                const email = localPart ? `${localPart}@${cpanelConfig.domain}` : '';
+                setForm(current => ({ ...current, email_address: email, auth_user: email, smtp_auth_user: email }));
+              }} placeholder={t('admin.cpanel.localPartPh')} style={{ ...inputStyle, flex: 1 }} />
+              <span style={{ color: 'var(--text-secondary)', fontSize: 13 }}>@{cpanelConfig.domain}</span>
+            </div>
+          ) : (
+            <input value={form.email_address || ''} onChange={e => set('email_address', e.target.value)}
+              placeholder={t('admin.accounts.emailPh')} style={inputStyle}
+              onFocus={e => e.target.style.borderColor = 'var(--accent)'}
+              onBlur={e => e.target.style.borderColor = 'var(--border)'} />
+          )}
         </Field>
-      )}
-
-      {cpanelMode && (
-        <div style={{ marginBottom: 16, padding: '10px 12px', border: '1px solid var(--border-subtle)', borderRadius: 8, background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', fontSize: 12, lineHeight: 1.5 }}>
-          {t('admin.cpanel.configured')}: {cpanelConfig.host}
-        </div>
       )}
 
       <div style={{ display: cpanelMode ? 'none' : undefined, height: 1, background: 'var(--border-subtle)', margin: '16px 0' }} />
@@ -272,7 +304,7 @@ function AccountForm({ initial, onSave, onCancel, cpanelConfig = null }) {
           onBlur={e => e.target.style.borderColor = 'var(--border)'} />
       </Field>
 
-      <Field label={isEdit ? t('admin.accounts.password') + ' (' + t('admin.accounts.passwordPhEdit') + ')' : t('admin.accounts.password')} required={!isEdit}>
+      <Field label={isEdit ? t('admin.accounts.password') + ' (' + t('admin.accounts.passwordPhEdit') + ')' : t('admin.accounts.password')} required={!isEdit && !cpanelMailbox}>
         <div style={{ position: 'relative' }}>
           <input type={showPass ? 'text' : 'password'}
             value={form.auth_pass || ''} onChange={e => set('auth_pass', e.target.value)}
@@ -293,6 +325,11 @@ function AccountForm({ initial, onSave, onCancel, cpanelConfig = null }) {
             </svg>
           </button>
         </div>
+        {!isEdit && (
+          <button type="button" onClick={() => set('auth_pass', generateMailboxPassword())} style={{ marginTop: 7, padding: '6px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', fontSize: 11, cursor: 'pointer' }}>
+            {t('admin.cpanel.generatePassword')}
+          </button>
+        )}
       </Field>
 
       {mailPolicy.allowInsecureTls && !cpanelMode && (
@@ -593,12 +630,25 @@ function AccountsTab() {
   const [foldersSaving, setFoldersSaving] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [cpanelConfig, setCpanelConfig] = useState(null);
+  const [cpanelMailboxes, setCpanelMailboxes] = useState([]);
+  const [accountDraft, setAccountDraft] = useState(null);
+  const [oneTimeCredentials, setOneTimeCredentials] = useState(null);
 
   useEffect(() => {
     api.admin.cpanel.getConnection()
       .then(result => setCpanelConfig(result.config?.configured ? result.config : null))
       .catch(() => setCpanelConfig(null));
   }, []);
+
+  useEffect(() => {
+    if (!cpanelConfig) {
+      setCpanelMailboxes([]);
+      return;
+    }
+    api.admin.cpanel.getMailboxes()
+      .then(result => setCpanelMailboxes(result.mailboxes || []))
+      .catch(() => setCpanelMailboxes([]));
+  }, [cpanelConfig]);
 
   // Alias form state
   const [aliasFormMode, setAliasFormMode] = useState(null); // null | 'add' | 'edit'
@@ -607,10 +657,29 @@ function AccountsTab() {
   const [aliasFormError, setAliasFormError] = useState('');
   const [aliasFormSaving, setAliasFormSaving] = useState(false);
 
-  const handleAdd = async (form) => {
+  const handleAdd = async (form, credentials = null) => {
     const account = await api.addAccount(form);
     setAccounts([...accounts, account]);
+    if (credentials) setOneTimeCredentials(credentials);
+    setAccountDraft(null);
     setSubview('list');
+  };
+
+  const oneTimeCredentialsText = oneTimeCredentials
+    ? `Email: ${oneTimeCredentials.email}\nPassword: ${oneTimeCredentials.password}`
+    : '';
+  const saveOneTimeCredentials = () => {
+    const blob = new Blob([oneTimeCredentialsText], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `${oneTimeCredentials.email.replace(/[^a-z0-9@._-]/gi, '_')}-credentials.txt`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+  const shareOneTimeCredentials = async () => {
+    if (navigator.share) await navigator.share({ title: oneTimeCredentials.email, text: oneTimeCredentialsText }).catch(() => {});
+    else await copyToClipboard(oneTimeCredentialsText);
   };
 
   const handleEdit = async (form) => {
@@ -785,7 +854,7 @@ function AccountsTab() {
         <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 20 }}>
           {t('admin.accounts.addTitle')}
         </div>
-        <AccountForm cpanelConfig={cpanelConfig} onSave={handleAdd} onCancel={() => setSubview('list')} />
+        <AccountForm initial={accountDraft} cpanelConfig={cpanelConfig} onSave={handleAdd} onCancel={() => { setAccountDraft(null); setSubview('list'); }} />
       </div>
     );
   }
@@ -1078,7 +1147,7 @@ function AccountsTab() {
         <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>
           {t('admin.accounts.title')}
         </div>
-        <button onClick={() => setSubview('add')} style={{
+        <button onClick={() => { setAccountDraft(null); setSubview('add'); }} style={{
           display: 'flex', alignItems: 'center', gap: 6,
           padding: '7px 12px', background: 'var(--accent)',
           border: 'none', borderRadius: 7, color: 'var(--accent-text)',
@@ -1091,13 +1160,39 @@ function AccountsTab() {
         </button>
       </div>
 
+      {oneTimeCredentials && (
+        <div style={{ marginBottom: 16, padding: 12, border: '1px solid var(--green)', borderRadius: 8, background: 'rgba(34,197,94,0.08)' }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>{t('admin.cpanel.created')}</div>
+          <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-secondary)' }}>{oneTimeCredentialsText}</pre>
+          <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 8 }}>
+            <button onClick={() => copyToClipboard(oneTimeCredentialsText)} style={{ padding: '6px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 11 }}>{t('admin.cpanel.copyCredentials')}</button>
+            <button onClick={saveOneTimeCredentials} style={{ padding: '6px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 11 }}>{t('admin.cpanel.saveCredentials')}</button>
+            <button onClick={shareOneTimeCredentials} style={{ padding: '6px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 11 }}>{t('admin.cpanel.shareCredentials')}</button>
+          </div>
+        </div>
+      )}
+
+      {cpanelMailboxes.filter(mailbox => !accounts.some(account => account.email_address?.toLowerCase() === mailbox.email?.toLowerCase())).length > 0 && (
+        <div style={{ marginBottom: 18, padding: 12, border: '1px solid var(--border)', borderRadius: 10, background: 'var(--bg-secondary)' }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 8 }}>{t('admin.cpanel.title')}</div>
+          {cpanelMailboxes.filter(mailbox => !accounts.some(account => account.email_address?.toLowerCase() === mailbox.email?.toLowerCase())).map(mailbox => (
+            <div key={mailbox.email} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderTop: '1px solid var(--border-subtle)' }}>
+              <span style={{ flex: 1, color: 'var(--text-secondary)', fontSize: 12 }}>{mailbox.email}</span>
+              <button onClick={() => { setAccountDraft({ name: mailbox.email, email_address: mailbox.email, cpanelMailbox: mailbox.email }); setSubview('add'); }} disabled={!!mailbox.suspended || !mailbox.is_present} style={{ padding: '6px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 11, cursor: 'pointer' }}>{t('admin.cpanel.linkAccount')}</button>
+            </div>
+          ))}
+        </div>
+      )}
+
       {accounts.length === 0 && (
         <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-tertiary)', fontSize: 14 }}>
           {t('admin.accounts.empty')}
         </div>
       )}
 
-      {accounts.map(account => (
+      {accounts.map(account => {
+        const isCpanelAccount = !!cpanelConfig?.host && account.imap_host === cpanelConfig.host;
+        return (
         <div key={account.id} style={{
           border: '1px solid var(--border-subtle)', borderRadius: 10,
           background: 'var(--bg-tertiary)', marginBottom: 10, overflow: 'hidden',
@@ -1126,9 +1221,6 @@ function AccountsTab() {
                 ) : (
                   <>
                     <span style={{ color: 'var(--green)' }}>● {t('admin.accounts.connected')}</span>
-                    <span style={{ color: 'var(--text-tertiary)' }}>
-                      {account.imap_host}:{account.imap_port}
-                    </span>
                   </>
                 )}
               </div>
@@ -1180,7 +1272,7 @@ function AccountsTab() {
           </div>
 
           {/* Connection details bar */}
-          <div style={{
+          {!isCpanelAccount && <div style={{
             padding: '8px 14px', borderTop: '1px solid var(--border-subtle)',
             background: 'var(--bg-secondary)',
             display: 'flex', gap: 20, flexWrap: 'wrap',
@@ -1217,9 +1309,10 @@ function AccountsTab() {
                 )}
               </div>
             )}
-          </div>
+          </div>}
         </div>
-      ))}
+        );
+      })}
       <ConfirmOverlay dialog={confirmDialog} onClose={() => setConfirmDialog(null)} />
     </div>
     </>
@@ -8665,8 +8758,6 @@ function CpanelTab() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState('');
   const [notice, setNotice] = useState(null);
-  const [linkTarget, setLinkTarget] = useState(null);
-  const [linkPassword, setLinkPassword] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -8734,52 +8825,24 @@ function CpanelTab() {
     }
   };
 
-  const openLinkMailbox = (mailbox) => {
+  const linkMailbox = async (mailbox) => {
     const existing = accounts.find(account => account.email_address?.toLowerCase() === mailbox.email.toLowerCase());
     if (existing) {
       setNotice({ type: 'success', message: t('admin.cpanel.linked') });
       return;
     }
-    setNotice(null);
-    setLinkTarget(mailbox);
-    setLinkPassword('');
-  };
-
-  const linkMailbox = async () => {
-    const mailbox = linkTarget;
-    const password = linkPassword;
-    if (!mailbox) return;
-    if (!password) {
-      setNotice({ type: 'error', message: t('admin.accounts.errorPasswordRequired') });
-      return;
-    }
     setBusy(`link:${mailbox.email}`);
     setNotice(null);
     try {
-      await api.addAccount({
-        name: mailbox.email,
-        email_address: mailbox.email,
-        color: '#6366f1',
-        protocol: 'imap',
-        imap_host: config.host,
-        imap_port: 993,
-        imap_skip_tls_verify: false,
-        smtp_host: config.host,
-        smtp_port: 465,
-        smtp_tls: 'SSL',
-        auth_user: mailbox.email,
-        auth_pass: password,
-        smtp_auth_user: mailbox.email,
-        smtp_auth_pass: password,
-      });
+      const reset = await api.admin.cpanel.resetMailboxPassword(mailbox.email);
+      setCreatedMailbox(reset.mailbox);
+      await api.addAccount(cpanelAccountPayload(config.host, mailbox.email, reset.mailbox.password));
       window.dispatchEvent(new CustomEvent('mailflow:accounts_refresh'));
       setNotice({ type: 'success', message: t('admin.cpanel.linked') });
     } catch (error) {
       setNotice({ type: 'error', message: error.message });
     } finally {
       setBusy('');
-      setLinkTarget(null);
-      setLinkPassword('');
     }
   };
 
@@ -8791,9 +8854,16 @@ function CpanelTab() {
       const result = await api.admin.cpanel.createMailbox(createForm);
       setCreatedMailbox(result.mailbox);
       setCreateForm(current => ({ ...current, localPart: '', password: '' }));
+      let linkError = null;
+      try {
+        await api.addAccount(cpanelAccountPayload(config.host, result.mailbox.email, result.mailbox.password));
+      } catch (error) {
+        linkError = error;
+      }
+      window.dispatchEvent(new CustomEvent('mailflow:accounts_refresh'));
       const inventory = await api.admin.cpanel.syncMailboxes();
       setMailboxes(inventory.mailboxes || []);
-      setNotice({ type: 'success', message: t('admin.cpanel.created') });
+      setNotice(linkError ? { type: 'error', message: linkError.message } : { type: 'success', message: t('admin.cpanel.linked') });
     } catch (error) {
       setNotice({ type: 'error', message: error.message });
     } finally {
@@ -8810,9 +8880,12 @@ function CpanelTab() {
     try {
       const result = await api.admin.cpanel.createMailboxesBulk({ items, quotaMb: bulkQuotaMb });
       setBulkResult(result);
+      const linkResults = await Promise.allSettled(result.created.map(mailbox => api.addAccount(cpanelAccountPayload(config.host, mailbox.email, mailbox.password))));
+      window.dispatchEvent(new CustomEvent('mailflow:accounts_refresh'));
       const inventory = await api.admin.cpanel.syncMailboxes();
       setMailboxes(inventory.mailboxes || []);
-      setNotice({ type: result.failed.length ? 'error' : 'success', message: t('admin.cpanel.bulkSummary', { created: result.created.length, failed: result.failed.length }) });
+      const linkFailure = linkResults.find(item => item.status === 'rejected');
+      setNotice({ type: result.failed.length || linkFailure ? 'error' : 'success', message: linkFailure?.reason?.message || t('admin.cpanel.bulkSummary', { created: result.created.length, failed: result.failed.length }) });
     } catch (error) {
       setNotice({ type: 'error', message: error.message });
     } finally {
@@ -8938,7 +9011,10 @@ function CpanelTab() {
               </Field>
             </div>
             <Field label={t('admin.cpanel.password')}>
-              <input type="password" value={createForm.password} onChange={e => setCreateForm(current => ({ ...current, password: e.target.value }))} placeholder="••••••••" style={inputStyle} />
+              <div style={{ display: 'flex', gap: 7 }}>
+                <input type="password" value={createForm.password} onChange={e => setCreateForm(current => ({ ...current, password: e.target.value }))} placeholder="••••••••" style={{ ...inputStyle, flex: 1 }} />
+                <button type="button" onClick={() => setCreateForm(current => ({ ...current, password: generateMailboxPassword() }))} style={{ padding: '6px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', fontSize: 11, cursor: 'pointer', whiteSpace: 'nowrap' }}>{t('admin.cpanel.generatePassword')}</button>
+              </div>
             </Field>
             <button onClick={create} disabled={!!busy || !config?.configured || !createForm.localPart} style={{ padding: '9px 13px', background: 'var(--accent)', color: 'var(--accent-text)', border: 'none', borderRadius: 7, cursor: busy ? 'wait' : 'pointer', fontSize: 12 }}>
               {busy === 'create' ? t('admin.cpanel.creating') : t('admin.cpanel.create')}
@@ -9058,7 +9134,7 @@ function CpanelTab() {
                 <td style={{ padding: '9px 10px', color: mailbox.suspended || !mailbox.is_present ? 'var(--red)' : 'var(--green)' }}>{mailbox.suspended ? t('admin.cpanel.suspended') : mailbox.is_present ? t('admin.cpanel.present') : t('admin.cpanel.missing')}</td>
                 <td style={{ padding: '9px 10px' }}>
                   <button
-                    onClick={() => openLinkMailbox(mailbox)}
+                    onClick={() => linkMailbox(mailbox)}
                     disabled={!!busy || !config?.configured || !!mailbox.suspended || !mailbox.is_present}
                     style={{ padding: '6px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 11, cursor: busy ? 'wait' : 'pointer', opacity: busy ? 0.65 : 1 }}
                   >
@@ -9071,27 +9147,6 @@ function CpanelTab() {
         </div>
       )}
 
-      {linkTarget && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, background: 'rgba(0,0,0,0.48)' }}>
-          <div role="dialog" aria-modal="true" style={{ width: 'min(420px, 100%)', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: 12, padding: 18, boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
-            <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>{t('admin.cpanel.linkAccount')}</div>
-            <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 14 }}>{t('admin.cpanel.linkPasswordPrompt', { email: linkTarget.email })}</div>
-            <input
-              autoFocus
-              type="password"
-              value={linkPassword}
-              onChange={event => setLinkPassword(event.target.value)}
-              onKeyDown={event => { if (event.key === 'Enter') linkMailbox(); }}
-              autoComplete="current-password"
-              style={inputStyle}
-            />
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
-              <button onClick={() => { setLinkTarget(null); setLinkPassword(''); }} disabled={!!busy} style={{ padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 7, background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', fontSize: 12 }}>{t('common.cancel')}</button>
-              <button onClick={linkMailbox} disabled={!!busy || !linkPassword} style={{ padding: '8px 12px', border: 'none', borderRadius: 7, background: 'var(--accent)', color: 'var(--accent-text)', fontSize: 12, cursor: busy ? 'wait' : 'pointer' }}>{busy ? t('admin.accounts.saving') : t('admin.cpanel.linkAccount')}</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

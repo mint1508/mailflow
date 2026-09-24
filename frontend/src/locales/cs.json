@@ -1399,6 +1399,7 @@
       "quotaMb": "Quota (MB)",
       "password": "Initial password",
       "passwordOptional": "Leave blank to generate a secure password. The password is shown once and is not stored by MailFlow.",
+      "generatePassword": "Vygenerovat heslo",
       "create": "Create mailbox",
       "creating": "Creating…",
       "created": "Mailbox created",
@@ -1450,7 +1451,6 @@
       "statsEmailAccounts": "E-mailové účty",
       "statsDiskUsage": "Využití disku",
       "linkAccount": "Přidat k účtům",
-      "linkPasswordPrompt": "Zadejte heslo schránky {{email}}",
       "linked": "Schránka byla přidána k účtům."
     },
     "systemEmail": {

@@ -1265,6 +1265,7 @@
       "quotaMb": "Quota (MB)",
       "password": "Initial password",
       "passwordOptional": "Leave blank to generate a secure password. The password is shown once and is not stored by MailFlow.",
+      "generatePassword": "生成密码",
       "create": "Create mailbox",
       "creating": "Creating…",
       "created": "Mailbox created",
@@ -1316,7 +1317,6 @@
       "statsEmailAccounts": "邮箱账户",
       "statsDiskUsage": "磁盘使用量",
       "linkAccount": "添加到账户",
-      "linkPasswordPrompt": "输入邮箱 {{email}} 的密码",
       "linked": "邮箱已添加到账户。"
     },
     "systemEmail": {
