@@ -80,7 +80,7 @@ function audit(actorUserId, action, success, detail = {}) {
   ).catch(error => console.warn('cPanel audit write failed:', error.message));
 }
 
-router.get('/connection', async (_req, res) => {
+router.get('/connection', requireAdmin, async (_req, res) => {
   const config = await getCpanelConfig();
   res.json({ config: publicConfig(config) });
 });
@@ -217,7 +217,7 @@ router.post('/mailboxes/bulk', async (req, res) => {
   }
 });
 
-router.post('/mailboxes/:email/password', async (req, res) => {
+router.post('/mailboxes/:email/password', requireAdmin, async (req, res) => {
   try {
     const result = await resetCpanelMailboxPassword(req.params.email, req.body?.password);
     await audit(req.session.userId, 'mailbox_password_reset', true, { email: result.email });
@@ -254,7 +254,7 @@ router.post('/mailboxes/:email/activation', async (req, res) => {
   }
 });
 
-router.post('/mailboxes/:email/reset-link', async (req, res) => {
+router.post('/mailboxes/:email/reset-link', requireAdmin, async (req, res) => {
   try {
     const result = await sendManagedMailboxReset(req.params.email);
     await audit(req.session.userId, 'mailbox_reset_link_sent', true, { email: req.params.email });
@@ -304,7 +304,7 @@ router.post('/mailboxes/:email/unsuspend', async (req, res) => {
   }
 });
 
-router.delete('/mailboxes/:email', async (req, res) => {
+router.delete('/mailboxes/:email', requireAdmin, async (req, res) => {
   try {
     const result = await deleteCpanelMailbox(req.params.email);
     // The provider is authoritative for deletion; remove the local projection
