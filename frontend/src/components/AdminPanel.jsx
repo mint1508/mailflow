@@ -639,6 +639,11 @@ function MailboxProvisioner({ config, limits, onChanged, onCredentials, onNotice
   const csvInputRef = useRef(null);
   const maxQuotaMb = Number(limits?.maxQuotaMb) || 10240;
 
+  useEffect(() => {
+    setCreateForm(current => ({ ...current, quotaMb: Math.min(Number(current.quotaMb) || 1, maxQuotaMb) }));
+    setBulkQuotaMb(current => Math.min(Number(current) || 1, maxQuotaMb));
+  }, [maxQuotaMb]);
+
   const create = async () => {
     setBusy('create');
     setBulkResult(null);
