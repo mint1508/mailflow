@@ -1066,6 +1066,9 @@ function AccountsTab() {
   const mailboxQuotaBytes = cpanelMailboxes.reduce((total, mailbox) => total + (Number(mailbox.quota_bytes) || Number(cpanelLimits.maxQuotaMb) * 1024 * 1024), 0);
   const mailboxCountPercent = cpanelLimits.maxMailboxes > 0 ? (cpanelMailboxes.length / cpanelLimits.maxMailboxes) * 100 : 0;
   const mailboxQuotaPercent = mailboxQuotaBytes > 0 ? (mailboxUsedBytes / mailboxQuotaBytes) * 100 : 0;
+  const cpanelMailboxByEmail = new Map(cpanelMailboxes.map(mailbox => [mailbox.email?.toLowerCase(), mailbox]));
+  const linkedAccountEmails = new Set(accounts.map(account => account.email_address?.toLowerCase()));
+  const unlinkedCpanelMailboxes = cpanelMailboxes.filter(mailbox => !linkedAccountEmails.has(mailbox.email?.toLowerCase()));
 
   if (subview === 'provision') {
     return (
@@ -1418,32 +1421,30 @@ function AccountsTab() {
       )}
 
       {cpanelConfig && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8, marginBottom: 18 }}>
-          <div style={{ padding: 12, border: '1px solid var(--border)', borderRadius: 9, background: 'var(--bg-secondary)' }}>
-            <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 5 }}>{t('admin.accounts.quotaMailboxCount')}</div>
-            <div style={{ fontSize: 20, color: 'var(--text-primary)' }}>{cpanelMailboxes.length} / {cpanelLimits.maxMailboxes}</div>
-            <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 3 }}>{t('admin.accounts.quotaPercent', { percent: mailboxCountPercent.toFixed(0) })}</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 6, marginBottom: 10 }}>
+          <div style={{ padding: '7px 9px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg-secondary)' }}>
+            <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 2 }}>{t('admin.accounts.quotaMailboxCount')}</div>
+            <div style={{ fontSize: 16, color: 'var(--text-primary)' }}>{cpanelMailboxes.length} / {cpanelLimits.maxMailboxes}</div>
+            <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 1 }}>{t('admin.accounts.quotaPercent', { percent: mailboxCountPercent.toFixed(0) })}</div>
           </div>
-          <div style={{ padding: 12, border: '1px solid var(--border)', borderRadius: 9, background: 'var(--bg-secondary)' }}>
-            <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 5 }}>{t('admin.accounts.quotaAssigned')}</div>
-            <div style={{ fontSize: 20, color: 'var(--text-primary)' }}>{bytesForMailbox(mailboxQuotaBytes)}</div>
-            <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 3 }}>{t('admin.accounts.quotaLimitPerMailbox', { max: bytesForMailbox(cpanelLimits.maxQuotaMb * 1024 * 1024) })}</div>
+          <div style={{ padding: '7px 9px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg-secondary)' }}>
+            <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 2 }}>{t('admin.accounts.quotaAssigned')}</div>
+            <div style={{ fontSize: 16, color: 'var(--text-primary)' }}>{bytesForMailbox(mailboxQuotaBytes)}</div>
+            <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 1 }}>{t('admin.accounts.quotaLimitPerMailbox', { max: bytesForMailbox(cpanelLimits.maxQuotaMb * 1024 * 1024) })}</div>
           </div>
-          <div style={{ padding: 12, border: '1px solid var(--border)', borderRadius: 9, background: 'var(--bg-secondary)' }}>
-            <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 5 }}>{t('admin.accounts.quotaDiskUsed')}</div>
-            <div style={{ fontSize: 20, color: 'var(--text-primary)' }}>{bytesForMailbox(mailboxUsedBytes)}</div>
-            <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 3 }}>{t('admin.accounts.quotaUsedPercent', { percent: mailboxQuotaPercent.toFixed(0) })}</div>
+          <div style={{ padding: '7px 9px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg-secondary)' }}>
+            <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 2 }}>{t('admin.accounts.quotaDiskUsed')}</div>
+            <div style={{ fontSize: 16, color: 'var(--text-primary)' }}>{bytesForMailbox(mailboxUsedBytes)}</div>
+            <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 1 }}>{t('admin.accounts.quotaUsedPercent', { percent: mailboxQuotaPercent.toFixed(0) })}</div>
           </div>
         </div>
       )}
 
-      {cpanelConfig && (
+      {cpanelConfig && unlinkedCpanelMailboxes.length > 0 && (
         <div style={{ marginBottom: 18, padding: 12, border: '1px solid var(--border)', borderRadius: 10, background: 'var(--bg-secondary)' }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 3 }}>{t('admin.accounts.mailboxInventoryTitle')}</div>
           <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 8 }}>{t('admin.accounts.mailboxInventoryHint', { domain: cpanelConfig.domain })}</div>
-          {cpanelMailboxes.length === 0 && <div style={{ color: 'var(--text-tertiary)', fontSize: 12, padding: '8px 0' }}>{t('admin.cpanel.empty')}</div>}
-          {cpanelMailboxes.map(mailbox => {
-            const linked = accounts.some(account => account.email_address?.toLowerCase() === mailbox.email?.toLowerCase());
+          {unlinkedCpanelMailboxes.map(mailbox => {
             return <div key={mailbox.email} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 0', borderTop: '1px solid var(--border-subtle)', flexWrap: 'wrap' }}>
               <div style={{ flex: '1 1 200px', minWidth: 160 }}>
                 <div style={{ color: 'var(--text-primary)', fontSize: 12 }}>{mailbox.email}</div>
@@ -1455,7 +1456,7 @@ function AccountsTab() {
                   </span>
                 ) : <>{bytesForMailbox(mailbox.quota_bytes)}{mailbox.disk_used_bytes != null ? ` · ${bytesForMailbox(mailbox.disk_used_bytes)} ${t('admin.accounts.quotaUsedShort')}` : ''}</>}</div>
               </div>
-              <span style={{ color: mailbox.suspended || !mailbox.is_present ? 'var(--red)' : linked ? 'var(--green)' : 'var(--amber)', fontSize: 11 }}>{mailbox.suspended ? t('admin.accounts.disabled') : linked ? t('admin.accounts.linked') : t('admin.accounts.pendingLink')}</span>
+              <span style={{ color: mailbox.suspended || !mailbox.is_present ? 'var(--red)' : 'var(--amber)', fontSize: 11 }}>{mailbox.suspended ? t('admin.accounts.disabled') : t('admin.accounts.pendingLink')}</span>
               <div style={{ display: 'flex', gap: 5 }}>
                 {quotaEditEmail !== mailbox.email && <IconBtn onClick={() => beginQuotaEdit(mailbox)} title={t('admin.accounts.editQuota')}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>
@@ -1482,7 +1483,8 @@ function AccountsTab() {
       )}
 
       {accounts.map(account => {
-        const isCpanelAccount = !!cpanelConfig?.host && account.imap_host === cpanelConfig.host;
+        const cpanelMailbox = cpanelMailboxByEmail.get(account.email_address?.toLowerCase()) || null;
+        const isCpanelAccount = !!cpanelMailbox || (!!cpanelConfig?.host && account.imap_host === cpanelConfig.host);
         return (
         <div key={account.id} style={{
           border: '1px solid var(--border-subtle)', borderRadius: 10,
@@ -1511,12 +1513,30 @@ function AccountsTab() {
                   }}>⚠ {account.sync_error}</span>
                 ) : (
                   <>
-                    <span style={{ color: 'var(--green)' }}>● {t('admin.accounts.connected')}</span>
+                    <span style={{ color: cpanelMailbox?.suspended ? 'var(--red)' : 'var(--green)' }}>● {cpanelMailbox?.suspended ? t('admin.accounts.disabled') : t('admin.accounts.connected')}</span>
                   </>
                 )}
               </div>
+              {cpanelMailbox && <div style={{ color: 'var(--text-tertiary)', fontSize: 11, marginTop: 3 }}>
+                {quotaEditEmail === cpanelMailbox.email ? (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+                    <input type="number" min="1" max={cpanelLimits.maxQuotaMb} value={quotaEditMb} onChange={event => setQuotaEditMb(event.target.value)} style={{ width: 68, padding: '3px 5px', border: '1px solid var(--border)', borderRadius: 5, background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: 11 }} /> {t('admin.cpanel.quotaUnit')}
+                    <button type="button" onClick={() => saveMailboxQuota(cpanelMailbox)} disabled={quotaSaving} style={{ border: 'none', background: 'none', color: 'var(--accent)', cursor: quotaSaving ? 'wait' : 'pointer', fontSize: 11 }}>{t('common.save')}</button>
+                    <button type="button" onClick={() => setQuotaEditEmail(null)} style={{ border: 'none', background: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', fontSize: 11 }}>{t('common.cancel')}</button>
+                  </span>
+                ) : <>{bytesForMailbox(cpanelMailbox.quota_bytes)}{cpanelMailbox.disk_used_bytes != null ? ` · ${bytesForMailbox(cpanelMailbox.disk_used_bytes)} ${t('admin.accounts.quotaUsedShort')}` : ''}</>}
+              </div>}
             </div>
             <div style={{ display: 'flex', gap: 6, flexShrink: 0, marginLeft: 'auto' }}>
+              {cpanelMailbox && quotaEditEmail !== cpanelMailbox.email && <IconBtn onClick={() => beginQuotaEdit(cpanelMailbox)} title={t('admin.accounts.editQuota')}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>
+              </IconBtn>}
+              {cpanelMailbox && <IconBtn onClick={() => handleResetMailboxPassword(cpanelMailbox)} title={t('admin.accounts.resetPassword')}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 11a8 8 0 1 0 2 5.3"/><polyline points="20 4 20 11 13 11"/></svg>
+              </IconBtn>}
+              {cpanelMailbox && <IconBtn onClick={() => handleToggleMailbox(cpanelMailbox)} title={cpanelMailbox.suspended ? t('admin.accounts.enableMailbox') : t('admin.accounts.disableMailbox')}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="5" width="18" height="14" rx="2"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="13" y2="14"/></svg>
+              </IconBtn>}
               {account.sync_error && (
                 <IconBtn onClick={() => handleReconnect(account.id)} title={t('sidebar.accountMenu.reconnect')}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1553,7 +1573,7 @@ function AccountsTab() {
                   <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
                 </svg>
               </IconBtn>
-              <IconBtn onClick={() => handleDelete(account.id)} title={t('common.remove')} danger>
+              <IconBtn onClick={() => cpanelMailbox ? handleDeleteMailbox(cpanelMailbox) : handleDelete(account.id)} title={cpanelMailbox ? t('common.delete') : t('common.remove')} danger>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <polyline points="3 6 5 6 21 6"/>
                   <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
