@@ -329,6 +329,16 @@ router.get('/mailboxes/:email/members', async (req, res) => {
   res.json({ ownerUserId: account.user_id, members: await listMailboxMemberships(account.id) });
 });
 
+router.get('/member-candidates', async (req, res) => {
+  const result = await query(
+    `SELECT id, username
+       FROM users
+      WHERE COALESCE(is_break_glass, false) = false
+      ORDER BY username ASC`,
+  );
+  res.json({ users: result.rows.map(({ id, username }) => ({ id, username })) });
+});
+
 router.post('/mailboxes/:email/members', async (req, res) => {
   const account = await getManagedMailboxAccount(req.params.email);
   if (!account) return res.status(404).json({ error: 'Managed mailbox not found' });
