@@ -644,7 +644,25 @@ function MailboxProvisioner({ config, limits, onChanged, onCredentials, onNotice
     setBulkQuotaMb(current => Math.min(Number(current) || 1, maxQuotaMb));
   }, [maxQuotaMb]);
 
+  const activationDeliveryError = (activation) => activation?.emailError || t('admin.cpanel.activationSendFailedGeneric');
+
+  const validateSingle = () => {
+    const localPart = String(createForm.localPart || '').trim();
+    const contactEmail = String(createForm.contactEmail || '').trim();
+    const quotaMb = Number(createForm.quotaMb);
+    if (!localPart) return t('admin.cpanel.localPartRequired');
+    if (!/^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+$/.test(localPart)) return t('admin.cpanel.localPartInvalid');
+    if (!contactEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) return t('admin.cpanel.contactEmailInvalid');
+    if (!Number.isFinite(quotaMb) || quotaMb < 1 || quotaMb > maxQuotaMb) return t('admin.cpanel.quotaInvalid', { max: maxQuotaMb });
+    return '';
+  };
+
   const create = async () => {
+    const validationError = validateSingle();
+    if (validationError) {
+      onNotice?.({ type: 'error', message: validationError });
+      return;
+    }
     setBusy('create');
     setBulkResult(null);
     try {
@@ -653,7 +671,12 @@ function MailboxProvisioner({ config, limits, onChanged, onCredentials, onNotice
       setCreateForm(current => ({ ...current, localPart: '', contactEmail: '' }));
       window.dispatchEvent(new CustomEvent('mailflow:accounts_refresh'));
       await onChanged?.();
-      onNotice?.({ type: 'success', message: result.activation.emailSent ? t('admin.cpanel.activationSent') : t('admin.cpanel.activationCreated') });
+      onNotice?.({
+        type: result.activation.emailSent ? 'success' : 'error',
+        message: result.activation.emailSent
+          ? t('admin.cpanel.activationSent')
+          : t('admin.cpanel.activationSendFailed', { error: activationDeliveryError(result.activation) }),
+      });
     } catch (error) {
       onNotice?.({ type: 'error', message: error.message });
     } finally {
@@ -663,7 +686,10 @@ function MailboxProvisioner({ config, limits, onChanged, onCredentials, onNotice
 
   const createBulk = async () => {
     const items = parseCpanelBulkRows(bulkText, mode);
-    if (!items.length) return;
+    if (!items.length) {
+      onNotice?.({ type: 'error', message: t('admin.cpanel.bulkInputRequired') });
+      return;
+    }
     setBusy('bulk');
     setBulkResult(null);
     try {
@@ -671,7 +697,13 @@ function MailboxProvisioner({ config, limits, onChanged, onCredentials, onNotice
       setBulkResult(result);
       window.dispatchEvent(new CustomEvent('mailflow:accounts_refresh'));
       await onChanged?.();
-      onNotice?.({ type: result.failed.length ? 'error' : 'success', message: t('admin.cpanel.bulkSummary', { created: result.created.length, failed: result.failed.length }) });
+      const activationFailures = result.created.filter(mailbox => mailbox.emailSent === false);
+      const hasFailures = result.failed.length > 0 || activationFailures.length > 0;
+      const summary = t('admin.cpanel.bulkSummary', { created: result.created.length, failed: result.failed.length });
+      const deliverySummary = activationFailures.length
+        ? ` ${t('admin.cpanel.bulkActivationFailure', { count: activationFailures.length })}`
+        : '';
+      onNotice?.({ type: hasFailures ? 'error' : 'success', message: `${summary}${deliverySummary}` });
     } catch (error) {
       onNotice?.({ type: 'error', message: error.message });
     } finally {
@@ -689,7 +721,7 @@ function MailboxProvisioner({ config, limits, onChanged, onCredentials, onNotice
   };
 
   const bulkCredentialsText = bulkResult?.created?.map(mailbox => (
-    `Email: ${mailbox.email}\nContact: ${mailbox.contactEmail}\nActivation: ${mailbox.activationUrl}\nQuota: ${mailbox.quotaMb} MB`
+    `Email: ${mailbox.email}\nContact: ${mailbox.contactEmail}\nActivation: ${mailbox.activationUrl}\nActivation email: ${mailbox.emailSent ? 'sent' : `not sent${mailbox.emailError ? ` (${mailbox.emailError})` : ''}`}\nQuota: ${mailbox.quotaMb} MB`
   )).join('\n\n') || '';
   const share = async (text) => {
     if (navigator.share) await navigator.share({ title: t('admin.cpanel.bulkCreate'), text }).catch(() => {});
@@ -731,7 +763,7 @@ function MailboxProvisioner({ config, limits, onChanged, onCredentials, onNotice
           <Field label={t('admin.cpanel.contactEmail')} required>
             <input type="email" value={createForm.contactEmail} onChange={e => setCreateForm(current => ({ ...current, contactEmail: e.target.value }))} placeholder={t('admin.cpanel.contactEmailPh')} style={inputStyle} />
           </Field>
-          <button type="button" onClick={create} disabled={!!busy || !createForm.localPart || !createForm.contactEmail.includes('@')} style={{ padding: '9px 13px', background: 'var(--accent)', color: 'var(--accent-text)', border: 'none', borderRadius: 7, cursor: busy ? 'wait' : 'pointer', fontSize: 12 }}>{busy === 'create' ? t('admin.cpanel.creating') : t('admin.accounts.createMailbox')}</button>
+          <button type="button" onClick={create} disabled={!!busy} style={{ padding: '9px 13px', background: 'var(--accent)', color: 'var(--accent-text)', border: 'none', borderRadius: 7, cursor: busy ? 'wait' : 'pointer', fontSize: 12 }}>{busy === 'create' ? t('admin.cpanel.creating') : t('admin.accounts.createMailbox')}</button>
         </>
       ) : (
         <>
@@ -743,6 +775,7 @@ function MailboxProvisioner({ config, limits, onChanged, onCredentials, onNotice
           {bulkResult && <div style={{ marginTop: 12, padding: 10, border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg-tertiary)' }}>
             <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 7 }}>{t('admin.cpanel.bulkSummary', { created: bulkResult.created.length, failed: bulkResult.failed.length })}</div>
             {bulkResult.failed.length > 0 && <div style={{ color: 'var(--red)', fontSize: 11, whiteSpace: 'pre-wrap', marginBottom: 8 }}>{bulkResult.failed.map(row => t('admin.cpanel.bulkFailure', { row: row.index + 1, error: row.error })).join('\n')}</div>}
+            {bulkResult.created.some(row => row.emailSent === false) && <div style={{ color: 'var(--red)', fontSize: 11, whiteSpace: 'pre-wrap', marginBottom: 8 }}>{bulkResult.created.filter(row => row.emailSent === false).map(row => t('admin.cpanel.bulkActivationFailureRow', { email: row.email, error: activationDeliveryError(row) })).join('\n')}</div>}
             {bulkResult.created.length > 0 && <><pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-secondary)' }}>{bulkCredentialsText}</pre><div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 9 }}><button type="button" onClick={() => copyToClipboard(bulkCredentialsText)} style={{ padding: '6px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: 11 }}>{t('admin.cpanel.bulkCopyCredentials')}</button><button type="button" onClick={() => save(bulkCredentialsText, 'mailbox-credentials.txt')} style={{ padding: '6px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: 11 }}>{t('admin.cpanel.saveCredentials')}</button><button type="button" onClick={() => share(bulkCredentialsText)} style={{ padding: '6px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: 11 }}>{t('admin.cpanel.shareCredentials')}</button></div></>}
           </div>}
         </>
@@ -832,7 +865,12 @@ function AccountsTab() {
       const result = await api.admin.cpanel.createMailboxActivation(mailbox.email, contactEmail);
       setActivationInfo({ email: mailbox.email, ...result.activation });
       setActivationEmailDraft(current => ({ ...current, [mailbox.email]: '' }));
-      setProvisionNotice({ type: 'success', message: result.activation.emailSent ? t('admin.cpanel.activationSent') : t('admin.cpanel.activationCreated') });
+      setProvisionNotice({
+        type: result.activation.emailSent ? 'success' : 'error',
+        message: result.activation.emailSent
+          ? t('admin.cpanel.activationSent')
+          : t('admin.cpanel.activationSendFailed', { error: result.activation.emailError || t('admin.cpanel.activationSendFailedGeneric') }),
+      });
       await reloadCpanelMailboxes();
     } catch (error) {
       setProvisionNotice({ type: 'error', message: error.message });
