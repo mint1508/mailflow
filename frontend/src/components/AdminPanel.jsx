@@ -1079,6 +1079,17 @@ function AccountsTab() {
         </button>
         <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 16 }}>{t('admin.accounts.createMailboxTitle')}</div>
         <MailboxProvisioner config={cpanelConfig} limits={cpanelLimits} onChanged={reloadCpanelMailboxes} onNotice={setProvisionNotice} onCredentials={mailbox => setOneTimeCredentials({ email: mailbox.email, password: mailbox.password })} />
+        {oneTimeCredentials && (
+          <div style={{ marginTop: 12, padding: 12, border: '1px solid var(--green)', borderRadius: 8, background: 'rgba(34,197,94,0.08)' }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>{t('admin.cpanel.created')}</div>
+            <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-secondary)' }}>{oneTimeCredentialsText}</pre>
+            <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 8 }}>
+              <button onClick={() => copyToClipboard(oneTimeCredentialsText)} style={{ padding: '6px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 11 }}>{t('admin.cpanel.copyCredentials')}</button>
+              <button onClick={saveOneTimeCredentials} style={{ padding: '6px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 11 }}>{t('admin.cpanel.saveCredentials')}</button>
+              <button onClick={shareOneTimeCredentials} style={{ padding: '6px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 11 }}>{t('admin.cpanel.shareCredentials')}</button>
+            </div>
+          </div>
+        )}
         {provisionNotice && <div style={{ marginTop: 10, fontSize: 12, color: provisionNotice.type === 'error' ? 'var(--red)' : 'var(--green)' }}>{provisionNotice.message}</div>}
       </div>
     );
