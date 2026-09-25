@@ -810,6 +810,7 @@ function AccountsTab() {
   const [activationDialogError, setActivationDialogError] = useState('');
   const [activationDialogInfo, setActivationDialogInfo] = useState(null);
   const [activationSending, setActivationSending] = useState(false);
+  const [membershipMailbox, setMembershipMailbox] = useState(null);
 
   useEffect(() => {
     api.admin.cpanel.getConnection()
@@ -956,6 +957,8 @@ function AccountsTab() {
       },
     });
   };
+
+  const openMembership = (mailbox) => setMembershipMailbox(mailbox);
 
   const activationInfoText = activationInfo
     ? `Email: ${activationInfo.email}\nContact: ${activationInfo.contactEmail || ''}\nActivation link: ${activationInfo.activationUrl}`
@@ -1554,6 +1557,9 @@ function AccountsTab() {
                 <IconBtn onClick={() => handleDeleteMailbox(mailbox)} title={t('common.delete')} danger>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
                 </IconBtn>
+                <IconBtn onClick={() => openMembership(mailbox)} title={t('admin.accounts.manageMembers')}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="9" cy="7" r="3"/><path d="M3 21v-2a6 6 0 0 1 12 0v2M16 11a3 3 0 1 0 0-6M18 14a5 5 0 0 1 3 4v3"/></svg>
+                </IconBtn>
               </div>
             </div>;
           })}
@@ -1623,6 +1629,9 @@ function AccountsTab() {
               </IconBtn>}
               {cpanelMailbox && <IconBtn onClick={() => handleToggleMailbox(cpanelMailbox)} title={cpanelMailbox.suspended ? t('admin.accounts.enableMailbox') : t('admin.accounts.disableMailbox')}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="5" width="18" height="14" rx="2"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="13" y2="14"/></svg>
+              </IconBtn>}
+              {cpanelMailbox && <IconBtn onClick={() => openMembership(cpanelMailbox)} title={t('admin.accounts.manageMembers')}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="9" cy="7" r="3"/><path d="M3 21v-2a6 6 0 0 1 12 0v2M16 11a3 3 0 1 0 0-6M18 14a5 5 0 0 1 3 4v3"/></svg>
               </IconBtn>}
               {account.sync_error && (
                 <IconBtn onClick={() => handleReconnect(account.id)} title={t('sidebar.accountMenu.reconnect')}>
@@ -1726,8 +1735,74 @@ function AccountsTab() {
         </div>
       </div>}
       <ConfirmOverlay dialog={confirmDialog} onClose={() => setConfirmDialog(null)} />
+      <MailboxMembershipModal mailbox={membershipMailbox} onClose={() => setMembershipMailbox(null)} />
     </div>
     </>
+  );
+}
+
+function MailboxMembershipModal({ mailbox, onClose }) {
+  const { t } = useTranslation();
+  const [members, setMembers] = useState([]);
+  const [ownerUserId, setOwnerUserId] = useState(null);
+  const [candidates, setCandidates] = useState([]);
+  const [query, setQuery] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [busyId, setBusyId] = useState(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!mailbox) return undefined;
+    setLoading(true); setError(''); setQuery('');
+    Promise.all([
+      api.admin.cpanel.getMailboxMembers(mailbox.email),
+      api.admin.cpanel.getMemberCandidates(),
+    ]).then(([membership, candidateData]) => {
+      setOwnerUserId(membership.ownerUserId || membership.owner_user_id);
+      setMembers(membership.members || []);
+      setCandidates(candidateData.users || []);
+    }).catch(err => setError(err?.message || String(err))).finally(() => setLoading(false));
+    return undefined;
+  }, [mailbox]);
+
+  if (!mailbox) return null;
+  const memberIds = new Set(members.map(member => member.userId || member.user_id || member.id));
+  const visibleCandidates = candidates.filter(candidate => {
+    const text = `${candidate.username || ''} ${candidate.email || ''}`.toLowerCase();
+    return !memberIds.has(candidate.id) && text.includes(query.toLowerCase());
+  });
+  const add = async (candidate) => {
+    setBusyId(candidate.id); setError('');
+    try {
+      const result = await api.admin.cpanel.addMailboxMember(mailbox.email, candidate.id);
+      setMembers(current => [...current, result.membership || { ...candidate, userId: candidate.id, permission: 'read_send' }]);
+    } catch (err) { setError(err?.message || String(err)); } finally { setBusyId(null); }
+  };
+  const remove = async (member) => {
+    const id = member.userId || member.user_id || member.id;
+    if (id === ownerUserId) return;
+    setBusyId(id); setError('');
+    try {
+      await api.admin.cpanel.removeMailboxMember(mailbox.email, id);
+      setMembers(current => current.filter(item => (item.userId || item.id) !== id));
+    } catch (err) { setError(err?.message || String(err)); } finally { setBusyId(null); }
+  };
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 9200, padding: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(8px)' }}>
+      <div onClick={event => event.stopPropagation()} style={{ width: '100%', maxWidth: 480, maxHeight: '80vh', overflow: 'auto', padding: 24, borderRadius: 12, background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', boxShadow: 'var(--shadow-modal)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: 12, marginBottom: 5 }}><div><div style={{ fontSize: 15, fontWeight: 650, color: 'var(--text-primary)' }}>{t('admin.accounts.membersTitle')}</div><div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 3 }}>{mailbox.email}</div></div><button type="button" onClick={onClose} style={{ border: 0, background: 'none', color: 'var(--text-tertiary)', fontSize: 20, cursor: 'pointer' }}>×</button></div>
+        <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 14 }}>{t('admin.accounts.membersDescription')}</div>
+        {error && <div style={{ marginBottom: 12, padding: '8px 10px', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 7, color: 'var(--red)', fontSize: 12 }}>{error}</div>}
+        {loading ? <div style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>{t('common.loading')}</div> : <>
+          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', marginBottom: 6 }}>{t('admin.accounts.currentMembers')}</div>
+          {members.length === 0 ? <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 14 }}>{t('admin.accounts.noMembers')}</div> : members.map(member => { const id = member.userId || member.id; const isOwner = id === ownerUserId || member.isOwner; return <div key={id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderTop: '1px solid var(--border-subtle)' }}><div style={{ flex: 1, fontSize: 12, color: 'var(--text-primary)' }}>{member.email || member.username || id}{isOwner && <span style={{ marginLeft: 6, color: 'var(--accent)', fontSize: 10 }}>{t('admin.accounts.owner')}</span>}<div style={{ color: 'var(--text-tertiary)', fontSize: 10 }}>{member.permission || 'read_send'}</div></div>{!isOwner && <button type="button" onClick={() => remove(member)} disabled={busyId === id} style={{ padding: '5px 8px', border: '1px solid var(--border)', borderRadius: 6, background: 'transparent', color: 'var(--red)', fontSize: 11 }}>{t('admin.accounts.removeMember')}</button>}</div>; })}
+          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', margin: '16px 0 6px' }}>{t('admin.accounts.addMember')}</div>
+          <input value={query} onChange={event => setQuery(event.target.value)} placeholder={t('admin.accounts.memberSearchPh')} style={{ ...inputStyle, marginBottom: 6 }} />
+          {visibleCandidates.slice(0, 10).map(candidate => <div key={candidate.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderTop: '1px solid var(--border-subtle)' }}><div style={{ flex: 1, fontSize: 12, color: 'var(--text-primary)' }}>{candidate.email || candidate.username}</div><button type="button" onClick={() => add(candidate)} disabled={busyId === candidate.id} style={{ padding: '5px 8px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--accent)', color: 'var(--accent-text)', fontSize: 11 }}>{t('admin.accounts.addMember')}</button></div>)}
+          {!visibleCandidates.length && <div style={{ fontSize: 12, color: 'var(--text-tertiary)', padding: '8px 0' }}>{t('admin.accounts.noMemberCandidates')}</div>}
+        </>}
+      </div>
+    </div>
   );
 }
 
