@@ -10,6 +10,169 @@
 // they never span accounts or users.
 import { query } from './db.js';
 
+const MAILBOX_PERMISSIONS = new Set(['read', 'read_send']);
+
+function mailboxPermissionClause(permission, column = 'mm.permission') {
+  if (!MAILBOX_PERMISSIONS.has(permission)) {
+    throw new Error(`Unsupported mailbox permission: ${permission}`);
+  }
+  // Sending always implies reading, while a read-only member must never pass a
+  // send-capability check.
+  return permission === 'read'
+    ? `${column} IN ('read', 'read_send')`
+    : `${column} = 'read_send'`;
+}
+
+// Account ids an App User may access. The legacy direct owner pointer remains a
+// compatibility allowance while every account writer is moved to memberships.
+// Roles and break-glass identity never bypass either scope.
+export async function getAccessibleAccountIds(userId, { permission = 'read' } = {}) {
+  const { rows } = await query(
+    `SELECT ea.id AS account_id
+       FROM email_accounts ea
+      WHERE ea.user_id = $1
+     UNION
+     SELECT mm.account_id
+       FROM active_mailbox_memberships mm
+      WHERE mm.user_id = $1 AND ${mailboxPermissionClause(permission)}
+      ORDER BY account_id`,
+    [userId],
+  );
+  return rows.map(row => row.account_id);
+}
+
+// A boolean account access check for thin routes that only need a deny gate.
+export async function hasAccountAccess(userId, accountId, { permission = 'read' } = {}) {
+  const { rows } = await query(
+    `SELECT 1
+       FROM email_accounts ea
+      WHERE ea.user_id = $1 AND ea.id = $2
+     UNION ALL
+     SELECT 1
+       FROM active_mailbox_memberships mm
+      WHERE mm.user_id = $1 AND mm.account_id = $2
+        AND ${mailboxPermissionClause(permission)}
+      LIMIT 1`,
+    [userId, accountId],
+  );
+  return rows.length > 0;
+}
+
+// An account row only when the requesting user has direct legacy ownership or
+// active membership. Use this instead of embedding either policy in a route.
+export async function getAccessibleAccount(userId, accountId, { permission = 'read' } = {}) {
+  const { rows } = await query(
+    `SELECT ea.*
+       FROM email_accounts ea
+      WHERE ea.id = $2
+        AND (
+          ea.user_id = $1
+          OR EXISTS (
+            SELECT 1 FROM active_mailbox_memberships mm
+             WHERE mm.account_id = ea.id AND mm.user_id = $1
+               AND ${mailboxPermissionClause(permission)}
+          )
+        )
+      LIMIT 1`,
+    [userId, accountId],
+  );
+  return rows[0] || null;
+}
+
+// Membership helpers deliberately perform data changes only. Route/policy code
+// decides who may grant or revoke access; these helpers keep the scope and
+// revive/revoke semantics identical at every call site.
+export async function getMailboxMembership(accountId, userId, { includeRevoked = false } = {}) {
+  const { rows } = await query(
+    `SELECT account_id, user_id, permission, granted_by, revoked_at, created_at, updated_at
+       FROM mailbox_memberships
+      WHERE account_id = $1 AND user_id = $2${includeRevoked ? '' : ' AND revoked_at IS NULL'}`,
+    [accountId, userId],
+  );
+  return rows[0] || null;
+}
+
+export async function listMailboxMemberships(accountId, { includeRevoked = false } = {}) {
+  const { rows } = await query(
+    `SELECT account_id, user_id, permission, granted_by, revoked_at, created_at, updated_at
+       FROM mailbox_memberships
+      WHERE account_id = $1${includeRevoked ? '' : ' AND revoked_at IS NULL'}
+      ORDER BY created_at, user_id`,
+    [accountId],
+  );
+  return rows;
+}
+
+export async function grantMailboxMembership({ accountId, userId, permission = 'read_send', grantedBy = null }) {
+  if (!MAILBOX_PERMISSIONS.has(permission)) {
+    throw new Error(`Unsupported mailbox permission: ${permission}`);
+  }
+  const { rows } = await query(
+    `INSERT INTO mailbox_memberships (account_id, user_id, permission, granted_by, revoked_at, updated_at)
+     VALUES ($1, $2, $3, $4, NULL, NOW())
+     ON CONFLICT (account_id, user_id) DO UPDATE SET
+       permission = EXCLUDED.permission,
+       granted_by = EXCLUDED.granted_by,
+       revoked_at = NULL,
+       updated_at = NOW()
+     RETURNING account_id, user_id, permission, granted_by, revoked_at, created_at, updated_at`,
+    [accountId, userId, permission, grantedBy],
+  );
+  return rows[0] || null;
+}
+
+export async function updateMailboxMembership({ accountId, userId, permission }) {
+  if (!MAILBOX_PERMISSIONS.has(permission)) {
+    throw new Error(`Unsupported mailbox permission: ${permission}`);
+  }
+  const { rows } = await query(
+    `UPDATE mailbox_memberships
+        SET permission = $3, updated_at = NOW()
+      WHERE account_id = $1 AND user_id = $2 AND revoked_at IS NULL
+      RETURNING account_id, user_id, permission, granted_by, revoked_at, created_at, updated_at`,
+    [accountId, userId, permission],
+  );
+  return rows[0] || null;
+}
+
+export async function revokeMailboxMembership({ accountId, userId }) {
+  const { rows } = await query(
+    `UPDATE mailbox_memberships
+        SET revoked_at = NOW(), updated_at = NOW()
+      WHERE account_id = $1 AND user_id = $2 AND revoked_at IS NULL
+      RETURNING account_id, user_id, permission, granted_by, revoked_at, created_at, updated_at`,
+    [accountId, userId],
+  );
+  return rows[0] || null;
+}
+
+// A primary mailbox is an optional default for navigation. It can only point at
+// a mailbox the user can access through direct legacy ownership or membership.
+export async function setPrimaryMailbox(userId, accountId = null) {
+  if (accountId == null) {
+    const { rows } = await query(
+      `UPDATE users SET primary_email_account_id = NULL WHERE id = $1
+       RETURNING primary_email_account_id`,
+      [userId],
+    );
+    return rows[0]?.primary_email_account_id ?? null;
+  }
+  const { rows } = await query(
+    `UPDATE users u
+        SET primary_email_account_id = $2
+      WHERE u.id = $1
+        AND EXISTS (
+          SELECT 1 FROM email_accounts ea WHERE ea.id = $2 AND ea.user_id = $1
+          UNION ALL
+          SELECT 1 FROM active_mailbox_memberships mm
+           WHERE mm.user_id = $1 AND mm.account_id = $2
+        )
+      RETURNING primary_email_account_id`,
+    [userId, accountId],
+  );
+  return rows[0]?.primary_email_account_id ?? null;
+}
+
 // A message the user owns (joined through their accounts), or null. Full row (m.*).
 export async function loadOwnedMessage(userId, messageId) {
   const { rows } = await query(
