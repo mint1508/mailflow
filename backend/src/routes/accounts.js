@@ -57,6 +57,7 @@ const SAFE_FIELDS = [
   'last_sync', 'sync_error', 'sort_order', 'folder_mappings',
   'signature', 'created_at', 'categorization_enabled', 'antispam_enabled',
   'trusted_authserv_id',
+  'managed_mailbox',
 ];
 function safeAccount(row) {
   const obj = Object.fromEntries(SAFE_FIELDS.map(k => [k, row[k]]));
@@ -71,8 +72,20 @@ router.get('/', async (req, res) => {
             smtp_host, smtp_port, smtp_tls, auth_user, smtp_auth_user, oauth_provider, enabled,
             include_in_unified_inbox,
             last_sync, sync_error, sort_order, folder_mappings, signature, created_at,
-            categorization_enabled, antispam_enabled
-     FROM email_accounts WHERE user_id = $1 ORDER BY sort_order, created_at`,
+            categorization_enabled, antispam_enabled, managed_mailbox
+            FROM email_accounts
+            WHERE user_id = $1
+              AND NOT (
+                managed_mailbox = true
+                AND EXISTS (
+                  SELECT 1 FROM invites i
+                  WHERE i.email_account_id = email_accounts.id
+                    AND i.invite_type = 'mailbox_activation'
+                    AND i.used_at IS NULL
+                    AND i.expires_at > NOW()
+                )
+              )
+            ORDER BY sort_order, created_at`,
     [req.session.userId]
   );
 
