@@ -806,6 +806,10 @@ function AccountsTab() {
   const [quotaEditMb, setQuotaEditMb] = useState('');
   const [quotaSaving, setQuotaSaving] = useState(false);
   const [activationEmailDraft, setActivationEmailDraft] = useState({});
+  const [activationDialogMailbox, setActivationDialogMailbox] = useState(null);
+  const [activationDialogError, setActivationDialogError] = useState('');
+  const [activationDialogInfo, setActivationDialogInfo] = useState(null);
+  const [activationSending, setActivationSending] = useState(false);
 
   useEffect(() => {
     api.admin.cpanel.getConnection()
@@ -861,24 +865,37 @@ function AccountsTab() {
   const handleCreateMailboxActivation = async (mailbox) => {
     const contactEmail = String(activationEmailDraft[mailbox.email] || '').trim();
     setProvisionNotice(null);
+    setActivationDialogError('');
     if (!contactEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) {
-      setProvisionNotice({ type: 'error', message: t('admin.cpanel.contactEmailInvalid') });
+      setActivationDialogError(t('admin.cpanel.contactEmailInvalid'));
       return;
     }
+    setActivationSending(true);
     try {
       const result = await api.admin.cpanel.createMailboxActivation(mailbox.email, contactEmail);
       setActivationInfo({ email: mailbox.email, ...result.activation });
+      setActivationDialogInfo({ email: mailbox.email, ...result.activation });
       setActivationEmailDraft(current => ({ ...current, [mailbox.email]: '' }));
-      setProvisionNotice({
-        type: result.activation.emailSent ? 'success' : 'error',
-        message: result.activation.emailSent
-          ? t('admin.cpanel.activationSent')
-          : t('admin.cpanel.activationSendFailed', { error: result.activation.emailError || t('admin.cpanel.activationSendFailedGeneric') }),
-      });
+      if (result.activation.emailSent) {
+        setProvisionNotice({ type: 'success', message: t('admin.cpanel.activationSent') });
+        setActivationDialogMailbox(null);
+      } else {
+        const message = t('admin.cpanel.activationSendFailed', { error: result.activation.emailError || t('admin.cpanel.activationSendFailedGeneric') });
+        setActivationDialogError(message);
+        setProvisionNotice({ type: 'error', message });
+      }
       await reloadCpanelMailboxes();
     } catch (error) {
-      setProvisionNotice({ type: 'error', message: error.message });
+      setActivationDialogError(error.message);
+    } finally {
+      setActivationSending(false);
     }
+  };
+
+  const openActivationDialog = (mailbox) => {
+    setActivationDialogMailbox(mailbox);
+    setActivationDialogError('');
+    setActivationDialogInfo(null);
   };
 
   const handleToggleMailbox = async (mailbox) => {
@@ -1521,13 +1538,12 @@ function AccountsTab() {
               <span style={{ color: mailbox.suspended || !mailbox.is_present ? 'var(--red)' : mailbox.activation_status === 'active' ? 'var(--green)' : 'var(--amber)', fontSize: 11 }}>
                 {mailbox.suspended ? t('admin.accounts.disabled') : mailbox.activation_status === 'active' ? t('admin.cpanel.activated') : mailbox.activation_status === 'pending' ? t('admin.cpanel.pendingActivation') : t('admin.accounts.pendingLink')}
               </span>
-              {mailbox.activation_status === 'unmanaged' && <div style={{ display: 'flex', gap: 5, flex: '1 1 240px', minWidth: 220 }}>
-                <input type="email" value={activationEmailDraft[mailbox.email] || ''} onChange={event => setActivationEmailDraft(current => ({ ...current, [mailbox.email]: event.target.value }))} placeholder={t('admin.cpanel.contactEmailPh')} style={{ ...inputStyle, padding: '5px 7px', fontSize: 11 }} />
-                <button type="button" onClick={() => handleCreateMailboxActivation(mailbox)} style={{ padding: '5px 8px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--accent)', color: 'var(--accent-text)', fontSize: 11, whiteSpace: 'nowrap', cursor: 'pointer' }}>{t('admin.cpanel.sendActivation')}</button>
-              </div>}
               <div style={{ display: 'flex', gap: 5 }}>
                 {quotaEditEmail !== mailbox.email && <IconBtn onClick={() => beginQuotaEdit(mailbox)} title={t('admin.accounts.editQuota')}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>
+                </IconBtn>}
+                {mailbox.activation_status === 'unmanaged' && <IconBtn onClick={() => openActivationDialog(mailbox)} title={t('admin.cpanel.sendActivation')}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
                 </IconBtn>}
                 {mailbox.activation_status !== 'unmanaged' && <IconBtn onClick={() => handleResetMailboxPassword(mailbox)} title={mailbox.activation_status === 'pending' ? t('admin.cpanel.resendActivation') : t('admin.accounts.resetPassword')}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 11a8 8 0 1 0 2 5.3"/><polyline points="20 4 20 11 13 11"/></svg>
@@ -1594,14 +1610,13 @@ function AccountsTab() {
                   </span>
                 ) : <>{bytesForMailbox(cpanelMailbox.quota_bytes)}{cpanelMailbox.disk_used_bytes != null ? ` · ${bytesForMailbox(cpanelMailbox.disk_used_bytes)} ${t('admin.accounts.quotaUsedShort')}` : ''}</>}
               </div>}
-              {cpanelMailbox?.activation_status === 'unmanaged' && <div style={{ display: 'flex', gap: 5, marginTop: 7, flexWrap: 'wrap' }}>
-                <input type="email" value={activationEmailDraft[cpanelMailbox.email] || ''} onChange={event => setActivationEmailDraft(current => ({ ...current, [cpanelMailbox.email]: event.target.value }))} placeholder={t('admin.cpanel.contactEmailPh')} style={{ ...inputStyle, padding: '5px 7px', fontSize: 11, flex: '1 1 190px' }} />
-                <button type="button" onClick={() => handleCreateMailboxActivation(cpanelMailbox)} style={{ padding: '5px 8px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--accent)', color: 'var(--accent-text)', fontSize: 11, whiteSpace: 'nowrap', cursor: 'pointer' }}>{t('admin.cpanel.sendActivation')}</button>
-              </div>}
             </div>
             <div style={{ display: 'flex', gap: 6, flexShrink: 0, marginLeft: 'auto' }}>
               {cpanelMailbox && quotaEditEmail !== cpanelMailbox.email && <IconBtn onClick={() => beginQuotaEdit(cpanelMailbox)} title={t('admin.accounts.editQuota')}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>
+              </IconBtn>}
+              {cpanelMailbox?.activation_status === 'unmanaged' && <IconBtn onClick={() => openActivationDialog(cpanelMailbox)} title={t('admin.cpanel.sendActivation')}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
               </IconBtn>}
               {cpanelMailbox && cpanelMailbox.activation_status !== 'unmanaged' && <IconBtn onClick={() => handleResetMailboxPassword(cpanelMailbox)} title={cpanelMailbox.activation_status === 'pending' ? t('admin.cpanel.resendActivation') : t('admin.accounts.resetPassword')}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 11a8 8 0 1 0 2 5.3"/><polyline points="20 4 20 11 13 11"/></svg>
@@ -1696,6 +1711,20 @@ function AccountsTab() {
         </div>
         );
       })}
+      {activationDialogMailbox && <div style={{ position: 'fixed', inset: 0, zIndex: 9000, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={() => { if (!activationSending) setActivationDialogMailbox(null); }}>
+        <div style={{ width: '100%', maxWidth: 420, padding: 20, border: '1px solid var(--border-subtle)', borderRadius: 12, background: 'var(--bg-secondary)', boxShadow: 'var(--shadow-modal)' }} onClick={event => event.stopPropagation()}>
+          <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 5 }}>{t('admin.cpanel.sendActivation')}</div>
+          <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 14 }}>{activationDialogMailbox.email}</div>
+          <label style={{ display: 'block', fontSize: 12, color: 'var(--text-secondary)', marginBottom: 5 }}>{t('admin.cpanel.contactEmail')}</label>
+          <input autoFocus type="email" value={activationEmailDraft[activationDialogMailbox.email] || ''} onChange={event => setActivationEmailDraft(current => ({ ...current, [activationDialogMailbox.email]: event.target.value }))} placeholder={t('admin.cpanel.contactEmailPh')} style={inputStyle} />
+          {activationDialogError && <div style={{ marginTop: 10, padding: '8px 10px', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 7, color: 'var(--red)', fontSize: 12 }}>{activationDialogError}</div>}
+          {activationDialogInfo?.activationUrl && <div style={{ marginTop: 10, fontSize: 11, color: 'var(--text-secondary)', wordBreak: 'break-all' }}><div style={{ color: 'var(--text-tertiary)', marginBottom: 3 }}>{t('admin.cpanel.activationReady')}</div>{activationDialogInfo.activationUrl}<button type="button" onClick={() => copyToClipboard(activationDialogInfo.activationUrl)} style={{ display: 'block', marginTop: 6, padding: '5px 8px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 11 }}>{t('admin.cpanel.copyActivation')}</button></div>}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 18 }}>
+            <button type="button" onClick={() => setActivationDialogMailbox(null)} disabled={activationSending} style={{ padding: '7px 12px', border: '1px solid var(--border)', borderRadius: 7, background: 'transparent', color: 'var(--text-secondary)', fontSize: 12 }}>{t('common.cancel')}</button>
+            <button type="button" onClick={() => handleCreateMailboxActivation(activationDialogMailbox)} disabled={activationSending} style={{ padding: '7px 12px', border: 'none', borderRadius: 7, background: 'var(--accent)', color: 'var(--accent-text)', fontSize: 12 }}>{activationSending ? t('common.loading') : t('admin.cpanel.sendActivation')}</button>
+          </div>
+        </div>
+      </div>}
       <ConfirmOverlay dialog={confirmDialog} onClose={() => setConfirmDialog(null)} />
     </div>
     </>
