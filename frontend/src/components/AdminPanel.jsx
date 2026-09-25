@@ -788,7 +788,9 @@ function AccountsTab() {
       setCpanelMailboxes([]);
       return;
     }
-    const result = await api.admin.cpanel.getMailboxes();
+    // cPanel is authoritative for mailbox existence. Refresh the projection so
+    // mailboxes deleted outside MailFlow do not remain actionable in Accounts.
+    const result = await api.admin.cpanel.syncMailboxes();
     setCpanelMailboxes(result.mailboxes || []);
     if (result.limits) setCpanelLimits(result.limits);
   }, [cpanelConfig]);
@@ -823,6 +825,7 @@ function AccountsTab() {
       setProvisionNotice({ type: 'success', message: t('admin.accounts.passwordReset') });
       await reloadCpanelMailboxes();
     } catch (error) {
+      await reloadCpanelMailboxes().catch(() => {});
       setProvisionNotice({ type: 'error', message: error.message });
     }
   };
@@ -835,6 +838,7 @@ function AccountsTab() {
       await reloadCpanelMailboxes();
       setProvisionNotice({ type: 'success', message: mailbox.suspended ? t('admin.accounts.mailboxEnabled') : t('admin.accounts.mailboxDisabled') });
     } catch (error) {
+      await reloadCpanelMailboxes().catch(() => {});
       setProvisionNotice({ type: 'error', message: error.message });
     }
   };
@@ -860,6 +864,7 @@ function AccountsTab() {
       setQuotaEditEmail(null);
       setProvisionNotice({ type: 'success', message: t('admin.accounts.quotaUpdated') });
     } catch (error) {
+      await reloadCpanelMailboxes().catch(() => {});
       setProvisionNotice({ type: 'error', message: error.message });
     } finally {
       setQuotaSaving(false);

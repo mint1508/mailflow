@@ -118,7 +118,7 @@ router.get('/mailboxes', async (_req, res) => {
 router.post('/mailboxes/sync', async (req, res) => {
   try {
     const mailboxes = await syncCpanelMailboxes(req.session.userId);
-    res.json({ ok: true, mailboxCount: mailboxes.length, mailboxes: mailboxes.map(publicMailbox) });
+    res.json({ ok: true, mailboxCount: mailboxes.length, mailboxes: mailboxes.map(publicMailbox), limits: getCpanelLimits() });
   } catch (error) {
     await audit(req.session.userId, 'inventory_sync', false, { error: error.message });
     res.status(400).json({ error: error.message });
