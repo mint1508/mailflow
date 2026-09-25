@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import crypto from 'crypto';
+import { authenticator } from 'otplib';
 import { query } from '../services/db.js';
-import { requireAdmin } from '../middleware/auth.js';
+import { beginImpersonation, requireAdmin } from '../middleware/auth.js';
 import { decrypt, encrypt } from '../services/encryption.js';
 import { validateHost, resolveForConnection } from '../services/hostValidation.js';
 import { createSmtpTransport } from '../services/smtpTransport.js';
@@ -11,13 +12,81 @@ import { imapManager } from '../index.js';
 import { stopCardavUser } from '../services/carddavSync.js';
 import { pluginRegistry } from '../plugins/registry.js';
 import { uuidParam } from '../utils/uuid.js';
+import { consume as consumeRateLimit, reset as resetRateLimit } from '../services/rateLimiter.js';
+import { MailboxAuthenticationUnavailableError, verifyUserCredential } from '../services/mailboxAuth.js';
 
 const router = Router();
+
+function saveSession(session) {
+  if (typeof session?.save !== 'function') return Promise.resolve();
+  return new Promise((resolve, reject) => session.save(error => (error ? reject(error) : resolve())));
+}
+
 router.use(requireAdmin);
 // Reject a malformed :id (user UUID) with a 400 before it reaches a uuid-typed query.
 router.param('id', uuidParam('id'));
 
 // ── Users ──────────────────────────────────────────────────────────────────────
+
+router.post('/users/:id/impersonate', async (req, res) => {
+  const { id: targetUserId } = req.params;
+  const { password, totpCode } = req.body || {};
+  if (targetUserId === req.session.userId) {
+    return res.status(400).json({ error: 'You cannot impersonate your own account' });
+  }
+  if (typeof password !== 'string' || !password) {
+    return res.status(400).json({ error: 'Your password is required to impersonate a user' });
+  }
+  const rateKey = `admin-impersonation:${req.session.userId}`;
+  const rate = await consumeRateLimit(rateKey, 5, 15 * 60 * 1000);
+  if (rate.limited) {
+    res.setHeader('Retry-After', Math.ceil(rate.resetMs / 1000));
+    return res.status(429).json({ error: 'Too many re-authentication attempts. Try again later.' });
+  }
+
+  const [adminResult, targetResult] = await Promise.all([
+    query(
+      'SELECT id, username, password_hash, totp_enabled, totp_secret FROM users WHERE id = $1 AND is_admin = true',
+      [req.session.userId],
+    ),
+    query('SELECT id, username FROM users WHERE id = $1', [targetUserId]),
+  ]);
+  const admin = adminResult.rows[0];
+  const target = targetResult.rows[0];
+  if (!admin || !target) return res.status(404).json({ error: 'User not found' });
+  let credentialValid;
+  try {
+    credentialValid = await verifyUserCredential(admin, password);
+  } catch (error) {
+    if (error instanceof MailboxAuthenticationUnavailableError) {
+      return res.status(503).json({ error: 'Mailbox authentication is temporarily unavailable' });
+    }
+    throw error;
+  }
+  if (!credentialValid) {
+    return res.status(401).json({ error: 'Re-authentication failed' });
+  }
+  if (admin.totp_enabled) {
+    const secret = decrypt(admin.totp_secret);
+    const normalizedCode = typeof totpCode === 'string' ? totpCode.replace(/\s/g, '') : '';
+    if (!secret || !normalizedCode || !authenticator.verify({ token: normalizedCode, secret })) {
+      return res.status(401).json({ error: 'Re-authentication failed' });
+    }
+  }
+
+  try {
+    const impersonation = await beginImpersonation(req, {
+      targetUserId: target.id,
+      targetUsername: target.username,
+    });
+    await saveSession(req.session);
+    await resetRateLimit(rateKey);
+    res.json({ ok: true, impersonation });
+  } catch (error) {
+    if (error.status) return res.status(error.status).json({ error: error.message });
+    throw error;
+  }
+});
 
 router.get('/users', async (req, res) => {
   const limit  = Math.min(parseInt(req.query.limit)  || 100, 200);
