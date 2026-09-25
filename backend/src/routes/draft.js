@@ -8,6 +8,7 @@ import { sanitizeSignature, sanitizeComposeBody } from '../services/emailSanitiz
 import { embedInlineDataImages } from '../utils/inlineImages.js';
 import { imapManager } from '../index.js';
 import { resolveAllDraftsPaths } from '../utils/mailUtils.js';
+import { getAccessibleAccount } from '../services/mailAccess.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -149,11 +150,8 @@ router.post('/draft', async (req, res) => {
   const { accountId, aliasId, to, cc, bcc, subject, body, bodyIsHtml = false, quotedBody, quotedBodyHtml, editedSignature, existingUid, existingFolder } = req.body;
   if (!accountId) return res.status(400).json({ error: 'accountId required' });
 
-  const ownerCheck = await query(
-    'SELECT id FROM email_accounts WHERE id = $1 AND user_id = $2',
-    [accountId, req.session.userId]
-  );
-  if (!ownerCheck.rows.length) return res.status(404).json({ error: 'Account not found' });
+  const ownerCheck = await getAccessibleAccount(req.session.userId, accountId, { permission: 'read_send' });
+  if (!ownerCheck) return res.status(404).json({ error: 'Account not found' });
 
   try {
     const { rawMessage, account, meta } = await buildRawDraft({ accountId, aliasId, to, cc, bcc, subject, body, bodyIsHtml, quotedBody, quotedBodyHtml, editedSignature });
@@ -219,14 +217,11 @@ router.delete('/draft/:uid', async (req, res) => {
   const { accountId, folder } = req.query;
   if (!accountId || !folder) return res.status(400).json({ error: 'accountId and folder required' });
 
-  const ownerCheck = await query(
-    'SELECT * FROM email_accounts WHERE id = $1 AND user_id = $2',
-    [accountId, req.session.userId]
-  );
-  if (!ownerCheck.rows.length) return res.status(404).json({ error: 'Account not found' });
+  const ownerCheck = await getAccessibleAccount(req.session.userId, accountId, { permission: 'read_send' });
+  if (!ownerCheck) return res.status(404).json({ error: 'Account not found' });
 
   try {
-    const account = ownerCheck.rows[0];
+    const account = ownerCheck;
     if (!(await isDraftsPath(account, folder))) {
       return res.status(400).json({ error: 'Folder is not a Drafts folder' });
     }

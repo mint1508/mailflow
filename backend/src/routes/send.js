@@ -13,6 +13,7 @@ import { generateVCard } from '../utils/vcard.js';
 import { createAccountSmtpTransport } from '../services/smtpTransport.js';
 import { imapManager } from '../index.js';
 import { pluginRegistry } from '../plugins/registry.js';
+import { getAccessibleAccount, hasAccountAccess } from '../services/mailAccess.js';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -179,13 +180,13 @@ router.post('/send', async (req, res) => {
   }
   const normalizedSubject = sanitizeHeaderValue(subject || '');
 
-  const [result, prefResult] = await Promise.all([
-    query('SELECT * FROM email_accounts WHERE id = $1 AND user_id = $2', [accountId, req.session.userId]),
+  const [accessibleAccount, prefResult] = await Promise.all([
+    getAccessibleAccount(req.session.userId, accountId, { permission: 'read_send' }),
     query('SELECT preferences FROM users WHERE id = $1', [req.session.userId]),
   ]);
-  if (!result.rows.length) return res.status(404).json({ error: 'Account not found' });
+  if (!accessibleAccount) return res.status(404).json({ error: 'Account not found' });
   const plaintextEmail = prefResult.rows[0]?.preferences?.plaintextEmail === true;
-  let account = result.rows[0];
+  let account = accessibleAccount;
 
   // Resolve the From identity — account by default, alias if requested
   let fromName = account.sender_name || account.name;
@@ -224,11 +225,15 @@ router.post('/send', async (req, res) => {
       const distinctMsgIds = [...new Set(forwardedAttachments.map(fa => fa.messageId))];
       const msgRows = await query(
         `SELECT m.id, m.uid, m.folder, m.attachments, m.account_id FROM messages m
-         JOIN email_accounts a ON m.account_id = a.id
-         WHERE m.id = ANY($1::uuid[]) AND a.user_id = $2`,
-        [distinctMsgIds, req.session.userId]
+         WHERE m.id = ANY($1::uuid[])`,
+        [distinctMsgIds]
       );
-      const msgById = new Map(msgRows.rows.map(m => [m.id, m]));
+      const referencedAccountIds = [...new Set(msgRows.rows.map(message => message.account_id))];
+      const accessResults = await Promise.all(referencedAccountIds.map(accountId =>
+        hasAccountAccess(req.session.userId, accountId, { permission: 'read_send' })));
+      const accessibleAccountIds = new Set(referencedAccountIds.filter((_accountId, index) => accessResults[index]));
+      const accessibleMessages = msgRows.rows.filter(message => accessibleAccountIds.has(message.account_id));
+      const msgById = new Map(accessibleMessages.map(m => [m.id, m]));
 
       // Build the fetch plan (one entry per requested attachment, order preserved) and sum the
       // DECLARED sizes so an oversized batch is rejected BEFORE any IMAP fetch happens.
