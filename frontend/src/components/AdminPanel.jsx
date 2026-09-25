@@ -859,8 +859,12 @@ function AccountsTab() {
   };
 
   const handleCreateMailboxActivation = async (mailbox) => {
-    const contactEmail = activationEmailDraft[mailbox.email] || '';
+    const contactEmail = String(activationEmailDraft[mailbox.email] || '').trim();
     setProvisionNotice(null);
+    if (!contactEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) {
+      setProvisionNotice({ type: 'error', message: t('admin.cpanel.contactEmailInvalid') });
+      return;
+    }
     try {
       const result = await api.admin.cpanel.createMailboxActivation(mailbox.email, contactEmail);
       setActivationInfo({ email: mailbox.email, ...result.activation });
@@ -1519,7 +1523,7 @@ function AccountsTab() {
               </span>
               {mailbox.activation_status === 'unmanaged' && <div style={{ display: 'flex', gap: 5, flex: '1 1 240px', minWidth: 220 }}>
                 <input type="email" value={activationEmailDraft[mailbox.email] || ''} onChange={event => setActivationEmailDraft(current => ({ ...current, [mailbox.email]: event.target.value }))} placeholder={t('admin.cpanel.contactEmailPh')} style={{ ...inputStyle, padding: '5px 7px', fontSize: 11 }} />
-                <button type="button" onClick={() => handleCreateMailboxActivation(mailbox)} disabled={!activationEmailDraft[mailbox.email]?.includes('@')} style={{ padding: '5px 8px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--accent)', color: 'var(--accent-text)', fontSize: 11, whiteSpace: 'nowrap', cursor: 'pointer' }}>{t('admin.cpanel.sendActivation')}</button>
+                <button type="button" onClick={() => handleCreateMailboxActivation(mailbox)} style={{ padding: '5px 8px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--accent)', color: 'var(--accent-text)', fontSize: 11, whiteSpace: 'nowrap', cursor: 'pointer' }}>{t('admin.cpanel.sendActivation')}</button>
               </div>}
               <div style={{ display: 'flex', gap: 5 }}>
                 {quotaEditEmail !== mailbox.email && <IconBtn onClick={() => beginQuotaEdit(mailbox)} title={t('admin.accounts.editQuota')}>
@@ -1592,7 +1596,7 @@ function AccountsTab() {
               </div>}
               {cpanelMailbox?.activation_status === 'unmanaged' && <div style={{ display: 'flex', gap: 5, marginTop: 7, flexWrap: 'wrap' }}>
                 <input type="email" value={activationEmailDraft[cpanelMailbox.email] || ''} onChange={event => setActivationEmailDraft(current => ({ ...current, [cpanelMailbox.email]: event.target.value }))} placeholder={t('admin.cpanel.contactEmailPh')} style={{ ...inputStyle, padding: '5px 7px', fontSize: 11, flex: '1 1 190px' }} />
-                <button type="button" onClick={() => handleCreateMailboxActivation(cpanelMailbox)} disabled={!activationEmailDraft[cpanelMailbox.email]?.includes('@')} style={{ padding: '5px 8px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--accent)', color: 'var(--accent-text)', fontSize: 11, whiteSpace: 'nowrap', cursor: 'pointer' }}>{t('admin.cpanel.sendActivation')}</button>
+                <button type="button" onClick={() => handleCreateMailboxActivation(cpanelMailbox)} style={{ padding: '5px 8px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--accent)', color: 'var(--accent-text)', fontSize: 11, whiteSpace: 'nowrap', cursor: 'pointer' }}>{t('admin.cpanel.sendActivation')}</button>
               </div>}
             </div>
             <div style={{ display: 'flex', gap: 6, flexShrink: 0, marginLeft: 'auto' }}>
