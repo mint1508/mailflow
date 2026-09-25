@@ -20,9 +20,24 @@ import { safeFetch } from '../services/safeFetch.js';
 import { safeFilename, attachmentDisposition } from '../utils/contentDisposition.js';
 import { tokenize, extractFlagFeatures } from '../services/spamTokenizer.js';
 import { updateIncrementalForUser } from '../services/spamModelStore.js';
+import { getAccessibleAccountIds } from '../services/mailAccess.js';
 
 const router = Router();
 router.use(requireAuth);
+
+async function accessibleAccountRows(userId) {
+  const ids = await getAccessibleAccountIds(userId);
+  if (!ids.length) return [];
+  const { rows } = await query(
+    'SELECT id, include_in_unified_inbox FROM email_accounts WHERE id = ANY($1::uuid[]) AND enabled = true',
+    [ids]
+  );
+  return rows;
+}
+
+async function accessibleAccountIds(userId) {
+  return (await accessibleAccountRows(userId)).map(({ id }) => id);
+}
 
 // Whether an account-scoped plugin that maintains label sibling rows (currently GTD) is active for
 // this account — the modern replacement for the former email_accounts.gtd_enabled gate on the
@@ -196,7 +211,7 @@ router.get('/messages/:id', async (req, res) => {
       FROM messages m
       JOIN email_accounts a ON m.account_id = a.id
       WHERE m.id = $1
-        AND a.user_id = $2
+        AND (a.user_id = $2 OR EXISTS (SELECT 1 FROM mailbox_memberships mm WHERE mm.account_id = a.id AND mm.user_id = $2 AND mm.permission IN ('read', 'read_send') AND mm.revoked_at IS NULL))
         AND m.is_deleted = false
     `, [id, req.session.userId]);
     if (!result.rows.length) return res.status(404).json({ error: 'Message not found' });
@@ -239,7 +254,7 @@ router.get('/resolve-message', async (req, res) => {
       FROM messages m
       JOIN email_accounts a ON m.account_id = a.id
       WHERE m.message_id = $1
-        AND a.user_id = $2
+        AND (a.user_id = $2 OR EXISTS (SELECT 1 FROM mailbox_memberships mm WHERE mm.account_id = a.id AND mm.user_id = $2 AND mm.permission IN ('read', 'read_send') AND mm.revoked_at IS NULL))
         AND m.is_deleted = false
         AND ($3::uuid IS NULL OR m.account_id = $3)
       ORDER BY (m.folder = 'INBOX') DESC, m.date DESC NULLS LAST
@@ -252,7 +267,7 @@ router.get('/resolve-message', async (req, res) => {
         FROM messages m
         JOIN email_accounts a ON m.account_id = a.id
         WHERE m.id = $1
-          AND a.user_id = $2
+          AND (a.user_id = $2 OR EXISTS (SELECT 1 FROM mailbox_memberships mm WHERE mm.account_id = a.id AND mm.user_id = $2 AND mm.permission IN ('read', 'read_send') AND mm.revoked_at IS NULL))
           AND m.is_deleted = false
           AND ($3::uuid IS NULL OR m.account_id = $3)
       `, [ref, req.session.userId, accountId]);
@@ -286,13 +301,10 @@ router.get('/thread/:threadId', async (req, res) => {
   if (!threadId) return res.status(400).json({ error: 'threadId required' });
 
   try {
-    const accountsResult = await query(
-      'SELECT id, include_in_unified_inbox FROM email_accounts WHERE user_id = $1 AND enabled = true',
-      [req.session.userId]
-    );
+    const accountRows = await accessibleAccountRows(req.session.userId);
     const accountIds = req.query.unified === 'true'
-      ? resolveAccountScope(accountsResult.rows).accountIds
-      : accountsResult.rows.map(row => row.id);
+      ? resolveAccountScope(accountRows).accountIds
+      : accountRows.map(row => row.id);
     if (!accountIds.length) return res.json({ messages: [] });
 
     // Show all non-deleted messages in the thread regardless of folder. This includes
@@ -341,10 +353,12 @@ router.get('/thread/:threadId', async (req, res) => {
 
 // Counts are snapshots independently measured on the IMAP server, never cache tallies.
 router.get('/unread-counts', async (req, res) => {
+  const accountIds = await accessibleAccountIds(req.session.userId);
+  if (!accountIds.length) return res.json({ total: 0, byAccount: {}, snapshots: {}, complete: true });
   const result = await query(`SELECT a.id AS account_id, a.include_in_unified_inbox,
       f.server_unread_count AS count, f.server_total_count, f.server_counts_at, f.server_count_revision, f.status_attempt_revision, f.status_error
     FROM email_accounts a LEFT JOIN folders f ON f.account_id=a.id AND f.path='INBOX'
-    WHERE a.user_id=$1 AND a.enabled`, [req.session.userId]);
+    WHERE a.id = ANY($1::uuid[]) AND a.enabled`, [accountIds]);
   const byAccount = {}, snapshots = {};
   let total = 0, complete = true;
   for (const row of result.rows) {
@@ -387,10 +401,10 @@ router.get('/messages/:id/body', async (req, res) => {
   if (!UUID_RE.test(id)) return res.status(400).json({ error: 'Invalid message id' });
 
   const result = await query(`
-    SELECT m.*, a.user_id, u.preferences FROM messages m
+    SELECT m.*, a.user_id,
+           (SELECT preferences FROM users WHERE id = $2) AS preferences FROM messages m
     JOIN email_accounts a ON m.account_id = a.id
-    JOIN users u ON u.id = a.user_id
-    WHERE m.id = $1 AND a.user_id = $2
+    WHERE m.id = $1 AND (a.user_id = $2 OR EXISTS (SELECT 1 FROM mailbox_memberships mm WHERE mm.account_id = a.id AND mm.user_id = $2 AND mm.permission IN ('read', 'read_send') AND mm.revoked_at IS NULL))
   `, [id, req.session.userId]);
 
   if (!result.rows.length) return res.status(404).json({ error: 'Message not found' });
@@ -545,7 +559,7 @@ router.get('/messages/:id/headers', async (req, res) => {
   const result = await query(`
     SELECT m.*, a.user_id FROM messages m
     JOIN email_accounts a ON m.account_id = a.id
-    WHERE m.id = $1 AND a.user_id = $2
+    WHERE m.id = $1 AND (a.user_id = $2 OR EXISTS (SELECT 1 FROM mailbox_memberships mm WHERE mm.account_id = a.id AND mm.user_id = $2 AND mm.permission IN ('read', 'read_send') AND mm.revoked_at IS NULL))
   `, [id, req.session.userId]);
 
   if (!result.rows.length) return res.status(404).json({ error: 'Message not found' });
@@ -602,7 +616,7 @@ router.get('/messages/:id/attachments.zip', async (req, res) => {
   const result = await query(`
     SELECT m.*, a.user_id FROM messages m
     JOIN email_accounts a ON m.account_id = a.id
-    WHERE m.id = $1 AND a.user_id = $2
+    WHERE m.id = $1 AND (a.user_id = $2 OR EXISTS (SELECT 1 FROM mailbox_memberships mm WHERE mm.account_id = a.id AND mm.user_id = $2 AND mm.permission IN ('read', 'read_send') AND mm.revoked_at IS NULL))
   `, [id, req.session.userId]);
 
   if (!result.rows.length) return res.status(404).json({ error: 'Message not found' });
@@ -686,7 +700,7 @@ router.get('/messages/:id/attachments/:part', async (req, res) => {
   const result = await query(`
     SELECT m.*, a.user_id FROM messages m
     JOIN email_accounts a ON m.account_id = a.id
-    WHERE m.id = $1 AND a.user_id = $2
+    WHERE m.id = $1 AND (a.user_id = $2 OR EXISTS (SELECT 1 FROM mailbox_memberships mm WHERE mm.account_id = a.id AND mm.user_id = $2 AND mm.permission IN ('read', 'read_send') AND mm.revoked_at IS NULL))
   `, [id, req.session.userId]);
 
   if (!result.rows.length) return res.status(404).json({ error: 'Message not found' });
@@ -738,7 +752,7 @@ router.patch('/messages/:id/read', async (req, res) => {
            END AS sibling_count
     FROM messages m
     JOIN email_accounts a ON m.account_id = a.id
-    WHERE m.id = $1 AND a.user_id = $2
+    WHERE m.id = $1 AND (a.user_id = $2 OR EXISTS (SELECT 1 FROM mailbox_memberships mm WHERE mm.account_id = a.id AND mm.user_id = $2 AND mm.permission IN ('read', 'read_send') AND mm.revoked_at IS NULL))
   `, [id, req.session.userId]);
 
   if (!result.rows.length) return res.status(404).json({ error: 'Message not found' });
@@ -801,7 +815,7 @@ router.patch('/messages/:id/star', async (req, res) => {
            END AS sibling_count
     FROM messages m
     JOIN email_accounts a ON m.account_id = a.id
-    WHERE m.id = $1 AND a.user_id = $2
+    WHERE m.id = $1 AND (a.user_id = $2 OR EXISTS (SELECT 1 FROM mailbox_memberships mm WHERE mm.account_id = a.id AND mm.user_id = $2 AND mm.permission IN ('read', 'read_send') AND mm.revoked_at IS NULL))
   `, [id, req.session.userId]);
 
   if (!result.rows.length) return res.status(404).json({ error: 'Message not found' });
@@ -1108,7 +1122,7 @@ router.post('/messages/bulk-read', async (req, res) => {
     const result = await query(
       `SELECT m.id, m.uid, m.folder, m.is_read, m.account_id, m.message_id FROM messages m
        JOIN email_accounts a ON m.account_id = a.id
-       WHERE m.id = ANY($2::uuid[]) AND a.user_id = $1`,
+       WHERE m.id = ANY($2::uuid[]) AND (a.user_id = $1 OR EXISTS (SELECT 1 FROM mailbox_memberships mm WHERE mm.account_id = a.id AND mm.user_id = $1 AND mm.permission IN ('read', 'read_send') AND mm.revoked_at IS NULL))`,
       [req.session.userId, ids]
     );
 
@@ -1208,7 +1222,7 @@ router.post('/messages/bulk-delete', async (req, res) => {
     const result = await query(
       `SELECT m.*, a.user_id, a.folder_mappings FROM messages m
        JOIN email_accounts a ON m.account_id = a.id
-       WHERE m.id = ANY($2::uuid[]) AND a.user_id = $1`,
+       WHERE m.id = ANY($2::uuid[]) AND (a.user_id = $1 OR EXISTS (SELECT 1 FROM mailbox_memberships mm WHERE mm.account_id = a.id AND mm.user_id = $1 AND mm.permission IN ('read', 'read_send') AND mm.revoked_at IS NULL))`,
       [req.session.userId, ids]
     );
 
@@ -1479,7 +1493,7 @@ router.post('/messages/bulk-move', async (req, res) => {
     const result = await query(
       `SELECT m.*, a.user_id FROM messages m
        JOIN email_accounts a ON m.account_id = a.id
-       WHERE m.id = ANY($2::uuid[]) AND a.user_id = $1`,
+       WHERE m.id = ANY($2::uuid[]) AND (a.user_id = $1 OR EXISTS (SELECT 1 FROM mailbox_memberships mm WHERE mm.account_id = a.id AND mm.user_id = $1 AND mm.permission IN ('read', 'read_send') AND mm.revoked_at IS NULL))`,
       [req.session.userId, ids]
     );
 
@@ -1618,7 +1632,7 @@ router.post('/messages/bulk-archive', async (req, res) => {
     const result = await query(
       `SELECT m.*, a.user_id, a.folder_mappings FROM messages m
        JOIN email_accounts a ON m.account_id = a.id
-       WHERE m.id = ANY($2::uuid[]) AND a.user_id = $1`,
+       WHERE m.id = ANY($2::uuid[]) AND (a.user_id = $1 OR EXISTS (SELECT 1 FROM mailbox_memberships mm WHERE mm.account_id = a.id AND mm.user_id = $1 AND mm.permission IN ('read', 'read_send') AND mm.revoked_at IS NULL))`,
       [req.session.userId, ids]
     );
 
@@ -1870,7 +1884,7 @@ router.post('/messages/:id/snooze', async (req, res) => {
   const msgResult = await query(
     `SELECT m.*, a.user_id FROM messages m
      JOIN email_accounts a ON a.id = m.account_id
-     WHERE m.id = $1 AND a.user_id = $2`,
+     WHERE m.id = $1 AND (a.user_id = $2 OR EXISTS (SELECT 1 FROM mailbox_memberships mm WHERE mm.account_id = a.id AND mm.user_id = $2 AND mm.permission IN ('read', 'read_send') AND mm.revoked_at IS NULL))`,
     [id, req.session.userId]
   );
   if (!msgResult.rows.length) return res.status(404).json({ error: 'Message not found' });
@@ -1954,7 +1968,7 @@ router.delete('/messages/:id', async (req, res) => {
   const result = await query(`
     SELECT m.*, a.user_id FROM messages m
     JOIN email_accounts a ON m.account_id = a.id
-    WHERE m.id = $1 AND a.user_id = $2
+    WHERE m.id = $1 AND (a.user_id = $2 OR EXISTS (SELECT 1 FROM mailbox_memberships mm WHERE mm.account_id = a.id AND mm.user_id = $2 AND mm.permission IN ('read', 'read_send') AND mm.revoked_at IS NULL))
   `, [id, req.session.userId]);
 
   if (!result.rows.length) return res.status(404).json({ error: 'Message not found' });
@@ -2118,7 +2132,7 @@ async function moveForSpamLabel(messageId, userId, destinationFolder, label) {
   const result = await query(`
     SELECT m.*, a.user_id, a.folder_mappings FROM messages m
     JOIN email_accounts a ON m.account_id = a.id
-    WHERE m.id = $1 AND a.user_id = $2
+    WHERE m.id = $1 AND (a.user_id = $2 OR EXISTS (SELECT 1 FROM mailbox_memberships mm WHERE mm.account_id = a.id AND mm.user_id = $2 AND mm.permission IN ('read', 'read_send') AND mm.revoked_at IS NULL))
   `, [messageId, userId]);
 
   if (!result.rows.length) return { ok: false, status: 404, error: 'Message not found' };
@@ -2227,7 +2241,7 @@ router.post('/messages/:id/spam', async (req, res) => {
   const lookup = await query(`
     SELECT m.account_id, a.folder_mappings FROM messages m
     JOIN email_accounts a ON m.account_id = a.id
-    WHERE m.id = $1 AND a.user_id = $2
+    WHERE m.id = $1 AND (a.user_id = $2 OR EXISTS (SELECT 1 FROM mailbox_memberships mm WHERE mm.account_id = a.id AND mm.user_id = $2 AND mm.permission IN ('read', 'read_send') AND mm.revoked_at IS NULL))
   `, [id, req.session.userId]);
 
   if (!lookup.rows.length) return res.status(404).json({ error: 'Message not found' });
@@ -2249,11 +2263,8 @@ router.get('/category-counts', async (req, res) => {
     return res.status(400).json({ error: 'Invalid account id' });
   }
 
-  const accountsResult = await query(
-    'SELECT id, include_in_unified_inbox FROM email_accounts WHERE user_id = $1 AND enabled = true',
-    [req.session.userId]
-  );
-  const { accountIds: scopedIds } = resolveAccountScope(accountsResult.rows, accountId);
+  const accountRows = await accessibleAccountRows(req.session.userId);
+  const { accountIds: scopedIds } = resolveAccountScope(accountRows, accountId);
   if (!scopedIds.length) return res.json({ counts: {} });
 
   const result = await query(`
@@ -2291,7 +2302,7 @@ router.patch('/messages/:id/category', async (req, res) => {
      FROM email_accounts a
      WHERE messages.id = $2
        AND messages.account_id = a.id
-       AND a.user_id = $3
+       AND (a.user_id = $3 OR EXISTS (SELECT 1 FROM mailbox_memberships mm WHERE mm.account_id = a.id AND mm.user_id = $3 AND mm.permission IN ('read', 'read_send') AND mm.revoked_at IS NULL))
      RETURNING messages.id`,
     [category === 'primary' ? null : category, id, req.session.userId]
   );
@@ -2310,7 +2321,7 @@ router.post('/messages/:id/unsubscribe', async (req, res) => {
     SELECT m.list_unsubscribe, m.list_unsubscribe_post
     FROM messages m
     JOIN email_accounts a ON m.account_id = a.id
-    WHERE m.id = $1 AND a.user_id = $2 AND m.is_deleted = false
+    WHERE m.id = $1 AND (a.user_id = $2 OR EXISTS (SELECT 1 FROM mailbox_memberships mm WHERE mm.account_id = a.id AND mm.user_id = $2 AND mm.permission IN ('read', 'read_send') AND mm.revoked_at IS NULL)) AND m.is_deleted = false
   `, [id, req.session.userId]);
 
   if (!result.rows.length) return res.status(404).json({ error: 'Message not found' });
@@ -2381,7 +2392,7 @@ router.post('/messages/:id/ham', async (req, res) => {
   const lookup = await query(`
     SELECT m.account_id, m.folder, a.folder_mappings FROM messages m
     JOIN email_accounts a ON m.account_id = a.id
-    WHERE m.id = $1 AND a.user_id = $2
+    WHERE m.id = $1 AND (a.user_id = $2 OR EXISTS (SELECT 1 FROM mailbox_memberships mm WHERE mm.account_id = a.id AND mm.user_id = $2 AND mm.permission IN ('read', 'read_send') AND mm.revoked_at IS NULL))
   `, [id, req.session.userId]);
 
   if (!lookup.rows.length) return res.status(404).json({ error: 'Message not found' });

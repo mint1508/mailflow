@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { query } from '../services/db.js';
 import { requireAuth } from '../middleware/auth.js';
 import { resolveAccountScope } from '../services/unifiedInbox.js';
+import { getAccessibleAccountIds } from '../services/mailAccess.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -130,10 +131,11 @@ router.get('/', searchLimiter, async (req, res) => {
   if (!trimmed) return res.json({ messages: [] });
   if (trimmed.length > 500) return res.status(400).json({ error: 'Search query too long' });
 
-  const accountsResult = await query(
-    'SELECT id, include_in_unified_inbox FROM email_accounts WHERE user_id = $1 AND enabled = true',
-    [req.session.userId]
-  );
+  const accessibleIds = await getAccessibleAccountIds(req.session.userId);
+  const accountsResult = accessibleIds.length ? await query(
+    'SELECT id, include_in_unified_inbox FROM email_accounts WHERE id = ANY($1::uuid[]) AND enabled = true',
+    [accessibleIds]
+  ) : { rows: [] };
   const { accountIds: targetIds } = resolveAccountScope(accountsResult.rows, accountId);
   if (!targetIds.length) return res.json({ messages: [] });
 
@@ -270,10 +272,11 @@ router.get('/contacts', searchLimiter, async (req, res) => {
   if (!trimmed || trimmed.length < 2) return res.json({ contacts: [] });
   if (trimmed.length > 100) return res.status(400).json({ error: 'Query too long' });
 
-  const accountsResult = await query(
-    'SELECT id FROM email_accounts WHERE user_id = $1 AND enabled = true',
-    [req.session.userId]
-  );
+  const accessibleIds = await getAccessibleAccountIds(req.session.userId);
+  const accountsResult = accessibleIds.length ? await query(
+    'SELECT id FROM email_accounts WHERE id = ANY($1::uuid[]) AND enabled = true',
+    [accessibleIds]
+  ) : { rows: [] };
   const userAccountIds = accountsResult.rows.map(r => r.id);
   if (!userAccountIds.length) return res.json({ contacts: [] });
 
