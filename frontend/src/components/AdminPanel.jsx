@@ -873,6 +873,7 @@ function AccountsTab() {
       confirmLabel: t('common.delete'),
       onConfirm: async () => {
         await api.admin.cpanel.deleteMailbox(mailbox.email);
+        setCpanelMailboxes(current => current.filter(item => item.email?.toLowerCase() !== mailbox.email.toLowerCase()));
         const linked = accounts.find(account => account.email_address?.toLowerCase() === mailbox.email.toLowerCase());
         if (linked) {
           await api.deleteAccount(linked.id).catch(() => {});

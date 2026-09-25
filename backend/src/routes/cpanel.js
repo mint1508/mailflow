@@ -185,6 +185,9 @@ router.post('/mailboxes/:email/unsuspend', async (req, res) => {
 router.delete('/mailboxes/:email', async (req, res) => {
   try {
     const result = await deleteCpanelMailbox(req.params.email);
+    // The provider is authoritative for deletion; remove the local projection
+    // only after cPanel confirms success so a failed mutation remains visible.
+    await query('DELETE FROM cpanel_mailboxes WHERE email = $1', [result.email]);
     await audit(req.session.userId, 'mailbox_deleted', true, { email: result.email });
     res.json({ ok: true, mailbox: result });
   } catch (error) {
