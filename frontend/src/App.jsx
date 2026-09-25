@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useStore } from './store/index.js';
 import { api } from './utils/api.js';
 import { applyTheme, getInitialTheme } from './themes.js';
@@ -58,7 +59,7 @@ export default function App() {
 
     api.me()
       .then(async (data) => {
-        setUser(data.user);
+        setUser(data.user ? { ...data.user, impersonation: data.impersonation || data.user.impersonation || null } : null);
         // Server is authoritative for the screen lock (#235). Reconcile the overlay:
         // show it if the session is locked; clear a stale client lock otherwise. Skip
         // loading prefs while locked (the API is 423'd until unlock).
@@ -108,7 +109,60 @@ export default function App() {
     <Routes>
       <Route path="/login" element={user ? <Navigate to="/" replace /> : <LoginPage />} />
       <Route path="/register" element={user ? <Navigate to="/" replace /> : <LoginPage />} />
-      <Route path="/*" element={user ? (isLocked ? <LockScreen /> : <MailApp />) : <Navigate to="/login" replace />} />
+      <Route path="/*" element={user ? (isLocked ? <LockScreen /> : <><MailApp /><ImpersonationBanner impersonation={user.impersonation} /></>) : <Navigate to="/login" replace />} />
     </Routes>
+  );
+}
+
+function ImpersonationBanner({ impersonation }) {
+  const { t } = useTranslation();
+  const [, setTick] = useState(0);
+  const [stopping, setStopping] = useState(false);
+
+  useEffect(() => {
+    if (!impersonation?.expiresAt) return undefined;
+    const timer = setInterval(() => setTick(value => value + 1), 1000);
+    return () => clearInterval(timer);
+  }, [impersonation?.expiresAt]);
+
+  if (!impersonation) return null;
+  const remainingMs = Math.max(0, new Date(impersonation.expiresAt).getTime() - Date.now());
+  const remainingMinutes = Math.floor(remainingMs / 60000);
+  const remainingSeconds = Math.floor((remainingMs % 60000) / 1000);
+  const countdown = `${remainingMinutes}:${String(remainingSeconds).padStart(2, '0')}`;
+
+  const stop = async () => {
+    setStopping(true);
+    try {
+      await api.stopImpersonation();
+      window.location.assign('/');
+    } catch (error) {
+      console.error('Failed to stop impersonation', error);
+      setStopping(false);
+    }
+  };
+
+  return (
+    <div role="status" style={{
+      position: 'fixed', top: 10, left: '50%', transform: 'translateX(-50%)', zIndex: 10000,
+      display: 'flex', alignItems: 'center', gap: 10, maxWidth: 'calc(100vw - 24px)',
+      padding: '8px 10px 8px 14px', borderRadius: 999,
+      background: '#b45309', color: '#fff', boxShadow: '0 8px 28px rgba(0,0,0,0.32)',
+      fontSize: 12, fontWeight: 600,
+    }}>
+      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {t('admin.users.impersonationBanner', { username: impersonation.targetUsername })}
+      </span>
+      <span aria-label={t('admin.users.impersonationTimeRemaining')} style={{ fontVariantNumeric: 'tabular-nums', opacity: 0.9 }}>
+        {countdown}
+      </span>
+      <button type="button" onClick={stop} disabled={stopping} style={{
+        padding: '5px 10px', border: '1px solid rgba(255,255,255,0.45)', borderRadius: 999,
+        background: 'rgba(255,255,255,0.15)', color: '#fff', cursor: stopping ? 'wait' : 'pointer',
+        fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap',
+      }}>
+        {stopping ? t('common.loading') : t('admin.users.exitImpersonation')}
+      </button>
+    </div>
   );
 }

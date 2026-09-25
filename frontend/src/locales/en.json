@@ -1164,7 +1164,16 @@
       "deleteConfirmLabel": "Delete user",
       "disable2faConfirmTitle": "Disable 2FA for \"{{username}}\"?",
       "disable2faConfirmBody": "This will remove their authenticator app requirement. They can re-enable it themselves.",
-      "disable2faConfirmLabel": "Disable 2FA"
+      "disable2faConfirmLabel": "Disable 2FA",
+      "loginAs": "Login as",
+      "loginAsTitle": "Login as \"{{username}}\"?",
+      "loginAsDescription": "Confirm your administrator credentials. This support session is temporary and all actions remain attributable to you.",
+      "yourPassword": "Your admin password",
+      "yourTotp": "Authenticator code (if enabled)",
+      "startImpersonation": "Start session",
+      "impersonationBanner": "Viewing as {{username}}",
+      "impersonationTimeRemaining": "Time remaining",
+      "exitImpersonation": "Exit"
     },
     "ai": {
       "title": "AI Assistant",

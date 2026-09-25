@@ -5558,6 +5558,7 @@ function UsersAndInvitesPanel() {
   const [copiedId, setCopiedId] = useState(null);
   const [copyFailedId, setCopyFailedId] = useState(null);
   const [confirmDialog, setConfirmDialog] = useState(null);
+  const [impersonateUser, setImpersonateUser] = useState(null);
 
   useEffect(() => {
     Promise.all([
@@ -5633,6 +5634,11 @@ function UsersAndInvitesPanel() {
         setUsers(us => us.map(x => x.id === u.id ? { ...x, totpEnabled: false } : x));
       },
     });
+  };
+
+  const handleImpersonate = async ({ password, totpCode }) => {
+    await api.admin.impersonateUser(impersonateUser.id, password, totpCode);
+    window.location.assign('/');
   };
 
   const handleToggleReg = async () => {
@@ -5748,6 +5754,17 @@ function UsersAndInvitesPanel() {
 
             {u.id !== currentUser?.id && (
               <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
+                <button
+                  onClick={() => setImpersonateUser(u)}
+                  title={t('admin.users.loginAs')}
+                  style={{
+                    padding: '5px 10px', borderRadius: 6, fontSize: 11, fontWeight: 500,
+                    border: '1px solid var(--border)', background: 'transparent',
+                    color: 'var(--text-primary)', cursor: 'pointer',
+                  }}
+                >
+                  {t('admin.users.loginAs')}
+                </button>
                 <button
                   onClick={() => handleToggleAdmin(u)}
                   title={u.isAdmin ? t('admin.users.removeAdmin') : t('admin.users.makeAdmin')}
@@ -6025,8 +6042,74 @@ function UsersAndInvitesPanel() {
         </button>
       )}
       <ConfirmOverlay dialog={confirmDialog} onClose={() => setConfirmDialog(null)} />
+      <ImpersonationDialog
+        user={impersonateUser}
+        onClose={() => setImpersonateUser(null)}
+        onConfirm={handleImpersonate}
+      />
     </div>
     </>
+  );
+}
+
+function ImpersonationDialog({ user, onClose, onConfirm }) {
+  const { t } = useTranslation();
+  const [password, setPassword] = useState('');
+  const [totpCode, setTotpCode] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    setPassword('');
+    setTotpCode('');
+    setBusy(false);
+    setError('');
+  }, [user]);
+
+  if (!user) return null;
+  const submit = async (event) => {
+    event.preventDefault();
+    setBusy(true);
+    setError('');
+    try {
+      await onConfirm({ password, totpCode: totpCode.trim() || undefined });
+    } catch (err) {
+      setError(err?.message || String(err));
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div onClick={busy ? undefined : onClose} style={{
+      position: 'fixed', inset: 0, zIndex: 9200, padding: 24,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+    }}>
+      <form onSubmit={submit} onClick={event => event.stopPropagation()} style={{
+        width: '100%', maxWidth: 390, padding: 24, borderRadius: 12,
+        background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', boxShadow: 'var(--shadow-modal)',
+      }}>
+        <div style={{ fontSize: 15, fontWeight: 650, color: 'var(--text-primary)', marginBottom: 7 }}>
+          {t('admin.users.loginAsTitle', { username: user.username })}
+        </div>
+        <div style={{ fontSize: 12, lineHeight: 1.5, color: 'var(--text-secondary)', marginBottom: 18 }}>
+          {t('admin.users.loginAsDescription')}
+        </div>
+        <Field label={t('admin.users.yourPassword')} required>
+          <input autoFocus type="password" autoComplete="current-password" value={password} onChange={event => setPassword(event.target.value)} style={inputStyle} />
+        </Field>
+        <Field label={t('admin.users.yourTotp')}>
+          <input inputMode="numeric" autoComplete="one-time-code" value={totpCode} onChange={event => setTotpCode(event.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="000000" style={inputStyle} />
+        </Field>
+        {error && <div style={{ marginBottom: 14, color: 'var(--red)', fontSize: 12 }}>{error}</div>}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <button type="button" onClick={onClose} disabled={busy} style={{ padding: '8px 14px', borderRadius: 7, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)' }}>{t('common.cancel')}</button>
+          <button type="submit" disabled={busy || !password} style={{ padding: '8px 14px', borderRadius: 7, border: 'none', background: '#b45309', color: '#fff', fontWeight: 600, opacity: busy || !password ? 0.55 : 1, cursor: busy ? 'wait' : 'pointer' }}>
+            {busy ? t('common.loading') : t('admin.users.startImpersonation')}
+          </button>
+        </div>
+      </form>
+    </div>
   );
 }
 

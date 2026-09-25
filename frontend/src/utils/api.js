@@ -145,6 +145,7 @@ export const api = {
   me: () => request('GET', '/auth/me'),
   forgotPassword: (email) => request('POST', '/auth/forgot-password', { email }),
   resetPassword: (token, password) => request('POST', '/auth/reset-password', { token, password }),
+  stopImpersonation: () => request('POST', '/auth/impersonation/stop'),
   getPreferences: () => request('GET', '/auth/preferences'),
   savePreferences: (prefs) => request('PATCH', '/auth/preferences', prefs),
   // The same write, but issued while the page is going away. keepalive lets the browser
@@ -188,6 +189,7 @@ export const api = {
     updateUser: (id, data) => request('PATCH', `/admin/users/${id}`, data),
     deleteUser: (id) => request('DELETE', `/admin/users/${id}`),
     disableUserTotp: (id) => request('POST', `/admin/users/${id}/totp/disable`),
+    impersonateUser: (id, password, totpCode) => request('POST', `/admin/users/${id}/impersonate`, { password, totpCode }),
     getSettings: () => request('GET', '/admin/settings'),
     updateSettings: (data) => request('PATCH', '/admin/settings', data),
     getInvites: (params) => request('GET', '/admin/invites' + (params ? '?' + new URLSearchParams(params) : '')),
