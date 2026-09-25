@@ -48,6 +48,7 @@ import { ImapManager } from './services/imapManager.js';
 import { getUpdateStatus } from './services/updateCheck.js';
 import { recordHttp } from './services/performanceMetrics.js';
 import { readSchemaVersion } from './services/versionInfo.js';
+import { startCpanelTokenMonitor } from './services/cpanelClient.js';
 
 const packageMeta = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf-8'));
 let buildMeta = {};
@@ -285,6 +286,9 @@ startCardavScheduler();
 
 // Nightly anti-spam model retrains, staggered per-user across 24h.
 startSpamScheduler();
+
+// Refresh cPanel API token metadata at startup and every 12 hours.
+startCpanelTokenMonitor();
 
 // Re-connect all enabled IMAP accounts on startup with bounded concurrency so a
 // large user base doesn't hammer IMAP servers and the DB connection pool at once.

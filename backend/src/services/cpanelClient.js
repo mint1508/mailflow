@@ -5,7 +5,9 @@ import { validateHost } from './hostValidation.js';
 import { safeFetch } from './safeFetch.js';
 
 export const CPANEL_SETTINGS_KEY = 'cpanel_connector';
+export const CPANEL_TOKEN_INVENTORY_KEY = 'cpanel_token_inventory';
 export const CPANEL_DEFAULT_PORT = 2083;
+export const CPANEL_TOKEN_CHECK_INTERVAL_MS = 12 * 60 * 60 * 1000;
 const REQUEST_TIMEOUT_MS = 15_000;
 const DEFAULT_MAX_MAILBOXES = 15;
 const DEFAULT_MAX_QUOTA_MB = 10 * 1024;
@@ -61,6 +63,28 @@ function assertTokenNotExpired(tokenExpiresAt) {
   if (Number.isFinite(expiresAt) && Date.now() > expiresAt) {
     throw new Error(`cPanel API token expired on ${tokenExpiresAt}. Create a new token in cPanel and update the connector.`);
   }
+}
+
+function epochToIso(value) {
+  const epoch = Number(value);
+  if (!Number.isFinite(epoch) || epoch <= 0) return null;
+  const date = new Date(epoch * 1000);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+export function normalizeCpanelToken(row) {
+  if (!row || typeof row !== 'object') return null;
+  const name = String(row.name || '').trim();
+  if (!name) return null;
+  const expiresAt = epochToIso(row.expires_at);
+  return {
+    name,
+    createdAt: epochToIso(row.create_time),
+    expiresAt,
+    expired: !!expiresAt && new Date(expiresAt).getTime() <= Date.now(),
+    readonly: Number(row.readonly) === 1,
+    hasFullAccess: Number(row.has_full_access) === 1,
+  };
 }
 
 export function getCpanelTokenStatus(tokenExpiresAt, now = new Date()) {
@@ -170,16 +194,16 @@ export async function saveCpanelConfig(input, { existingConfig = null } = {}) {
   return { ...normalized, tokenExpiresAt, tokenPresent: true, token: undefined, updatedAt: stored.updatedAt };
 }
 
-async function resolveCpanelConfig(configInput) {
+async function resolveCpanelConfig(configInput, { allowExpired = false } = {}) {
   if (!configInput?.host) {
     const saved = await getCpanelConfig({ includeToken: true });
-    assertTokenNotExpired(saved?.tokenExpiresAt);
+    if (!allowExpired) assertTokenNotExpired(saved?.tokenExpiresAt);
     return saved;
   }
 
   const normalized = await normalizeCpanelConfig(configInput, { tokenRequired: false });
   if (normalized.token) {
-    assertTokenNotExpired(normalized.tokenExpiresAt);
+    if (!allowExpired) assertTokenNotExpired(normalized.tokenExpiresAt);
     return normalized;
   }
 
@@ -187,7 +211,7 @@ async function resolveCpanelConfig(configInput) {
   if (!saved || !sameEndpoint(normalized, saved)) {
     throw new Error('A new cPanel API token is required when the connection target changes');
   }
-  assertTokenNotExpired(saved.tokenExpiresAt);
+  if (!allowExpired) assertTokenNotExpired(saved.tokenExpiresAt);
   return { ...normalized, token: saved.token, tokenExpiresAt: saved.tokenExpiresAt };
 }
 
@@ -298,9 +322,13 @@ export function normalizeCpanelApiError(body, { httpStatus = null, token = '' } 
 }
 
 async function cpanelRequest(config, functionName, params = {}) {
-  assertTokenNotExpired(config?.tokenExpiresAt);
-  const url = new URL(`https://${config.host}:${config.port}/execute/Email/${functionName}`);
-  url.searchParams.set('api.version', '1');
+  return cpanelUapiRequest(config, 'Email', functionName, params);
+}
+
+async function cpanelUapiRequest(config, moduleName, functionName, params = {}, { allowExpired = false, apiVersion = '1' } = {}) {
+  if (!allowExpired) assertTokenNotExpired(config?.tokenExpiresAt);
+  const url = new URL(`https://${config.host}:${config.port}/execute/${moduleName}/${functionName}`);
+  url.searchParams.set('api.version', apiVersion);
   for (const [key, value] of Object.entries(params)) {
     if (value !== undefined && value !== null && value !== '') url.searchParams.set(key, String(value));
   }
@@ -339,6 +367,67 @@ async function cpanelRequest(config, functionName, params = {}) {
   } finally {
     clearTimeout(timer);
   }
+}
+
+export async function listCpanelApiTokens(configInput) {
+  const config = await resolveCpanelConfig(configInput, { allowExpired: true });
+  if (!config) throw new Error('cPanel connector is not configured');
+  const result = await cpanelUapiRequest(config, 'Tokens', 'list', {}, { allowExpired: true, apiVersion: '3' });
+  const rows = Array.isArray(result.data) ? result.data : [];
+  return rows.map(normalizeCpanelToken).filter(Boolean);
+}
+
+async function saveCpanelTokenInventory(inventory) {
+  await query(
+    `INSERT INTO system_settings (key, value, updated_at)
+     VALUES ($1, $2, NOW())
+     ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = NOW()`,
+    [CPANEL_TOKEN_INVENTORY_KEY, JSON.stringify(inventory)],
+  );
+  return inventory;
+}
+
+export async function getCpanelTokenInventory() {
+  const result = await query('SELECT value FROM system_settings WHERE key = $1', [CPANEL_TOKEN_INVENTORY_KEY]);
+  if (!result.rows.length) return { checkedAt: null, ok: false, tokens: [], error: null };
+  try {
+    const stored = JSON.parse(result.rows[0].value);
+    return {
+      checkedAt: stored.checkedAt || null,
+      ok: stored.ok === true,
+      tokens: Array.isArray(stored.tokens) ? stored.tokens : [],
+      error: stored.error || null,
+    };
+  } catch {
+    return { checkedAt: null, ok: false, tokens: [], error: 'Stored cPanel token inventory is corrupted' };
+  }
+}
+
+export async function checkCpanelTokenInventory() {
+  const checkedAt = new Date().toISOString();
+  try {
+    const config = await getCpanelConfig({ includeToken: true });
+    if (!config) {
+      return saveCpanelTokenInventory({ checkedAt, ok: false, tokens: [], error: 'cPanel connector is not configured' });
+    }
+    const tokens = await listCpanelApiTokens(config);
+    return saveCpanelTokenInventory({ checkedAt, ok: true, tokens, error: null });
+  } catch (error) {
+    return saveCpanelTokenInventory({
+      checkedAt,
+      ok: false,
+      tokens: [],
+      error: String(error?.message || 'Unable to check cPanel API tokens').slice(0, MAX_CPANEL_ERROR_LENGTH),
+    });
+  }
+}
+
+export function startCpanelTokenMonitor() {
+  const run = () => checkCpanelTokenInventory().catch(error => console.warn('cPanel token inventory check failed:', error.message));
+  run();
+  const timer = setInterval(run, CPANEL_TOKEN_CHECK_INTERVAL_MS);
+  timer.unref?.();
+  return timer;
 }
 
 async function getProvisioningContext() {

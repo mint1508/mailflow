@@ -97,7 +97,7 @@ router.delete('/users/:id', async (req, res) => {
 router.get('/settings', async (req, res) => {
   const result = await query('SELECT key, value FROM system_settings');
   const settings = {};
-  const sensitiveKeys = new Set(['cpanel_connector', 'system_email_config']);
+  const sensitiveKeys = new Set(['cpanel_connector', 'cpanel_token_inventory', 'system_email_config']);
   for (const row of result.rows) {
     if (!sensitiveKeys.has(row.key)) settings[row.key] = row.value;
   }

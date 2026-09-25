@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { generateMailboxPassword, getCpanelTokenStatus, normalizeBulkMailboxInput, normalizeCpanelApiError, normalizeCpanelConfig, normalizeMailbox } from './cpanelClient.js';
+import { generateMailboxPassword, getCpanelTokenStatus, normalizeBulkMailboxInput, normalizeCpanelApiError, normalizeCpanelConfig, normalizeCpanelToken, normalizeMailbox } from './cpanelClient.js';
 
 describe('cPanel mailbox normalization', () => {
   it('normalizes the list_pops_with_disk shape', () => {
@@ -93,6 +93,24 @@ describe('cPanel API error normalization', () => {
 });
 
 describe('cPanel API token expiry', () => {
+  it('normalizes token inventory metadata without exposing token secrets', () => {
+    expect(normalizeCpanelToken({
+      name: 'mailflow',
+      create_time: 1609372800,
+      expires_at: null,
+      readonly: 1,
+      has_full_access: 1,
+      token: 'must-not-be-returned',
+    })).toEqual({
+      name: 'mailflow',
+      createdAt: '2020-12-31T00:00:00.000Z',
+      expiresAt: null,
+      expired: false,
+      readonly: true,
+      hasFullAccess: true,
+    });
+  });
+
   it('normalizes a date-only expiry and reports the remaining window', async () => {
     await expect(normalizeCpanelConfig({
       host: 'mail.example.com',

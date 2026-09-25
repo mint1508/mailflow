@@ -9032,6 +9032,7 @@ function CpanelTab() {
   const { t } = useTranslation();
   const [form, setForm] = useState({ host: '', port: 2083, username: '', domain: '', token: '', tokenExpiresAt: '' });
   const [config, setConfig] = useState(null);
+  const [tokenInventory, setTokenInventory] = useState({ checkedAt: null, ok: false, tokens: [], error: null });
   const [mailboxes, setMailboxes] = useState([]);
   const [limits, setLimits] = useState({ maxMailboxes: 15, maxQuotaMb: 10240 });
   const [loading, setLoading] = useState(true);
@@ -9051,6 +9052,8 @@ function CpanelTab() {
       }
       setMailboxes(inventory.mailboxes || []);
       if (inventory.limits) setLimits(inventory.limits);
+      const tokenResult = await api.admin.cpanel.getTokenInventory();
+      setTokenInventory(tokenResult.inventory || { checkedAt: null, ok: false, tokens: [], error: null });
     } catch (error) {
       setNotice({ type: 'error', message: error.message });
     } finally {
@@ -9083,6 +9086,24 @@ function CpanelTab() {
     try {
       const result = await api.admin.cpanel.testConnection({ ...form, token: form.token || undefined });
       setNotice({ type: 'success', message: t('admin.cpanel.testOk', { count: result.mailboxCount }) });
+    } catch (error) {
+      setNotice({ type: 'error', message: error.message });
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const checkTokens = async () => {
+    setBusy('tokens');
+    setNotice(null);
+    try {
+      const result = await api.admin.cpanel.checkTokenInventory();
+      setTokenInventory(result.inventory || { checkedAt: null, ok: false, tokens: [], error: null });
+      if (result.inventory?.ok) {
+        setNotice({ type: 'success', message: t('admin.cpanel.tokenInventoryCheckOk', { count: result.inventory.tokens.length }) });
+      } else {
+        setNotice({ type: 'error', message: result.inventory?.error || t('admin.cpanel.tokenInventoryCheckFailed') });
+      }
     } catch (error) {
       setNotice({ type: 'error', message: error.message });
     } finally {
@@ -9174,6 +9195,36 @@ function CpanelTab() {
           </button>
         </div>
         {notice && <div style={{ marginTop: 12, fontSize: 12, color: notice.type === 'error' ? 'var(--red)' : 'var(--green)' }}>{notice.message}</div>}
+      </div>
+
+      <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 12, padding: 16, marginBottom: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 8 }}>
+          <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)' }}>{t('admin.cpanel.tokenInventoryTitle')}</div>
+          <button onClick={checkTokens} disabled={!!busy || !config?.configured} style={{ padding: '7px 11px', background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: 7, cursor: busy ? 'wait' : 'pointer', fontSize: 12 }}>
+            {busy === 'tokens' ? t('admin.cpanel.tokenInventoryChecking') : t('admin.cpanel.tokenInventoryCheck')}
+          </button>
+        </div>
+        <div style={{ fontSize: 11, color: 'var(--text-tertiary)', lineHeight: 1.5, marginBottom: 10 }}>{t('admin.cpanel.tokenInventoryHint')}</div>
+        {tokenInventory.checkedAt && <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 10 }}>{t('admin.cpanel.tokenInventoryLastChecked', { date: new Date(tokenInventory.checkedAt).toLocaleString() })}</div>}
+        {tokenInventory.error && <div style={{ fontSize: 12, color: 'var(--red)', marginBottom: 10 }}>{tokenInventory.error}</div>}
+        {tokenInventory.tokens.length > 0 && (
+          <div style={{ overflowX: 'auto', border: '1px solid var(--border-subtle)', borderRadius: 8 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <thead><tr style={{ borderBottom: '1px solid var(--border)' }}>
+                {[t('admin.cpanel.tokenInventoryName'), t('admin.cpanel.tokenInventoryCreated'), t('admin.cpanel.tokenInventoryExpires'), t('admin.cpanel.tokenInventoryStatus')].map(label => <th key={label} style={{ textAlign: 'left', padding: '8px 10px', color: 'var(--text-tertiary)', fontWeight: 500 }}>{label}</th>)}
+              </tr></thead>
+              <tbody>{tokenInventory.tokens.map(token => (
+                <tr key={token.name} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                  <td style={{ padding: '9px 10px', color: 'var(--text-primary)' }}>{token.name}</td>
+                  <td style={{ padding: '9px 10px', color: 'var(--text-secondary)' }}>{token.createdAt ? new Date(token.createdAt).toLocaleString() : '—'}</td>
+                  <td style={{ padding: '9px 10px', color: token.expired ? 'var(--red)' : 'var(--text-secondary)' }}>{token.expiresAt ? new Date(token.expiresAt).toLocaleString() : t('admin.cpanel.tokenInventoryNever')}</td>
+                  <td style={{ padding: '9px 10px', color: token.expired ? 'var(--red)' : 'var(--green)' }}>{token.expired ? t('admin.cpanel.tokenInventoryExpired') : token.readonly ? t('admin.cpanel.tokenInventoryReadOnly') : t('admin.cpanel.tokenInventoryActive')}</td>
+                </tr>
+              ))}</tbody>
+            </table>
+          </div>
+        )}
+        {!tokenInventory.error && tokenInventory.checkedAt && tokenInventory.tokens.length === 0 && <div style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>{t('admin.cpanel.tokenInventoryEmpty')}</div>}
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 10 }}>

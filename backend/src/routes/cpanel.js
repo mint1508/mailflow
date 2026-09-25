@@ -14,6 +14,8 @@ import {
   deleteCpanelMailbox,
   getCpanelLimits,
   getCpanelTokenStatus,
+  getCpanelTokenInventory,
+  checkCpanelTokenInventory,
 } from '../services/cpanelClient.js';
 
 const router = Router();
@@ -84,6 +86,19 @@ router.post('/connection/test', requireAdmin, async (req, res) => {
     await audit(req.session.userId, 'connection_test', false, { error: error.message });
     res.status(400).json({ error: error.message });
   }
+});
+
+router.get('/connection/tokens', requireAdmin, async (_req, res) => {
+  res.json({ inventory: await getCpanelTokenInventory() });
+});
+
+router.post('/connection/tokens/check', requireAdmin, async (req, res) => {
+  const inventory = await checkCpanelTokenInventory();
+  await audit(req.session.userId, 'token_inventory_check', inventory.ok, {
+    tokenCount: inventory.tokens.length,
+    error: inventory.error || undefined,
+  });
+  res.json({ inventory });
 });
 
 router.get('/mailboxes', async (_req, res) => {
