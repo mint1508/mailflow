@@ -760,7 +760,6 @@
     },
     "accounts": {
       "title": "Konta pocztowe",
-      "addButton": "Dodaj konto",
       "empty": "Nie dodano jeszcze kont",
       "connected": "Połączono",
       "folderMappings": "Mapowania folderów",
@@ -845,7 +844,17 @@
       "mailboxInventoryTitle": "Zarządzane konta e-mail",
       "passwordReset": "Wygenerowano nowe hasło. Skopiuj je lub udostępnij teraz; MailFlow nie pokaże go ponownie.",
       "pendingLink": "Wymaga aktywacji",
-      "resetPassword": "Wygeneruj nowe hasło"
+      "resetPassword": "Wygeneruj nowe hasło",
+      "quotaMailboxCount": "Używane skrzynki",
+      "quotaPercent": "{{percent}}% limitu skrzynek",
+      "quotaAssigned": "Przydzielony limit",
+      "quotaLimitPerMailbox": "Maksymalnie {{max}} na skrzynkę",
+      "quotaDiskUsed": "Użyte miejsce",
+      "quotaUsedPercent": "{{percent}}% przydzielonego limitu",
+      "quotaUsedShort": "użyto",
+      "editQuota": "Edytuj limit skrzynki",
+      "quotaInvalid": "Limit musi wynosić od 1 do {{max}} MB",
+      "quotaUpdated": "Limit skrzynki zaktualizowany"
     },
     "folderMappings": {
       "title": "Mapowania folderów",
@@ -1298,7 +1307,6 @@
       "title": "Połączenie cPanel",
       "localPart": "Mailbox name",
       "localPartPh": "support",
-      "quotaMb": "Quota (MB)",
       "password": "Initial password",
       "passwordOptional": "Leave blank to generate a secure password. The password is shown once and is not stored by MailFlow.",
       "generatePassword": "Wygeneruj hasło",
@@ -1351,7 +1359,8 @@
       "linked": "Skrzynka została dodana do kont.",
       "actions": "Zarządzane w Kontach",
       "adminDescription": "Ustawienia łącznika tylko dla administratora. Tworzenie i zarządzanie są w Kontach.",
-      "adminOnlyHint": "Użyj Kont"
+      "adminOnlyHint": "Użyj Kont",
+      "quotaWithLimit": "Limit (MB, maks. {{max}})"
     },
     "systemEmail": {
       "tabUsers": "Użytkownicy i zaproszenia",

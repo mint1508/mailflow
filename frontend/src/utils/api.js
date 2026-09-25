@@ -207,6 +207,7 @@ export const api = {
       createMailbox: (data) => request('POST', '/admin/cpanel/mailboxes', data),
       createMailboxesBulk: (data) => request('POST', '/admin/cpanel/mailboxes/bulk', data),
       resetMailboxPassword: (email, password) => request('POST', `/admin/cpanel/mailboxes/${encodeURIComponent(email)}/password`, { password }),
+      updateMailboxQuota: (email, quotaMb) => request('PATCH', `/admin/cpanel/mailboxes/${encodeURIComponent(email)}/quota`, { quotaMb }),
       suspendMailbox: (email) => request('POST', `/admin/cpanel/mailboxes/${encodeURIComponent(email)}/suspend`),
       unsuspendMailbox: (email) => request('POST', `/admin/cpanel/mailboxes/${encodeURIComponent(email)}/unsuspend`),
       deleteMailbox: (email) => request('DELETE', `/admin/cpanel/mailboxes/${encodeURIComponent(email)}`),

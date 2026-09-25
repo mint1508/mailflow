@@ -744,7 +744,6 @@
     },
     "accounts": {
       "title": "Account email",
-      "addButton": "Aggiungi account",
       "empty": "Nessun account aggiunto ancora",
       "connected": "Connesso",
       "folderMappings": "Mappatura cartelle",
@@ -829,7 +828,17 @@
       "mailboxInventoryTitle": "Account email gestiti",
       "passwordReset": "Nuova password generata. Copiala o condividila ora; MailFlow non la mostrerà più.",
       "pendingLink": "Attivazione richiesta",
-      "resetPassword": "Genera nuova password"
+      "resetPassword": "Genera nuova password",
+      "quotaMailboxCount": "Caselle usate",
+      "quotaPercent": "{{percent}}% del limite",
+      "quotaAssigned": "Quota assegnata",
+      "quotaLimitPerMailbox": "Massimo {{max}} per casella",
+      "quotaDiskUsed": "Spazio usato",
+      "quotaUsedPercent": "{{percent}}% della quota assegnata",
+      "quotaUsedShort": "usati",
+      "editQuota": "Modifica quota casella",
+      "quotaInvalid": "La quota deve essere tra 1 e {{max}} MB",
+      "quotaUpdated": "Quota della casella aggiornata"
     },
     "folderMappings": {
       "title": "Mappatura cartelle",
@@ -1279,7 +1288,6 @@
       "title": "Connettore cPanel",
       "localPart": "Mailbox name",
       "localPartPh": "support",
-      "quotaMb": "Quota (MB)",
       "password": "Initial password",
       "passwordOptional": "Leave blank to generate a secure password. The password is shown once and is not stored by MailFlow.",
       "generatePassword": "Genera password",
@@ -1332,7 +1340,8 @@
       "linked": "Casella aggiunta agli account.",
       "actions": "Gestito in Account",
       "adminDescription": "Impostazioni del connettore riservate all’admin. Creazione e gestione sono in Account.",
-      "adminOnlyHint": "Usa Account"
+      "adminOnlyHint": "Usa Account",
+      "quotaWithLimit": "Quota (MB, massimo {{max}})"
     },
     "systemEmail": {
       "tabUsers": "Utenti e inviti",

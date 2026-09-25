@@ -628,7 +628,7 @@ function AccountForm({ initial, onSave, onCancel, cpanelConfig = null }) {
 }
 
 // ─── Mailbox provisioning (used by the mod-facing Accounts tab) ───────────────
-function MailboxProvisioner({ config, onChanged, onCredentials, onNotice }) {
+function MailboxProvisioner({ config, limits, onChanged, onCredentials, onNotice }) {
   const { t } = useTranslation();
   const [mode, setMode] = useState('single');
   const [createForm, setCreateForm] = useState({ localPart: '', quotaMb: 1024, password: '' });
@@ -637,6 +637,7 @@ function MailboxProvisioner({ config, onChanged, onCredentials, onNotice }) {
   const [bulkResult, setBulkResult] = useState(null);
   const [busy, setBusy] = useState('');
   const csvInputRef = useRef(null);
+  const maxQuotaMb = Number(limits?.maxQuotaMb) || 10240;
 
   const create = async () => {
     setBusy('create');
@@ -722,7 +723,7 @@ function MailboxProvisioner({ config, onChanged, onCredentials, onNotice }) {
                 <span style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>@{config.domain}</span>
               </div>
             </Field>
-            <Field label={t('admin.cpanel.quotaMb')} required><input type="number" min="1" value={createForm.quotaMb} onChange={e => setCreateForm(current => ({ ...current, quotaMb: Number(e.target.value) }))} style={inputStyle} /></Field>
+            <Field label={t('admin.cpanel.quotaWithLimit', { max: maxQuotaMb })} required><input type="number" min="1" max={maxQuotaMb} value={createForm.quotaMb} onChange={e => setCreateForm(current => ({ ...current, quotaMb: Math.min(maxQuotaMb, Number(e.target.value)) }))} style={inputStyle} /></Field>
           </div>
           <Field label={t('admin.cpanel.password')}>
             <div style={{ display: 'flex', gap: 7 }}>
@@ -735,7 +736,7 @@ function MailboxProvisioner({ config, onChanged, onCredentials, onNotice }) {
       ) : (
         <>
           <div style={{ fontSize: 11, color: 'var(--text-tertiary)', lineHeight: 1.5, marginBottom: 8 }}>{mode === 'csv' ? t('admin.cpanel.csvHint') : t('admin.cpanel.bulkHint')}</div>
-          <Field label={t('admin.cpanel.quotaMb')} required><input type="number" min="1" value={bulkQuotaMb} onChange={e => setBulkQuotaMb(Number(e.target.value))} style={{ ...inputStyle, maxWidth: 160 }} /></Field>
+          <Field label={t('admin.cpanel.quotaWithLimit', { max: maxQuotaMb })} required><input type="number" min="1" max={maxQuotaMb} value={bulkQuotaMb} onChange={e => setBulkQuotaMb(Math.min(maxQuotaMb, Number(e.target.value)))} style={{ ...inputStyle, maxWidth: 160 }} /></Field>
           <textarea value={bulkText} onChange={e => setBulkText(e.target.value)} placeholder={t('admin.cpanel.bulkPh')} rows={5} style={{ ...inputStyle, resize: 'vertical', fontFamily: 'var(--font-mono)', marginBottom: 10 }} />
           {mode === 'csv' && <label style={{ display: 'block', marginBottom: 10, color: 'var(--text-secondary)', fontSize: 12 }}>{t('admin.cpanel.csvChoose')}<input ref={csvInputRef} type="file" accept=".csv,text/csv" onChange={readCsv} style={{ display: 'block', marginTop: 5, color: 'var(--text-secondary)', fontSize: 12 }} /></label>}
           <button type="button" onClick={createBulk} disabled={!!busy || !bulkText.trim()} style={{ padding: '9px 13px', background: 'var(--accent)', color: 'var(--accent-text)', border: 'none', borderRadius: 7, cursor: busy ? 'wait' : 'pointer', fontSize: 12 }}>{busy === 'bulk' ? t('admin.cpanel.bulkCreating') : t('admin.accounts.createMailboxes')}</button>
@@ -763,9 +764,13 @@ function AccountsTab() {
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [cpanelConfig, setCpanelConfig] = useState(null);
   const [cpanelMailboxes, setCpanelMailboxes] = useState([]);
+  const [cpanelLimits, setCpanelLimits] = useState({ maxMailboxes: 15, maxQuotaMb: 10240 });
   const [accountDraft, setAccountDraft] = useState(null);
   const [oneTimeCredentials, setOneTimeCredentials] = useState(null);
   const [provisionNotice, setProvisionNotice] = useState(null);
+  const [quotaEditEmail, setQuotaEditEmail] = useState(null);
+  const [quotaEditMb, setQuotaEditMb] = useState('');
+  const [quotaSaving, setQuotaSaving] = useState(false);
 
   useEffect(() => {
     api.admin.cpanel.getConnection()
@@ -780,6 +785,7 @@ function AccountsTab() {
     }
     const result = await api.admin.cpanel.getMailboxes();
     setCpanelMailboxes(result.mailboxes || []);
+    if (result.limits) setCpanelLimits(result.limits);
   }, [cpanelConfig]);
 
   useEffect(() => { reloadCpanelMailboxes().catch(() => setCpanelMailboxes([])); }, [reloadCpanelMailboxes]);
@@ -825,6 +831,33 @@ function AccountsTab() {
       setProvisionNotice({ type: 'success', message: mailbox.suspended ? t('admin.accounts.mailboxEnabled') : t('admin.accounts.mailboxDisabled') });
     } catch (error) {
       setProvisionNotice({ type: 'error', message: error.message });
+    }
+  };
+
+  const beginQuotaEdit = (mailbox) => {
+    const quotaMb = Math.max(1, Math.round((Number(mailbox.quota_bytes) || 0) / (1024 * 1024)));
+    setQuotaEditEmail(mailbox.email);
+    setQuotaEditMb(String(quotaMb || 1024));
+    setProvisionNotice(null);
+  };
+
+  const saveMailboxQuota = async (mailbox) => {
+    const quotaMb = Number(quotaEditMb);
+    if (!Number.isInteger(quotaMb) || quotaMb < 1 || quotaMb > Number(cpanelLimits.maxQuotaMb)) {
+      setProvisionNotice({ type: 'error', message: t('admin.accounts.quotaInvalid', { max: cpanelLimits.maxQuotaMb }) });
+      return;
+    }
+    setQuotaSaving(true);
+    setProvisionNotice(null);
+    try {
+      await api.admin.cpanel.updateMailboxQuota(mailbox.email, quotaMb);
+      await reloadCpanelMailboxes();
+      setQuotaEditEmail(null);
+      setProvisionNotice({ type: 'success', message: t('admin.accounts.quotaUpdated') });
+    } catch (error) {
+      setProvisionNotice({ type: 'error', message: error.message });
+    } finally {
+      setQuotaSaving(false);
     }
   };
 
@@ -1018,6 +1051,11 @@ function AccountsTab() {
     });
   };
 
+  const mailboxUsedBytes = cpanelMailboxes.reduce((total, mailbox) => total + (Number(mailbox.disk_used_bytes) || 0), 0);
+  const mailboxQuotaBytes = cpanelMailboxes.reduce((total, mailbox) => total + (Number(mailbox.quota_bytes) || Number(cpanelLimits.maxQuotaMb) * 1024 * 1024), 0);
+  const mailboxCountPercent = cpanelLimits.maxMailboxes > 0 ? (cpanelMailboxes.length / cpanelLimits.maxMailboxes) * 100 : 0;
+  const mailboxQuotaPercent = mailboxQuotaBytes > 0 ? (mailboxUsedBytes / mailboxQuotaBytes) * 100 : 0;
+
   if (subview === 'provision') {
     return (
       <div>
@@ -1026,7 +1064,7 @@ function AccountsTab() {
           {t('sidebar.backToAccounts')}
         </button>
         <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 16 }}>{t('admin.accounts.createMailboxTitle')}</div>
-        <MailboxProvisioner config={cpanelConfig} onChanged={reloadCpanelMailboxes} onNotice={setProvisionNotice} onCredentials={mailbox => setOneTimeCredentials({ email: mailbox.email, password: mailbox.password })} />
+        <MailboxProvisioner config={cpanelConfig} limits={cpanelLimits} onChanged={reloadCpanelMailboxes} onNotice={setProvisionNotice} onCredentials={mailbox => setOneTimeCredentials({ email: mailbox.email, password: mailbox.password })} />
         {provisionNotice && <div style={{ marginTop: 10, fontSize: 12, color: provisionNotice.type === 'error' ? 'var(--red)' : 'var(--green)' }}>{provisionNotice.message}</div>}
       </div>
     );
@@ -1369,6 +1407,26 @@ function AccountsTab() {
       )}
 
       {cpanelConfig && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8, marginBottom: 18 }}>
+          <div style={{ padding: 12, border: '1px solid var(--border)', borderRadius: 9, background: 'var(--bg-secondary)' }}>
+            <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 5 }}>{t('admin.accounts.quotaMailboxCount')}</div>
+            <div style={{ fontSize: 20, color: 'var(--text-primary)' }}>{cpanelMailboxes.length} / {cpanelLimits.maxMailboxes}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 3 }}>{t('admin.accounts.quotaPercent', { percent: mailboxCountPercent.toFixed(0) })}</div>
+          </div>
+          <div style={{ padding: 12, border: '1px solid var(--border)', borderRadius: 9, background: 'var(--bg-secondary)' }}>
+            <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 5 }}>{t('admin.accounts.quotaAssigned')}</div>
+            <div style={{ fontSize: 20, color: 'var(--text-primary)' }}>{bytesForMailbox(mailboxQuotaBytes)}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 3 }}>{t('admin.accounts.quotaLimitPerMailbox', { max: bytesForMailbox(cpanelLimits.maxQuotaMb * 1024 * 1024) })}</div>
+          </div>
+          <div style={{ padding: 12, border: '1px solid var(--border)', borderRadius: 9, background: 'var(--bg-secondary)' }}>
+            <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 5 }}>{t('admin.accounts.quotaDiskUsed')}</div>
+            <div style={{ fontSize: 20, color: 'var(--text-primary)' }}>{bytesForMailbox(mailboxUsedBytes)}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 3 }}>{t('admin.accounts.quotaUsedPercent', { percent: mailboxQuotaPercent.toFixed(0) })}</div>
+          </div>
+        </div>
+      )}
+
+      {cpanelConfig && (
         <div style={{ marginBottom: 18, padding: 12, border: '1px solid var(--border)', borderRadius: 10, background: 'var(--bg-secondary)' }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 3 }}>{t('admin.accounts.mailboxInventoryTitle')}</div>
           <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 8 }}>{t('admin.accounts.mailboxInventoryHint', { domain: cpanelConfig.domain })}</div>
@@ -1378,10 +1436,19 @@ function AccountsTab() {
             return <div key={mailbox.email} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 0', borderTop: '1px solid var(--border-subtle)', flexWrap: 'wrap' }}>
               <div style={{ flex: '1 1 200px', minWidth: 160 }}>
                 <div style={{ color: 'var(--text-primary)', fontSize: 12 }}>{mailbox.email}</div>
-                <div style={{ color: 'var(--text-tertiary)', fontSize: 11, marginTop: 2 }}>{mailbox.suspended ? t('admin.cpanel.suspended') : mailbox.is_present ? t('admin.cpanel.present') : t('admin.cpanel.missing')} · {bytesForMailbox(mailbox.quota_bytes)}{mailbox.disk_used_bytes != null ? ` · ${bytesForMailbox(mailbox.disk_used_bytes)} used` : ''}</div>
+                <div style={{ color: 'var(--text-tertiary)', fontSize: 11, marginTop: 2 }}>{mailbox.suspended ? t('admin.cpanel.suspended') : mailbox.is_present ? t('admin.cpanel.present') : t('admin.cpanel.missing')} · {quotaEditEmail === mailbox.email ? (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                    <input type="number" min="1" max={cpanelLimits.maxQuotaMb} value={quotaEditMb} onChange={event => setQuotaEditMb(event.target.value)} style={{ width: 68, padding: '3px 5px', border: '1px solid var(--border)', borderRadius: 5, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 11 }} /> {t('admin.cpanel.quotaUnit')}
+                    <button type="button" onClick={() => saveMailboxQuota(mailbox)} disabled={quotaSaving} style={{ border: 'none', background: 'none', color: 'var(--accent)', cursor: quotaSaving ? 'wait' : 'pointer', fontSize: 11 }}>{t('common.save')}</button>
+                    <button type="button" onClick={() => setQuotaEditEmail(null)} style={{ border: 'none', background: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', fontSize: 11 }}>{t('common.cancel')}</button>
+                  </span>
+                ) : <>{bytesForMailbox(mailbox.quota_bytes)}{mailbox.disk_used_bytes != null ? ` · ${bytesForMailbox(mailbox.disk_used_bytes)} ${t('admin.accounts.quotaUsedShort')}` : ''}</>}</div>
               </div>
               <span style={{ color: mailbox.suspended || !mailbox.is_present ? 'var(--red)' : linked ? 'var(--green)' : 'var(--amber)', fontSize: 11 }}>{mailbox.suspended ? t('admin.accounts.disabled') : linked ? t('admin.accounts.linked') : t('admin.accounts.pendingLink')}</span>
               <div style={{ display: 'flex', gap: 5 }}>
+                {quotaEditEmail !== mailbox.email && <IconBtn onClick={() => beginQuotaEdit(mailbox)} title={t('admin.accounts.editQuota')}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>
+                </IconBtn>}
                 <IconBtn onClick={() => handleResetMailboxPassword(mailbox)} title={t('admin.accounts.resetPassword')}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 11a8 8 0 1 0 2 5.3"/><polyline points="20 4 20 11 13 11"/></svg>
                 </IconBtn>

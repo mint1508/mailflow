@@ -673,7 +673,6 @@
     },
     "accounts": {
       "title": "E-Mail-Konten",
-      "addButton": "Konto hinzufügen",
       "empty": "Noch keine Konten hinzugefügt",
       "connected": "Verbunden",
       "folderMappings": "Ordnerzuordnungen",
@@ -758,7 +757,17 @@
       "mailboxInventoryTitle": "Verwaltete E-Mail-Konten",
       "passwordReset": "Neues Passwort erstellt. Jetzt kopieren oder teilen; MailFlow zeigt es nicht erneut.",
       "pendingLink": "Aktivierung erforderlich",
-      "resetPassword": "Neues Postfachpasswort erzeugen"
+      "resetPassword": "Neues Postfachpasswort erzeugen",
+      "quotaMailboxCount": "Verwendete Postfächer",
+      "quotaPercent": "{{percent}}% des Postfachlimits",
+      "quotaAssigned": "Zugewiesenes Kontingent",
+      "quotaLimitPerMailbox": "Maximal {{max}} pro Postfach",
+      "quotaDiskUsed": "Belegter Speicher",
+      "quotaUsedPercent": "{{percent}}% des Kontingents",
+      "quotaUsedShort": "belegt",
+      "editQuota": "Postfachkontingent bearbeiten",
+      "quotaInvalid": "Kontingent muss zwischen 1 und {{max}} MB liegen",
+      "quotaUpdated": "Postfachkontingent aktualisiert"
     },
     "folderMappings": {
       "title": "Ordnerzuordnungen",
@@ -1208,7 +1217,6 @@
       "title": "cPanel-Verbindung",
       "localPart": "Mailbox name",
       "localPartPh": "support",
-      "quotaMb": "Quota (MB)",
       "password": "Initial password",
       "passwordOptional": "Leave blank to generate a secure password. The password is shown once and is not stored by MailFlow.",
       "generatePassword": "Passwort generieren",
@@ -1261,7 +1269,8 @@
       "linked": "Postfach zu Konten hinzugefügt.",
       "actions": "In Accounts verwalten",
       "adminDescription": "Nur-Admin-Einstellungen für den Connector. Erstellung und tägliche Verwaltung erfolgen unter Konten.",
-      "adminOnlyHint": "In Konten verwalten"
+      "adminOnlyHint": "In Konten verwalten",
+      "quotaWithLimit": "Kontingent (MB, max. {{max}})"
     },
     "systemEmail": {
       "tabUsers": "Benutzer & Einladungen",

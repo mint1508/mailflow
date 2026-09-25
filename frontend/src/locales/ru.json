@@ -744,7 +744,6 @@
     },
     "accounts": {
       "title": "Почтовые аккаунты",
-      "addButton": "Добавить аккаунт",
       "empty": "Аккаунты ещё не добавлены",
       "connected": "Подключён",
       "folderMappings": "Сопоставление папок",
@@ -829,7 +828,17 @@
       "mailboxInventoryTitle": "Управляемые почтовые аккаунты",
       "passwordReset": "Новый пароль создан. Скопируйте или передайте его сейчас; MailFlow больше его не покажет.",
       "pendingLink": "Требуется активация",
-      "resetPassword": "Создать новый пароль"
+      "resetPassword": "Создать новый пароль",
+      "quotaMailboxCount": "Использованные ящики",
+      "quotaPercent": "{{percent}}% лимита ящиков",
+      "quotaAssigned": "Назначенная квота",
+      "quotaLimitPerMailbox": "Максимум {{max}} на ящик",
+      "quotaDiskUsed": "Занято на диске",
+      "quotaUsedPercent": "{{percent}}% назначенной квоты",
+      "quotaUsedShort": "занято",
+      "editQuota": "Изменить квоту ящика",
+      "quotaInvalid": "Квота должна быть от 1 до {{max}} МБ",
+      "quotaUpdated": "Квота ящика обновлена"
     },
     "folderMappings": {
       "title": "Сопоставление папок",
@@ -1279,7 +1288,6 @@
       "title": "Подключение cPanel",
       "localPart": "Mailbox name",
       "localPartPh": "support",
-      "quotaMb": "Quota (MB)",
       "password": "Initial password",
       "passwordOptional": "Leave blank to generate a secure password. The password is shown once and is not stored by MailFlow.",
       "generatePassword": "Сгенерировать пароль",
@@ -1332,7 +1340,8 @@
       "linked": "Ящик добавлен в аккаунты.",
       "actions": "Управляется в Аккаунтах",
       "adminDescription": "Настройки коннектора доступны только администратору. Создание и управление находятся в Аккаунтах.",
-      "adminOnlyHint": "Используйте Аккаунты"
+      "adminOnlyHint": "Используйте Аккаунты",
+      "quotaWithLimit": "Квота (МБ, макс. {{max}})"
     },
     "systemEmail": {
       "tabUsers": "Пользователи и приглашения",

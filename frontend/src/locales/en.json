@@ -744,7 +744,6 @@
     },
     "accounts": {
       "title": "Email accounts",
-      "addButton": "Add account",
       "createMailbox": "Create email account",
       "createMailboxes": "Create email accounts",
       "createMailboxTitle": "Create email accounts",
@@ -829,7 +828,17 @@
       "trustedAuthservDetected": "Seen on your recent mail (click to use):",
       "trustedAuthservDetectedNone": "No data yet — messages are inspected once antispam is enabled for this account.",
       "trustedAuthservWarn": "Only trust an ID you recognize as your mail provider's receiving server.",
-      "enabledGlobally": "Enabled globally"
+      "enabledGlobally": "Enabled globally",
+      "quotaMailboxCount": "Mailboxes used",
+      "quotaPercent": "{{percent}}% of mailbox limit",
+      "quotaAssigned": "Quota assigned",
+      "quotaLimitPerMailbox": "Maximum {{max}} per mailbox",
+      "quotaDiskUsed": "Disk used",
+      "quotaUsedPercent": "{{percent}}% of assigned quota",
+      "quotaUsedShort": "used",
+      "editQuota": "Edit mailbox quota",
+      "quotaInvalid": "Quota must be between 1 and {{max}} MB",
+      "quotaUpdated": "Mailbox quota updated"
     },
     "folderMappings": {
       "title": "Folder mappings",
@@ -1279,7 +1288,6 @@
       "title": "cPanel connector",
       "localPart": "Mailbox name",
       "localPartPh": "support",
-      "quotaMb": "Quota (MB)",
       "password": "Initial password",
       "passwordOptional": "Leave blank to generate a secure password. The password is shown once and is not stored by MailFlow.",
       "generatePassword": "Generate password",
@@ -1332,7 +1340,8 @@
       "statsDiskUsage": "Disk usage",
       "actions": "Managed from Accounts",
       "adminOnlyHint": "Use Accounts",
-      "linked": "Mailbox added to Accounts."
+      "linked": "Mailbox added to Accounts.",
+      "quotaWithLimit": "Quota (MB, max {{max}})"
     },
     "systemEmail": {
       "tabUsers": "Users & Invites",

@@ -744,7 +744,6 @@
     },
     "accounts": {
       "title": "Contas de e-mail",
-      "addButton": "Adicionar conta",
       "empty": "Nenhuma conta adicionada ainda",
       "connected": "Conectada",
       "folderMappings": "Mapeamento de pastas",
@@ -829,7 +828,17 @@
       "mailboxInventoryTitle": "Contas de e-mail gerenciadas",
       "passwordReset": "Nova senha gerada. Copie ou compartilhe agora; o MailFlow não a mostrará novamente.",
       "pendingLink": "Requer ativação",
-      "resetPassword": "Gerar nova senha"
+      "resetPassword": "Gerar nova senha",
+      "quotaMailboxCount": "Caixas usadas",
+      "quotaPercent": "{{percent}}% do limite",
+      "quotaAssigned": "Cota atribuída",
+      "quotaLimitPerMailbox": "Máximo de {{max}} por caixa",
+      "quotaDiskUsed": "Disco ocupado",
+      "quotaUsedPercent": "{{percent}}% da cota atribuída",
+      "quotaUsedShort": "usado",
+      "editQuota": "Editar cota da caixa",
+      "quotaInvalid": "A cota deve ficar entre 1 e {{max}} MB",
+      "quotaUpdated": "Cota da caixa atualizada"
     },
     "folderMappings": {
       "title": "Mapeamento de pastas",
@@ -1279,7 +1288,6 @@
       "title": "Conector cPanel",
       "localPart": "Mailbox name",
       "localPartPh": "support",
-      "quotaMb": "Quota (MB)",
       "password": "Initial password",
       "passwordOptional": "Leave blank to generate a secure password. The password is shown once and is not stored by MailFlow.",
       "generatePassword": "Gerar senha",
@@ -1332,7 +1340,8 @@
       "linked": "Caixa adicionada às contas.",
       "actions": "Gerenciado em Contas",
       "adminDescription": "Configurações do conector apenas para administradores. Criação e gestão ficam em Contas.",
-      "adminOnlyHint": "Usar Contas"
+      "adminOnlyHint": "Usar Contas",
+      "quotaWithLimit": "Cota (MB, máx. {{max}})"
     },
     "systemEmail": {
       "tabUsers": "Usuários e convites",

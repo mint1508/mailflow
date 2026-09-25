@@ -386,6 +386,17 @@ export async function resetCpanelMailboxPassword(email, password) {
   return { email: `${localPart}@${config.domain}`, password: cleanPassword };
 }
 
+export async function updateCpanelMailboxQuota(email, quotaMb) {
+  const { config, localPart } = await resolveMailboxTarget(email);
+  const cleanQuota = normalizeQuotaMb(quotaMb);
+  await cpanelRequest(config, 'edit_pop_quota', {
+    email: localPart,
+    quota: cleanQuota,
+    domain: config.domain,
+  });
+  return { email: `${localPart}@${config.domain}`, quotaMb: cleanQuota };
+}
+
 export async function setCpanelMailboxSuspended(email, suspended) {
   const { config, localPart } = await resolveMailboxTarget(email);
   await cpanelRequest(config, suspended ? 'suspend_login' : 'unsuspend_login', {

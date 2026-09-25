@@ -744,7 +744,6 @@
     },
     "accounts": {
       "title": "Cuentas de correo",
-      "addButton": "Añadir cuenta",
       "empty": "Aún no hay cuentas añadidas",
       "connected": "Conectada",
       "folderMappings": "Asignación de carpetas",
@@ -829,7 +828,17 @@
       "mailboxInventoryTitle": "Cuentas de correo administradas",
       "passwordReset": "Nueva contraseña generada. Cópiala o compártela ahora; MailFlow no volverá a mostrarla.",
       "pendingLink": "Requiere activación",
-      "resetPassword": "Generar nueva contraseña"
+      "resetPassword": "Generar nueva contraseña",
+      "quotaMailboxCount": "Buzones usados",
+      "quotaPercent": "{{percent}}% del límite",
+      "quotaAssigned": "Cuota asignada",
+      "quotaLimitPerMailbox": "Máximo {{max}} por buzón",
+      "quotaDiskUsed": "Disco usado",
+      "quotaUsedPercent": "{{percent}}% de la cuota asignada",
+      "quotaUsedShort": "usados",
+      "editQuota": "Editar cuota del buzón",
+      "quotaInvalid": "La cuota debe estar entre 1 y {{max}} MB",
+      "quotaUpdated": "Cuota del buzón actualizada"
     },
     "folderMappings": {
       "title": "Asignación de carpetas",
@@ -1279,7 +1288,6 @@
       "title": "Conector de cPanel",
       "localPart": "Mailbox name",
       "localPartPh": "support",
-      "quotaMb": "Quota (MB)",
       "password": "Initial password",
       "passwordOptional": "Leave blank to generate a secure password. The password is shown once and is not stored by MailFlow.",
       "generatePassword": "Generar contraseña",
@@ -1332,7 +1340,8 @@
       "linked": "Buzón añadido a las cuentas.",
       "actions": "Gestionado en Cuentas",
       "adminDescription": "Ajustes del conector solo para administradores. La creación y gestión diaria están en Cuentas.",
-      "adminOnlyHint": "Usar Cuentas"
+      "adminOnlyHint": "Usar Cuentas",
+      "quotaWithLimit": "Cuota (MB, máx. {{max}})"
     },
     "systemEmail": {
       "tabUsers": "Usuarios e invitaciones",

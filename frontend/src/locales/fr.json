@@ -744,7 +744,6 @@
     },
     "accounts": {
       "title": "Comptes e-mail",
-      "addButton": "Ajouter un compte",
       "empty": "Aucun compte ajouté pour l'instant",
       "connected": "Connecté",
       "folderMappings": "Mappage des dossiers",
@@ -829,7 +828,17 @@
       "mailboxInventoryTitle": "Comptes e-mail gérés",
       "passwordReset": "Nouveau mot de passe généré. Copiez-le ou partagez-le maintenant; MailFlow ne l’affichera plus.",
       "pendingLink": "Activation requise",
-      "resetPassword": "Générer un nouveau mot de passe"
+      "resetPassword": "Générer un nouveau mot de passe",
+      "quotaMailboxCount": "Boîtes utilisées",
+      "quotaPercent": "{{percent}}% de la limite",
+      "quotaAssigned": "Quota attribué",
+      "quotaLimitPerMailbox": "Maximum {{max}} par boîte",
+      "quotaDiskUsed": "Espace utilisé",
+      "quotaUsedPercent": "{{percent}}% du quota attribué",
+      "quotaUsedShort": "utilisés",
+      "editQuota": "Modifier le quota",
+      "quotaInvalid": "Le quota doit être entre 1 et {{max}} Mo",
+      "quotaUpdated": "Quota de la boîte mis à jour"
     },
     "folderMappings": {
       "title": "Mappage des dossiers",
@@ -1279,7 +1288,6 @@
       "title": "Connecteur cPanel",
       "localPart": "Mailbox name",
       "localPartPh": "support",
-      "quotaMb": "Quota (MB)",
       "password": "Initial password",
       "passwordOptional": "Leave blank to generate a secure password. The password is shown once and is not stored by MailFlow.",
       "generatePassword": "Générer un mot de passe",
@@ -1332,7 +1340,8 @@
       "linked": "Boîte ajoutée aux comptes.",
       "actions": "Géré dans Comptes",
       "adminDescription": "Réglages du connecteur réservés à l’administrateur. La création et la gestion se trouvent dans Comptes.",
-      "adminOnlyHint": "Utiliser Comptes"
+      "adminOnlyHint": "Utiliser Comptes",
+      "quotaWithLimit": "Quota (Mo, max. {{max}})"
     },
     "systemEmail": {
       "tabUsers": "Utilisateurs et invitations",

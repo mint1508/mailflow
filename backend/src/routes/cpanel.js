@@ -9,6 +9,7 @@ import {
   createCpanelMailbox,
   createCpanelMailboxes,
   resetCpanelMailboxPassword,
+  updateCpanelMailboxQuota,
   setCpanelMailboxSuspended,
   deleteCpanelMailbox,
   getCpanelLimits,
@@ -138,6 +139,23 @@ router.post('/mailboxes/:email/password', async (req, res) => {
     res.json({ ok: true, mailbox: result });
   } catch (error) {
     await audit(req.session.userId, 'mailbox_password_reset', false, { error: error.message });
+    res.status(400).json({ error: error.message });
+  }
+});
+
+router.patch('/mailboxes/:email/quota', async (req, res) => {
+  try {
+    const result = await updateCpanelMailboxQuota(req.params.email, req.body?.quotaMb);
+    await query(
+      `UPDATE cpanel_mailboxes
+       SET quota_bytes = $1, quota_raw = $2, updated_at = NOW()
+       WHERE email = $3`,
+      [result.quotaMb * 1024 * 1024, String(result.quotaMb), result.email],
+    );
+    await audit(req.session.userId, 'mailbox_quota_updated', true, { email: result.email, quotaMb: result.quotaMb });
+    res.json({ ok: true, mailbox: result });
+  } catch (error) {
+    await audit(req.session.userId, 'mailbox_quota_updated', false, { error: error.message });
     res.status(400).json({ error: error.message });
   }
 });

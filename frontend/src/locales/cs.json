@@ -924,7 +924,6 @@
     },
     "accounts": {
       "title": "E-mailové účty",
-      "addButton": "Přidat účet",
       "empty": "Zatím nebyly přidány žádné účty",
       "connected": "Připojeno",
       "folderMappings": "Mapování složek",
@@ -1009,7 +1008,17 @@
       "mailboxInventoryTitle": "Spravované e-mailové účty",
       "passwordReset": "Bylo vygenerováno nové heslo. Zkopírujte nebo sdílejte ho nyní; MailFlow ho znovu nezobrazí.",
       "pendingLink": "Vyžaduje aktivaci",
-      "resetPassword": "Vygenerovat nové heslo"
+      "resetPassword": "Vygenerovat nové heslo",
+      "quotaMailboxCount": "Použité schránky",
+      "quotaPercent": "{{percent}}% limitu schránek",
+      "quotaAssigned": "Přidělená kvóta",
+      "quotaLimitPerMailbox": "Maximum {{max}} na schránku",
+      "quotaDiskUsed": "Využití disku",
+      "quotaUsedPercent": "{{percent}}% přidělené kvóty",
+      "quotaUsedShort": "využito",
+      "editQuota": "Upravit kvótu schránky",
+      "quotaInvalid": "Kvóta musí být mezi 1 a {{max}} MB",
+      "quotaUpdated": "Kvóta schránky aktualizována"
     },
     "folderMappings": {
       "title": "Mapování složek",
@@ -1413,7 +1422,6 @@
       "title": "Připojení cPanel",
       "localPart": "Mailbox name",
       "localPartPh": "support",
-      "quotaMb": "Quota (MB)",
       "password": "Initial password",
       "passwordOptional": "Leave blank to generate a secure password. The password is shown once and is not stored by MailFlow.",
       "generatePassword": "Vygenerovat heslo",
@@ -1466,7 +1474,8 @@
       "linked": "Schránka byla přidána k účtům.",
       "actions": "Spravovat v Účtech",
       "adminDescription": "Nastavení konektoru pouze pro správce. Vytváření a správa probíhá v Účtech.",
-      "adminOnlyHint": "Použít Účty"
+      "adminOnlyHint": "Použít Účty",
+      "quotaWithLimit": "Kvóta (MB, max. {{max}})"
     },
     "systemEmail": {
       "tabUsers": "Uživatelé a pozvánky",

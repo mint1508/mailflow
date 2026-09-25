@@ -744,7 +744,6 @@
     },
     "accounts": {
       "title": "邮箱账户",
-      "addButton": "添加账户",
       "empty": "尚未添加任何账户",
       "connected": "已连接",
       "folderMappings": "文件夹映射",
@@ -829,7 +828,17 @@
       "mailboxInventoryTitle": "管理中的邮箱账户",
       "passwordReset": "新密码已生成。请立即复制或分享；MailFlow 不会再次显示。",
       "pendingLink": "需要激活",
-      "resetPassword": "生成新邮箱密码"
+      "resetPassword": "生成新邮箱密码",
+      "quotaMailboxCount": "已用邮箱",
+      "quotaPercent": "邮箱上限的 {{percent}}%",
+      "quotaAssigned": "已分配配额",
+      "quotaLimitPerMailbox": "每个邮箱最多 {{max}}",
+      "quotaDiskUsed": "已用磁盘",
+      "quotaUsedPercent": "已分配配额的 {{percent}}%",
+      "quotaUsedShort": "已用",
+      "editQuota": "编辑邮箱配额",
+      "quotaInvalid": "配额必须在 1 到 {{max}} MB 之间",
+      "quotaUpdated": "邮箱配额已更新"
     },
     "folderMappings": {
       "title": "文件夹映射",
@@ -1279,7 +1288,6 @@
       "title": "cPanel 连接",
       "localPart": "Mailbox name",
       "localPartPh": "support",
-      "quotaMb": "Quota (MB)",
       "password": "Initial password",
       "passwordOptional": "Leave blank to generate a secure password. The password is shown once and is not stored by MailFlow.",
       "generatePassword": "生成密码",
@@ -1332,7 +1340,8 @@
       "linked": "邮箱已添加到账户。",
       "actions": "在账户中管理",
       "adminDescription": "仅管理员可配置连接器。邮箱创建和日常管理位于账户中。",
-      "adminOnlyHint": "请在账户中操作"
+      "adminOnlyHint": "请在账户中操作",
+      "quotaWithLimit": "配额（MB，最多 {{max}}）"
     },
     "systemEmail": {
       "tabUsers": "用户与邀请",
