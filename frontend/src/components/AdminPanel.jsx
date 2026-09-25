@@ -9030,7 +9030,7 @@ function LinkedIdentitiesSection() {
 
 function CpanelTab() {
   const { t } = useTranslation();
-  const [form, setForm] = useState({ host: '', port: 2083, username: '', domain: '', token: '' });
+  const [form, setForm] = useState({ host: '', port: 2083, username: '', domain: '', token: '', tokenExpiresAt: '' });
   const [config, setConfig] = useState(null);
   const [mailboxes, setMailboxes] = useState([]);
   const [limits, setLimits] = useState({ maxMailboxes: 15, maxQuotaMb: 10240 });
@@ -9151,6 +9151,20 @@ function CpanelTab() {
           {input('token', 'password', config?.tokenPresent ? '••••••••' : '')}
         </Field>
         <div style={{ fontSize: 11, color: 'var(--text-tertiary)', lineHeight: 1.5, marginBottom: 14 }}>{t('admin.cpanel.tokenHint')}</div>
+        <Field label={t('admin.cpanel.tokenExpiry')}>
+          {input('tokenExpiresAt', 'date')}
+        </Field>
+        <div style={{ fontSize: 11, color: 'var(--text-tertiary)', lineHeight: 1.5, marginBottom: 14 }}>{t('admin.cpanel.tokenExpiryHint')}</div>
+        {config?.configured && config.tokenExpired && (
+          <div style={{ marginBottom: 12, fontSize: 12, color: 'var(--red)' }}>
+            {t('admin.cpanel.tokenExpired', { date: config.tokenExpiresAt })}
+          </div>
+        )}
+        {config?.configured && !config.tokenExpired && config.tokenExpiresAt && (
+          <div style={{ marginBottom: 12, fontSize: 12, color: config.tokenExpiresSoon ? 'var(--orange, #b45309)' : 'var(--text-secondary)' }}>
+            {t('admin.cpanel.tokenExpiresOn', { date: config.tokenExpiresAt })}
+          </div>
+        )}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button onClick={save} disabled={!!busy} style={{ padding: '9px 13px', background: 'var(--accent)', color: 'var(--accent-text)', border: 'none', borderRadius: 7, cursor: busy ? 'wait' : 'pointer', fontSize: 12 }}>
             {t('admin.cpanel.save')}

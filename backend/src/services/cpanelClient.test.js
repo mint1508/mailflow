@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { generateMailboxPassword, normalizeBulkMailboxInput, normalizeCpanelApiError, normalizeMailbox } from './cpanelClient.js';
+import { generateMailboxPassword, getCpanelTokenStatus, normalizeBulkMailboxInput, normalizeCpanelApiError, normalizeCpanelConfig, normalizeMailbox } from './cpanelClient.js';
 
 describe('cPanel mailbox normalization', () => {
   it('normalizes the list_pops_with_disk shape', () => {
@@ -89,5 +89,27 @@ describe('cPanel API error normalization', () => {
       .toBe('cPanel returned HTTP 403: Forbidden');
     expect(normalizeCpanelApiError({ message: 'Access denied' }, { httpStatus: 403 }))
       .toBe('cPanel returned HTTP 403: Access denied');
+  });
+});
+
+describe('cPanel API token expiry', () => {
+  it('normalizes a date-only expiry and reports the remaining window', async () => {
+    await expect(normalizeCpanelConfig({
+      host: 'mail.example.com',
+      port: 2083,
+      username: 'cpuser',
+      domain: 'example.com',
+      token: 'token',
+      tokenExpiresAt: '2026-10-15',
+    }, { tokenRequired: true })).resolves.toMatchObject({ tokenExpiresAt: '2026-10-15' });
+    expect(getCpanelTokenStatus('2026-10-15', new Date('2026-09-25T12:00:00Z')))
+      .toMatchObject({ tokenExpired: false, tokenExpiresSoon: true, tokenExpiryDays: 20 });
+  });
+
+  it('rejects malformed expiry values', async () => {
+    await expect(normalizeCpanelConfig({
+      host: 'mail.example.com', port: 2083, username: 'cpuser', domain: 'example.com', token: 'token', tokenExpiresAt: 'tomorrow',
+    }, { tokenRequired: true })).rejects.toThrow('expiration must be a valid date');
+    expect(getCpanelTokenStatus('2026-09-24', new Date('2026-09-25T12:00:00Z')).tokenExpired).toBe(true);
   });
 });

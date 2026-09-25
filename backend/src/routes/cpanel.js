@@ -13,6 +13,7 @@ import {
   setCpanelMailboxSuspended,
   deleteCpanelMailbox,
   getCpanelLimits,
+  getCpanelTokenStatus,
 } from '../services/cpanelClient.js';
 
 const router = Router();
@@ -20,12 +21,15 @@ router.use(requireMailboxManager);
 
 function publicConfig(config) {
   if (!config) return { configured: false };
+  const tokenStatus = getCpanelTokenStatus(config.tokenExpiresAt);
   return {
     configured: true,
     host: config.host,
     port: config.port,
     username: config.username,
     domain: config.domain,
+    tokenExpiresAt: config.tokenExpiresAt || null,
+    ...tokenStatus,
     tokenPresent: true,
     updatedAt: config.updatedAt,
   };

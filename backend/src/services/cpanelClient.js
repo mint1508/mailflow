@@ -41,6 +41,42 @@ function cleanDomain(value) {
   return domain;
 }
 
+function normalizeTokenExpiry(value) {
+  if (value == null || String(value).trim() === '') return null;
+  const expiry = String(value).trim();
+  // Keep this as a date-only value because cPanel's token UI is date based.
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(expiry)) {
+    throw new Error('cPanel API token expiration must be a valid date');
+  }
+  const parsed = new Date(`${expiry}T00:00:00.000Z`);
+  if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== expiry) {
+    throw new Error('cPanel API token expiration must be a valid date');
+  }
+  return expiry;
+}
+
+function assertTokenNotExpired(tokenExpiresAt) {
+  if (!tokenExpiresAt) return;
+  const expiresAt = new Date(`${tokenExpiresAt}T23:59:59.999Z`).getTime();
+  if (Number.isFinite(expiresAt) && Date.now() > expiresAt) {
+    throw new Error(`cPanel API token expired on ${tokenExpiresAt}. Create a new token in cPanel and update the connector.`);
+  }
+}
+
+export function getCpanelTokenStatus(tokenExpiresAt, now = new Date()) {
+  const expiry = normalizeTokenExpiry(tokenExpiresAt);
+  if (!expiry) return { tokenExpired: false, tokenExpiresSoon: false, tokenExpiryDays: null };
+  const today = new Date(now);
+  const todayUtc = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
+  const expiryUtc = Date.UTC(Number(expiry.slice(0, 4)), Number(expiry.slice(5, 7)) - 1, Number(expiry.slice(8, 10)));
+  const tokenExpiryDays = Math.ceil((expiryUtc - todayUtc) / 86400000);
+  return {
+    tokenExpired: tokenExpiryDays < 0,
+    tokenExpiresSoon: tokenExpiryDays >= 0 && tokenExpiryDays <= 30,
+    tokenExpiryDays,
+  };
+}
+
 function cleanLocalPart(value) {
   const localPart = String(value || '').trim().toLowerCase();
   if (!/^[a-z0-9](?:[a-z0-9._-]{0,63}[a-z0-9])?$/.test(localPart)) {
@@ -82,11 +118,12 @@ export async function normalizeCpanelConfig(input, { tokenRequired = true } = {}
   if (!username || username.length > 255 || /\s/.test(username)) throw new Error('cPanel username is required');
   const domain = cleanDomain(input?.domain);
   const token = input?.token == null ? '' : String(input.token).trim();
+  const tokenExpiresAt = normalizeTokenExpiry(input?.tokenExpiresAt);
   if (tokenRequired && !token) throw new Error('cPanel API token is required');
 
   const hostError = await validateHost(host);
   if (hostError) throw new Error(`cPanel host: ${hostError}`);
-  return { host, port, username, domain, token };
+  return { host, port, username, domain, token, tokenExpiresAt };
 }
 
 export async function getCpanelConfig({ includeToken = false } = {}) {
@@ -101,6 +138,7 @@ export async function getCpanelConfig({ includeToken = false } = {}) {
     port: stored.port || CPANEL_DEFAULT_PORT,
     username: stored.username,
     domain: stored.domain,
+    tokenExpiresAt: stored.tokenExpiresAt || null,
     ...(includeToken ? { token } : {}),
     tokenPresent: true,
     updatedAt: stored.updatedAt || null,
@@ -111,11 +149,15 @@ export async function saveCpanelConfig(input, { existingConfig = null } = {}) {
   const normalized = await normalizeCpanelConfig(input, { tokenRequired: false });
   const token = normalized.token || (sameEndpoint(normalized, existingConfig) ? existingConfig?.token : null);
   if (!token) throw new Error('cPanel API token is required');
+  const tokenExpiresAt = input?.tokenExpiresAt === undefined && sameEndpoint(normalized, existingConfig)
+    ? (existingConfig?.tokenExpiresAt || null)
+    : normalized.tokenExpiresAt;
   const stored = {
     host: normalized.host,
     port: normalized.port,
     username: normalized.username,
     domain: normalized.domain,
+    tokenExpiresAt,
     token: encrypt(token),
     updatedAt: new Date().toISOString(),
   };
@@ -125,20 +167,28 @@ export async function saveCpanelConfig(input, { existingConfig = null } = {}) {
      ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = NOW()`,
     [CPANEL_SETTINGS_KEY, JSON.stringify(stored)],
   );
-  return { ...normalized, tokenPresent: true, token: undefined, updatedAt: stored.updatedAt };
+  return { ...normalized, tokenExpiresAt, tokenPresent: true, token: undefined, updatedAt: stored.updatedAt };
 }
 
 async function resolveCpanelConfig(configInput) {
-  if (!configInput?.host) return getCpanelConfig({ includeToken: true });
+  if (!configInput?.host) {
+    const saved = await getCpanelConfig({ includeToken: true });
+    assertTokenNotExpired(saved?.tokenExpiresAt);
+    return saved;
+  }
 
   const normalized = await normalizeCpanelConfig(configInput, { tokenRequired: false });
-  if (normalized.token) return normalized;
+  if (normalized.token) {
+    assertTokenNotExpired(normalized.tokenExpiresAt);
+    return normalized;
+  }
 
   const saved = await getCpanelConfig({ includeToken: true });
   if (!saved || !sameEndpoint(normalized, saved)) {
     throw new Error('A new cPanel API token is required when the connection target changes');
   }
-  return { ...normalized, token: saved.token };
+  assertTokenNotExpired(saved.tokenExpiresAt);
+  return { ...normalized, token: saved.token, tokenExpiresAt: saved.tokenExpiresAt };
 }
 
 function parseBytes(value) {
@@ -248,6 +298,7 @@ export function normalizeCpanelApiError(body, { httpStatus = null, token = '' } 
 }
 
 async function cpanelRequest(config, functionName, params = {}) {
+  assertTokenNotExpired(config?.tokenExpiresAt);
   const url = new URL(`https://${config.host}:${config.port}/execute/Email/${functionName}`);
   url.searchParams.set('api.version', '1');
   for (const [key, value] of Object.entries(params)) {
