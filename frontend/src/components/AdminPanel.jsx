@@ -721,19 +721,19 @@ function MailboxProvisioner({ config, limits, onChanged, onCredentials, onNotice
       </div>
       {mode === 'single' ? (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px', gap: 10 }}>
-            <Field label={t('admin.cpanel.localPart')} required>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <input value={createForm.localPart} onChange={e => setCreateForm(current => ({ ...current, localPart: e.target.value }))} placeholder={t('admin.cpanel.localPartPh')} style={{ ...inputStyle, flex: 1 }} />
-                <span style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>@{config.domain}</span>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+            <Field label={t('admin.cpanel.localPart')} required style={{ flex: '1 1 220px', minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                <input value={createForm.localPart} onChange={e => setCreateForm(current => ({ ...current, localPart: e.target.value }))} placeholder={t('admin.cpanel.localPartPh')} style={{ ...inputStyle, flex: '1 1 auto', minWidth: 0 }} />
+                <span style={{ color: 'var(--text-tertiary)', fontSize: 12, overflowWrap: 'anywhere' }}>@{config.domain}</span>
               </div>
             </Field>
-            <Field label={t('admin.cpanel.quotaWithLimit', { max: maxQuotaMb })} required><input type="number" min="1" max={maxQuotaMb} value={createForm.quotaMb} onChange={e => setCreateForm(current => ({ ...current, quotaMb: Math.min(maxQuotaMb, Number(e.target.value)) }))} style={inputStyle} /></Field>
+            <Field label={t('admin.cpanel.quotaWithLimit', { max: maxQuotaMb })} required style={{ flex: '0 1 150px', minWidth: 110 }}><input type="number" min="1" max={maxQuotaMb} value={createForm.quotaMb} onChange={e => setCreateForm(current => ({ ...current, quotaMb: Math.min(maxQuotaMb, Number(e.target.value)) }))} style={inputStyle} /></Field>
           </div>
           <Field label={t('admin.cpanel.password')}>
-            <div style={{ display: 'flex', gap: 7 }}>
-              <input type="password" value={createForm.password} onChange={e => setCreateForm(current => ({ ...current, password: e.target.value }))} placeholder={t('admin.cpanel.passwordOptional')} style={{ ...inputStyle, flex: 1 }} />
-              <button type="button" onClick={() => setCreateForm(current => ({ ...current, password: generateMailboxPassword() }))} style={{ padding: '6px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', fontSize: 11, cursor: 'pointer', whiteSpace: 'nowrap' }}>{t('admin.cpanel.generatePassword')}</button>
+            <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+              <input type="password" value={createForm.password} onChange={e => setCreateForm(current => ({ ...current, password: e.target.value }))} placeholder={t('admin.cpanel.passwordOptional')} style={{ ...inputStyle, flex: '1 1 220px', minWidth: 0 }} />
+              <button type="button" onClick={() => setCreateForm(current => ({ ...current, password: generateMailboxPassword() }))} style={{ padding: '6px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', fontSize: 11, cursor: 'pointer', flex: '0 1 auto', whiteSpace: 'normal' }}>{t('admin.cpanel.generatePassword')}</button>
             </div>
           </Field>
           <button type="button" onClick={create} disabled={!!busy || !createForm.localPart} style={{ padding: '9px 13px', background: 'var(--accent)', color: 'var(--accent-text)', border: 'none', borderRadius: 7, cursor: busy ? 'wait' : 'pointer', fontSize: 12 }}>{busy === 'create' ? t('admin.cpanel.creating') : t('admin.accounts.createMailbox')}</button>
