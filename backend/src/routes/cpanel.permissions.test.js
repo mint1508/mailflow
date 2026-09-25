@@ -50,6 +50,13 @@ vi.mock('../services/mailboxActivation.js', () => ({
   sendManagedMailboxReset: vi.fn(async () => ({ emailSent: true })),
 }));
 
+vi.mock('../services/mailAccess.js', () => ({
+  listMailboxMemberships: vi.fn(async () => []),
+  grantMailboxMembership: vi.fn(async input => ({ ...input })),
+  updateMailboxMembership: vi.fn(async input => ({ ...input })),
+  revokeMailboxMembership: vi.fn(async input => ({ ...input })),
+}));
+
 import express from 'express';
 import cpanelRoutes from './cpanel.js';
 import { query } from '../services/db.js';

@@ -24,6 +24,12 @@ import {
   resendMailboxActivation,
   sendManagedMailboxReset,
 } from '../services/mailboxActivation.js';
+import {
+  listMailboxMemberships,
+  grantMailboxMembership,
+  updateMailboxMembership,
+  revokeMailboxMembership,
+} from '../services/mailAccess.js';
 
 const router = Router();
 router.use(requireMailboxManager);
@@ -302,6 +308,64 @@ router.post('/mailboxes/:email/unsuspend', async (req, res) => {
     await audit(req.session.userId, 'mailbox_unsuspended', false, { error: error.message });
     res.status(400).json({ error: error.message });
   }
+});
+
+// Membership management is intentionally scoped to managed mailboxes. The cPanel
+// mailbox remains the source of truth; these records only grant app access.
+async function getManagedMailboxAccount(email) {
+  const result = await query(
+    `SELECT id, user_id, email_address
+       FROM email_accounts
+      WHERE managed_mailbox = true AND lower(email_address) = lower($1)
+      LIMIT 1`,
+    [email],
+  );
+  return result.rows[0] || null;
+}
+
+router.get('/mailboxes/:email/members', async (req, res) => {
+  const account = await getManagedMailboxAccount(req.params.email);
+  if (!account) return res.status(404).json({ error: 'Managed mailbox not found' });
+  res.json({ ownerUserId: account.user_id, members: await listMailboxMemberships(account.id) });
+});
+
+router.post('/mailboxes/:email/members', async (req, res) => {
+  const account = await getManagedMailboxAccount(req.params.email);
+  if (!account) return res.status(404).json({ error: 'Managed mailbox not found' });
+  const userId = req.body?.userId;
+  const permission = req.body?.permission || 'read_send';
+  if (!userId) return res.status(400).json({ error: 'userId is required' });
+  if (userId === account.user_id) return res.status(400).json({ error: 'Mailbox owner does not need membership' });
+  const target = await query('SELECT id FROM users WHERE id = $1', [userId]);
+  if (!target.rows.length) return res.status(404).json({ error: 'Target user not found' });
+  try {
+    const membership = await grantMailboxMembership({ accountId: account.id, userId, permission, grantedBy: req.session.userId });
+    res.status(201).json({ membership });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+router.patch('/mailboxes/:email/members/:userId', async (req, res) => {
+  const account = await getManagedMailboxAccount(req.params.email);
+  if (!account) return res.status(404).json({ error: 'Managed mailbox not found' });
+  if (req.params.userId === account.user_id) return res.status(400).json({ error: 'Mailbox owner does not need membership' });
+  try {
+    const membership = await updateMailboxMembership({ accountId: account.id, userId: req.params.userId, permission: req.body?.permission });
+    if (!membership) return res.status(404).json({ error: 'Membership not found' });
+    res.json({ membership });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+router.delete('/mailboxes/:email/members/:userId', async (req, res) => {
+  const account = await getManagedMailboxAccount(req.params.email);
+  if (!account) return res.status(404).json({ error: 'Managed mailbox not found' });
+  if (req.params.userId === account.user_id) return res.status(400).json({ error: 'Mailbox owner cannot be removed' });
+  const membership = await revokeMailboxMembership({ accountId: account.id, userId: req.params.userId });
+  if (!membership) return res.status(404).json({ error: 'Membership not found' });
+  res.json({ membership });
 });
 
 router.delete('/mailboxes/:email', requireAdmin, async (req, res) => {
