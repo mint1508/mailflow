@@ -631,7 +631,7 @@ function AccountForm({ initial, onSave, onCancel, cpanelConfig = null }) {
 function MailboxProvisioner({ config, limits, onChanged, onCredentials, onNotice }) {
   const { t } = useTranslation();
   const [mode, setMode] = useState('single');
-  const [createForm, setCreateForm] = useState({ localPart: '', quotaMb: 1024, password: '' });
+  const [createForm, setCreateForm] = useState({ localPart: '', quotaMb: 1024, contactEmail: '' });
   const [bulkText, setBulkText] = useState('');
   const [bulkQuotaMb, setBulkQuotaMb] = useState(1024);
   const [bulkResult, setBulkResult] = useState(null);
@@ -649,12 +649,11 @@ function MailboxProvisioner({ config, limits, onChanged, onCredentials, onNotice
     setBulkResult(null);
     try {
       const result = await api.admin.cpanel.createMailbox(createForm);
-      onCredentials?.(result.mailbox);
-      setCreateForm(current => ({ ...current, localPart: '', password: '' }));
-      await api.addAccount(cpanelAccountPayload(config.host, result.mailbox.email, result.mailbox.password));
+      onCredentials?.({ email: result.mailbox.email, ...result.activation });
+      setCreateForm(current => ({ ...current, localPart: '', contactEmail: '' }));
       window.dispatchEvent(new CustomEvent('mailflow:accounts_refresh'));
       await onChanged?.();
-      onNotice?.({ type: 'success', message: t('admin.cpanel.linked') });
+      onNotice?.({ type: 'success', message: result.activation.emailSent ? t('admin.cpanel.activationSent') : t('admin.cpanel.activationCreated') });
     } catch (error) {
       onNotice?.({ type: 'error', message: error.message });
     } finally {
@@ -670,7 +669,6 @@ function MailboxProvisioner({ config, limits, onChanged, onCredentials, onNotice
     try {
       const result = await api.admin.cpanel.createMailboxesBulk({ items, quotaMb: bulkQuotaMb });
       setBulkResult(result);
-      await Promise.allSettled(result.created.map(mailbox => api.addAccount(cpanelAccountPayload(config.host, mailbox.email, mailbox.password))));
       window.dispatchEvent(new CustomEvent('mailflow:accounts_refresh'));
       await onChanged?.();
       onNotice?.({ type: result.failed.length ? 'error' : 'success', message: t('admin.cpanel.bulkSummary', { created: result.created.length, failed: result.failed.length }) });
@@ -691,7 +689,7 @@ function MailboxProvisioner({ config, limits, onChanged, onCredentials, onNotice
   };
 
   const bulkCredentialsText = bulkResult?.created?.map(mailbox => (
-    `Email: ${mailbox.email}\nPassword: ${mailbox.password}\nQuota: ${mailbox.quotaMb} MB`
+    `Email: ${mailbox.email}\nContact: ${mailbox.contactEmail}\nActivation: ${mailbox.activationUrl}\nQuota: ${mailbox.quotaMb} MB`
   )).join('\n\n') || '';
   const share = async (text) => {
     if (navigator.share) await navigator.share({ title: t('admin.cpanel.bulkCreate'), text }).catch(() => {});
@@ -730,13 +728,10 @@ function MailboxProvisioner({ config, limits, onChanged, onCredentials, onNotice
             </Field>
             <Field label={t('admin.cpanel.quotaWithLimit', { max: maxQuotaMb })} required style={{ flex: '0 1 150px', minWidth: 110 }}><input type="number" min="1" max={maxQuotaMb} value={createForm.quotaMb} onChange={e => setCreateForm(current => ({ ...current, quotaMb: Math.min(maxQuotaMb, Number(e.target.value)) }))} style={inputStyle} /></Field>
           </div>
-          <Field label={t('admin.cpanel.password')}>
-            <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
-              <input type="password" value={createForm.password} onChange={e => setCreateForm(current => ({ ...current, password: e.target.value }))} placeholder={t('admin.cpanel.passwordOptional')} style={{ ...inputStyle, flex: '1 1 220px', minWidth: 0 }} />
-              <button type="button" onClick={() => setCreateForm(current => ({ ...current, password: generateMailboxPassword() }))} style={{ padding: '6px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', fontSize: 11, cursor: 'pointer', flex: '0 1 auto', whiteSpace: 'normal' }}>{t('admin.cpanel.generatePassword')}</button>
-            </div>
+          <Field label={t('admin.cpanel.contactEmail')} required>
+            <input type="email" value={createForm.contactEmail} onChange={e => setCreateForm(current => ({ ...current, contactEmail: e.target.value }))} placeholder={t('admin.cpanel.contactEmailPh')} style={inputStyle} />
           </Field>
-          <button type="button" onClick={create} disabled={!!busy || !createForm.localPart} style={{ padding: '9px 13px', background: 'var(--accent)', color: 'var(--accent-text)', border: 'none', borderRadius: 7, cursor: busy ? 'wait' : 'pointer', fontSize: 12 }}>{busy === 'create' ? t('admin.cpanel.creating') : t('admin.accounts.createMailbox')}</button>
+          <button type="button" onClick={create} disabled={!!busy || !createForm.localPart || !createForm.contactEmail.includes('@')} style={{ padding: '9px 13px', background: 'var(--accent)', color: 'var(--accent-text)', border: 'none', borderRadius: 7, cursor: busy ? 'wait' : 'pointer', fontSize: 12 }}>{busy === 'create' ? t('admin.cpanel.creating') : t('admin.accounts.createMailbox')}</button>
         </>
       ) : (
         <>
@@ -771,11 +766,12 @@ function AccountsTab() {
   const [cpanelMailboxes, setCpanelMailboxes] = useState([]);
   const [cpanelLimits, setCpanelLimits] = useState({ maxMailboxes: 15, maxQuotaMb: 10240 });
   const [accountDraft, setAccountDraft] = useState(null);
-  const [oneTimeCredentials, setOneTimeCredentials] = useState(null);
+  const [activationInfo, setActivationInfo] = useState(null);
   const [provisionNotice, setProvisionNotice] = useState(null);
   const [quotaEditEmail, setQuotaEditEmail] = useState(null);
   const [quotaEditMb, setQuotaEditMb] = useState('');
   const [quotaSaving, setQuotaSaving] = useState(false);
+  const [activationEmailDraft, setActivationEmailDraft] = useState({});
 
   useEffect(() => {
     api.admin.cpanel.getConnection()
@@ -807,7 +803,7 @@ function AccountsTab() {
   const handleAdd = async (form, credentials = null) => {
     const account = await api.addAccount(form);
     setAccounts([...accounts, account]);
-    if (credentials) setOneTimeCredentials(credentials);
+    if (credentials) setActivationInfo(credentials);
     setAccountDraft(null);
     setSubview('list');
   };
@@ -815,17 +811,29 @@ function AccountsTab() {
   const handleResetMailboxPassword = async (mailbox) => {
     setProvisionNotice(null);
     try {
-      const result = await api.admin.cpanel.resetMailboxPassword(mailbox.email);
-      const linked = accounts.some(account => account.email_address?.toLowerCase() === mailbox.email.toLowerCase());
-      if (!linked) {
-        await api.addAccount(cpanelAccountPayload(cpanelConfig.host, mailbox.email, result.mailbox.password));
-        window.dispatchEvent(new CustomEvent('mailflow:accounts_refresh'));
-      }
-      setOneTimeCredentials({ email: result.mailbox.email, password: result.mailbox.password });
-      setProvisionNotice({ type: 'success', message: t('admin.accounts.passwordReset') });
+      const pending = mailbox.activation_status === 'pending';
+      const result = pending
+        ? await api.admin.cpanel.resendMailboxActivation(mailbox.email)
+        : await api.admin.cpanel.sendMailboxResetLink(mailbox.email);
+      if (pending) setActivationInfo({ email: mailbox.email, ...result.activation });
+      setProvisionNotice({ type: 'success', message: mailbox.activation_status === 'pending' ? t('admin.cpanel.activationResent') : t('admin.cpanel.resetLinkSent') });
       await reloadCpanelMailboxes();
     } catch (error) {
       await reloadCpanelMailboxes().catch(() => {});
+      setProvisionNotice({ type: 'error', message: error.message });
+    }
+  };
+
+  const handleCreateMailboxActivation = async (mailbox) => {
+    const contactEmail = activationEmailDraft[mailbox.email] || '';
+    setProvisionNotice(null);
+    try {
+      const result = await api.admin.cpanel.createMailboxActivation(mailbox.email, contactEmail);
+      setActivationInfo({ email: mailbox.email, ...result.activation });
+      setActivationEmailDraft(current => ({ ...current, [mailbox.email]: '' }));
+      setProvisionNotice({ type: 'success', message: result.activation.emailSent ? t('admin.cpanel.activationSent') : t('admin.cpanel.activationCreated') });
+      await reloadCpanelMailboxes();
+    } catch (error) {
       setProvisionNotice({ type: 'error', message: error.message });
     }
   };
@@ -889,21 +897,21 @@ function AccountsTab() {
     });
   };
 
-  const oneTimeCredentialsText = oneTimeCredentials
-    ? `Email: ${oneTimeCredentials.email}\nPassword: ${oneTimeCredentials.password}`
+  const activationInfoText = activationInfo
+    ? `Email: ${activationInfo.email}\nContact: ${activationInfo.contactEmail || ''}\nActivation link: ${activationInfo.activationUrl}`
     : '';
-  const saveOneTimeCredentials = () => {
-    const blob = new Blob([oneTimeCredentialsText], { type: 'text/plain;charset=utf-8' });
+  const saveActivationInfo = () => {
+    const blob = new Blob([activationInfoText], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
-    anchor.download = `${oneTimeCredentials.email.replace(/[^a-z0-9@._-]/gi, '_')}-credentials.txt`;
+    anchor.download = `${activationInfo.email.replace(/[^a-z0-9@._-]/gi, '_')}-activation.txt`;
     anchor.click();
     URL.revokeObjectURL(url);
   };
-  const shareOneTimeCredentials = async () => {
-    if (navigator.share) await navigator.share({ title: oneTimeCredentials.email, text: oneTimeCredentialsText }).catch(() => {});
-    else await copyToClipboard(oneTimeCredentialsText);
+  const shareActivationInfo = async () => {
+    if (navigator.share) await navigator.share({ title: activationInfo.email, text: activationInfoText }).catch(() => {});
+    else await copyToClipboard(activationInfoText);
   };
 
   const handleEdit = async (form) => {
@@ -1078,15 +1086,15 @@ function AccountsTab() {
           {t('sidebar.backToAccounts')}
         </button>
         <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 16 }}>{t('admin.accounts.createMailboxTitle')}</div>
-        <MailboxProvisioner config={cpanelConfig} limits={cpanelLimits} onChanged={reloadCpanelMailboxes} onNotice={setProvisionNotice} onCredentials={mailbox => setOneTimeCredentials({ email: mailbox.email, password: mailbox.password })} />
-        {oneTimeCredentials && (
+        <MailboxProvisioner config={cpanelConfig} limits={cpanelLimits} onChanged={reloadCpanelMailboxes} onNotice={setProvisionNotice} onCredentials={setActivationInfo} />
+        {activationInfo && (
           <div style={{ marginTop: 12, padding: 12, border: '1px solid var(--green)', borderRadius: 8, background: 'rgba(34,197,94,0.08)' }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>{t('admin.cpanel.created')}</div>
-            <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-secondary)' }}>{oneTimeCredentialsText}</pre>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>{t('admin.cpanel.activationReady')}</div>
+            <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-secondary)' }}>{activationInfoText}</pre>
             <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 8 }}>
-              <button onClick={() => copyToClipboard(oneTimeCredentialsText)} style={{ padding: '6px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 11 }}>{t('admin.cpanel.copyCredentials')}</button>
-              <button onClick={saveOneTimeCredentials} style={{ padding: '6px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 11 }}>{t('admin.cpanel.saveCredentials')}</button>
-              <button onClick={shareOneTimeCredentials} style={{ padding: '6px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 11 }}>{t('admin.cpanel.shareCredentials')}</button>
+              <button onClick={() => copyToClipboard(activationInfoText)} style={{ padding: '6px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 11 }}>{t('admin.cpanel.copyActivation')}</button>
+              <button onClick={saveActivationInfo} style={{ padding: '6px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 11 }}>{t('admin.cpanel.saveCredentials')}</button>
+              <button onClick={shareActivationInfo} style={{ padding: '6px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 11 }}>{t('admin.cpanel.shareActivation')}</button>
             </div>
           </div>
         )}
@@ -1419,14 +1427,14 @@ function AccountsTab() {
 
       {provisionNotice && <div style={{ marginBottom: 12, fontSize: 12, color: provisionNotice.type === 'error' ? 'var(--red)' : 'var(--green)' }}>{provisionNotice.message}</div>}
 
-      {oneTimeCredentials && (
+      {activationInfo && (
         <div style={{ marginBottom: 16, padding: 12, border: '1px solid var(--green)', borderRadius: 8, background: 'rgba(34,197,94,0.08)' }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>{t('admin.cpanel.created')}</div>
-          <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-secondary)' }}>{oneTimeCredentialsText}</pre>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>{t('admin.cpanel.activationReady')}</div>
+          <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-secondary)' }}>{activationInfoText}</pre>
           <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 8 }}>
-            <button onClick={() => copyToClipboard(oneTimeCredentialsText)} style={{ padding: '6px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 11 }}>{t('admin.cpanel.copyCredentials')}</button>
-            <button onClick={saveOneTimeCredentials} style={{ padding: '6px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 11 }}>{t('admin.cpanel.saveCredentials')}</button>
-            <button onClick={shareOneTimeCredentials} style={{ padding: '6px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 11 }}>{t('admin.cpanel.shareCredentials')}</button>
+            <button onClick={() => copyToClipboard(activationInfoText)} style={{ padding: '6px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 11 }}>{t('admin.cpanel.copyActivation')}</button>
+            <button onClick={saveActivationInfo} style={{ padding: '6px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 11 }}>{t('admin.cpanel.saveCredentials')}</button>
+            <button onClick={shareActivationInfo} style={{ padding: '6px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 11 }}>{t('admin.cpanel.shareActivation')}</button>
           </div>
         </div>
       )}
@@ -1467,14 +1475,20 @@ function AccountsTab() {
                   </span>
                 ) : <>{bytesForMailbox(mailbox.quota_bytes)}{mailbox.disk_used_bytes != null ? ` · ${bytesForMailbox(mailbox.disk_used_bytes)} ${t('admin.accounts.quotaUsedShort')}` : ''}</>}</div>
               </div>
-              <span style={{ color: mailbox.suspended || !mailbox.is_present ? 'var(--red)' : 'var(--amber)', fontSize: 11 }}>{mailbox.suspended ? t('admin.accounts.disabled') : t('admin.accounts.pendingLink')}</span>
+              <span style={{ color: mailbox.suspended || !mailbox.is_present ? 'var(--red)' : mailbox.activation_status === 'active' ? 'var(--green)' : 'var(--amber)', fontSize: 11 }}>
+                {mailbox.suspended ? t('admin.accounts.disabled') : mailbox.activation_status === 'active' ? t('admin.cpanel.activated') : mailbox.activation_status === 'pending' ? t('admin.cpanel.pendingActivation') : t('admin.accounts.pendingLink')}
+              </span>
+              {mailbox.activation_status === 'unmanaged' && <div style={{ display: 'flex', gap: 5, flex: '1 1 240px', minWidth: 220 }}>
+                <input type="email" value={activationEmailDraft[mailbox.email] || ''} onChange={event => setActivationEmailDraft(current => ({ ...current, [mailbox.email]: event.target.value }))} placeholder={t('admin.cpanel.contactEmailPh')} style={{ ...inputStyle, padding: '5px 7px', fontSize: 11 }} />
+                <button type="button" onClick={() => handleCreateMailboxActivation(mailbox)} disabled={!activationEmailDraft[mailbox.email]?.includes('@')} style={{ padding: '5px 8px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--accent)', color: 'var(--accent-text)', fontSize: 11, whiteSpace: 'nowrap', cursor: 'pointer' }}>{t('admin.cpanel.sendActivation')}</button>
+              </div>}
               <div style={{ display: 'flex', gap: 5 }}>
                 {quotaEditEmail !== mailbox.email && <IconBtn onClick={() => beginQuotaEdit(mailbox)} title={t('admin.accounts.editQuota')}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>
                 </IconBtn>}
-                <IconBtn onClick={() => handleResetMailboxPassword(mailbox)} title={t('admin.accounts.resetPassword')}>
+                {mailbox.activation_status !== 'unmanaged' && <IconBtn onClick={() => handleResetMailboxPassword(mailbox)} title={mailbox.activation_status === 'pending' ? t('admin.cpanel.resendActivation') : t('admin.accounts.resetPassword')}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 11a8 8 0 1 0 2 5.3"/><polyline points="20 4 20 11 13 11"/></svg>
-                </IconBtn>
+                </IconBtn>}
                 <IconBtn onClick={() => handleToggleMailbox(mailbox)} title={mailbox.suspended ? t('admin.accounts.enableMailbox') : t('admin.accounts.disableMailbox')}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="5" width="18" height="14" rx="2"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="13" y2="14"/></svg>
                 </IconBtn>
@@ -1524,7 +1538,7 @@ function AccountsTab() {
                   }}>⚠ {account.sync_error}</span>
                 ) : (
                   <>
-                    <span style={{ color: cpanelMailbox?.suspended ? 'var(--red)' : 'var(--green)' }}>● {cpanelMailbox?.suspended ? t('admin.accounts.disabled') : t('admin.accounts.connected')}</span>
+                    <span style={{ color: cpanelMailbox?.suspended ? 'var(--red)' : cpanelMailbox?.activation_status === 'pending' ? 'var(--amber)' : 'var(--green)' }}>● {cpanelMailbox?.suspended ? t('admin.accounts.disabled') : cpanelMailbox?.activation_status === 'pending' ? t('admin.cpanel.pendingActivation') : t('admin.accounts.connected')}</span>
                   </>
                 )}
               </div>
@@ -1537,12 +1551,16 @@ function AccountsTab() {
                   </span>
                 ) : <>{bytesForMailbox(cpanelMailbox.quota_bytes)}{cpanelMailbox.disk_used_bytes != null ? ` · ${bytesForMailbox(cpanelMailbox.disk_used_bytes)} ${t('admin.accounts.quotaUsedShort')}` : ''}</>}
               </div>}
+              {cpanelMailbox?.activation_status === 'unmanaged' && <div style={{ display: 'flex', gap: 5, marginTop: 7, flexWrap: 'wrap' }}>
+                <input type="email" value={activationEmailDraft[cpanelMailbox.email] || ''} onChange={event => setActivationEmailDraft(current => ({ ...current, [cpanelMailbox.email]: event.target.value }))} placeholder={t('admin.cpanel.contactEmailPh')} style={{ ...inputStyle, padding: '5px 7px', fontSize: 11, flex: '1 1 190px' }} />
+                <button type="button" onClick={() => handleCreateMailboxActivation(cpanelMailbox)} disabled={!activationEmailDraft[cpanelMailbox.email]?.includes('@')} style={{ padding: '5px 8px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--accent)', color: 'var(--accent-text)', fontSize: 11, whiteSpace: 'nowrap', cursor: 'pointer' }}>{t('admin.cpanel.sendActivation')}</button>
+              </div>}
             </div>
             <div style={{ display: 'flex', gap: 6, flexShrink: 0, marginLeft: 'auto' }}>
               {cpanelMailbox && quotaEditEmail !== cpanelMailbox.email && <IconBtn onClick={() => beginQuotaEdit(cpanelMailbox)} title={t('admin.accounts.editQuota')}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>
               </IconBtn>}
-              {cpanelMailbox && <IconBtn onClick={() => handleResetMailboxPassword(cpanelMailbox)} title={t('admin.accounts.resetPassword')}>
+              {cpanelMailbox && cpanelMailbox.activation_status !== 'unmanaged' && <IconBtn onClick={() => handleResetMailboxPassword(cpanelMailbox)} title={cpanelMailbox.activation_status === 'pending' ? t('admin.cpanel.resendActivation') : t('admin.accounts.resetPassword')}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 11a8 8 0 1 0 2 5.3"/><polyline points="20 4 20 11 13 11"/></svg>
               </IconBtn>}
               {cpanelMailbox && <IconBtn onClick={() => handleToggleMailbox(cpanelMailbox)} title={cpanelMailbox.suspended ? t('admin.accounts.enableMailbox') : t('admin.accounts.disableMailbox')}>

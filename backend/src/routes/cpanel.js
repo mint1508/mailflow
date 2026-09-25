@@ -17,6 +17,13 @@ import {
   getCpanelTokenInventory,
   checkCpanelTokenInventory,
 } from '../services/cpanelClient.js';
+import {
+  createMailboxActivation,
+  createExistingMailboxActivation,
+  mailboxActivationState,
+  resendMailboxActivation,
+  sendManagedMailboxReset,
+} from '../services/mailboxActivation.js';
 
 const router = Router();
 router.use(requireMailboxManager);
@@ -46,6 +53,23 @@ function publicMailbox(mailbox) {
     disk_used_bytes: mailbox.disk_used_bytes ?? mailbox.diskUsedBytes ?? null,
     is_present: mailbox.is_present ?? true,
   };
+}
+
+async function withActivationState(mailboxes) {
+  const states = await mailboxActivationState(mailboxes.map(mailbox => mailbox.email));
+  return mailboxes.map(mailbox => {
+    const state = states.get(mailbox.email?.toLowerCase());
+    return {
+      ...publicMailbox(mailbox),
+      account_id: state?.account_id || null,
+      owner_user_id: state?.user_id || null,
+      contact_email: state?.contact_email || state?.recovery_email || null,
+      activation_expires_at: state?.expires_at || null,
+      activation_status: state?.used_at && state.enabled
+        ? 'active'
+        : state?.invite_id ? 'pending' : 'unmanaged',
+    };
+  });
 }
 
 function audit(actorUserId, action, success, detail = {}) {
@@ -112,13 +136,13 @@ router.get('/mailboxes', async (_req, res) => {
      ORDER BY email ASC`,
     [config.domain],
   );
-  res.json({ domain: config?.domain || null, mailboxes: result.rows, limits: getCpanelLimits() });
+  res.json({ domain: config?.domain || null, mailboxes: await withActivationState(result.rows), limits: getCpanelLimits() });
 });
 
 router.post('/mailboxes/sync', async (req, res) => {
   try {
     const mailboxes = await syncCpanelMailboxes(req.session.userId);
-    res.json({ ok: true, mailboxCount: mailboxes.length, mailboxes: mailboxes.map(publicMailbox), limits: getCpanelLimits() });
+    res.json({ ok: true, mailboxCount: mailboxes.length, mailboxes: await withActivationState(mailboxes), limits: getCpanelLimits() });
   } catch (error) {
     await audit(req.session.userId, 'inventory_sync', false, { error: error.message });
     res.status(400).json({ error: error.message });
@@ -126,11 +150,29 @@ router.post('/mailboxes/sync', async (req, res) => {
 });
 
 router.post('/mailboxes', async (req, res) => {
+  let result = null;
   try {
-    const result = await createCpanelMailbox(req.body || {});
-    await audit(req.session.userId, 'mailbox_created', true, { email: result.email, quotaMb: result.quotaMb });
-    res.status(201).json({ ok: true, mailbox: result });
+    if (!req.body?.contactEmail) return res.status(400).json({ error: 'Contact email is required' });
+    result = await createCpanelMailbox({ ...req.body, password: undefined });
+    const activation = await createMailboxActivation({
+      actorUserId: req.session.userId,
+      mailbox: result,
+      contactEmail: req.body.contactEmail,
+    });
+    await audit(req.session.userId, 'mailbox_created', true, { email: result.email, quotaMb: result.quotaMb, activationEmailSent: activation.emailSent });
+    res.status(201).json({
+      ok: true,
+      mailbox: { email: result.email, quotaMb: result.quotaMb },
+      activation: {
+        contactEmail: activation.contactEmail,
+        activationUrl: activation.activationUrl,
+        emailSent: activation.emailSent,
+        emailError: activation.emailError,
+        expiresAt: activation.expiresAt,
+      },
+    });
   } catch (error) {
+    if (result?.email) await deleteCpanelMailbox(result.email).catch(cleanupError => console.warn('Mailbox cleanup failed:', cleanupError.message));
     await audit(req.session.userId, 'mailbox_created', false, { error: error.message });
     res.status(400).json({ error: error.message });
   }
@@ -139,6 +181,30 @@ router.post('/mailboxes', async (req, res) => {
 router.post('/mailboxes/bulk', async (req, res) => {
   try {
     const result = await createCpanelMailboxes(req.body || {});
+    const activated = [];
+    for (const mailbox of result.created) {
+      const item = req.body?.items?.[mailbox.index] || {};
+      try {
+        const activation = await createMailboxActivation({
+          actorUserId: req.session.userId,
+          mailbox,
+          contactEmail: item.contactEmail,
+        });
+        activated.push({
+          index: mailbox.index,
+          email: mailbox.email,
+          quotaMb: mailbox.quotaMb,
+          contactEmail: activation.contactEmail,
+          activationUrl: activation.activationUrl,
+          emailSent: activation.emailSent,
+          emailError: activation.emailError,
+        });
+      } catch (error) {
+        await deleteCpanelMailbox(mailbox.email).catch(cleanupError => console.warn('Mailbox cleanup failed:', cleanupError.message));
+        result.failed.push({ index: mailbox.index, input: mailbox.email, error: error.message });
+      }
+    }
+    result.created = activated;
     await audit(req.session.userId, 'mailboxes_bulk_created', result.failed.length === 0, {
       requestedCount: result.requestedCount,
       createdCount: result.created.length,
@@ -158,6 +224,43 @@ router.post('/mailboxes/:email/password', async (req, res) => {
     res.json({ ok: true, mailbox: result });
   } catch (error) {
     await audit(req.session.userId, 'mailbox_password_reset', false, { error: error.message });
+    res.status(400).json({ error: error.message });
+  }
+});
+
+router.post('/mailboxes/:email/activation/resend', async (req, res) => {
+  try {
+    const result = await resendMailboxActivation(req.params.email);
+    await audit(req.session.userId, 'mailbox_activation_resent', true, { email: req.params.email });
+    res.json({ ok: true, activation: result });
+  } catch (error) {
+    await audit(req.session.userId, 'mailbox_activation_resent', false, { email: req.params.email, error: error.message });
+    res.status(400).json({ error: error.message });
+  }
+});
+
+router.post('/mailboxes/:email/activation', async (req, res) => {
+  try {
+    const result = await createExistingMailboxActivation({
+      actorUserId: req.session.userId,
+      mailboxEmail: req.params.email,
+      contactEmail: req.body?.contactEmail,
+    });
+    await audit(req.session.userId, 'mailbox_activation_created', true, { email: req.params.email, activationEmailSent: result.emailSent });
+    res.status(201).json({ ok: true, activation: result });
+  } catch (error) {
+    await audit(req.session.userId, 'mailbox_activation_created', false, { email: req.params.email, error: error.message });
+    res.status(400).json({ error: error.message });
+  }
+});
+
+router.post('/mailboxes/:email/reset-link', async (req, res) => {
+  try {
+    const result = await sendManagedMailboxReset(req.params.email);
+    await audit(req.session.userId, 'mailbox_reset_link_sent', true, { email: req.params.email });
+    res.json({ ok: true, reset: result });
+  } catch (error) {
+    await audit(req.session.userId, 'mailbox_reset_link_sent', false, { email: req.params.email, error: error.message });
     res.status(400).json({ error: error.message });
   }
 });
@@ -207,6 +310,21 @@ router.delete('/mailboxes/:email', async (req, res) => {
     // The provider is authoritative for deletion; remove the local projection
     // only after cPanel confirms success so a failed mutation remains visible.
     await query('DELETE FROM cpanel_mailboxes WHERE email = $1', [result.email]);
+    const managedAccount = await query(
+      `SELECT id, user_id FROM email_accounts
+       WHERE managed_mailbox = true AND lower(email_address) = lower($1)`,
+      [result.email],
+    );
+    if (managedAccount.rows.length) {
+      await query('DELETE FROM invites WHERE email_account_id = $1', [managedAccount.rows[0].id]);
+      await query('DELETE FROM email_accounts WHERE id = $1', [managedAccount.rows[0].id]);
+      await query(
+        `DELETE FROM users u
+         WHERE u.id = $1 AND lower(u.username) = lower($2)
+           AND NOT EXISTS (SELECT 1 FROM email_accounts ea WHERE ea.user_id = u.id)`,
+        [managedAccount.rows[0].user_id, result.email],
+      );
+    }
     await audit(req.session.userId, 'mailbox_deleted', true, { email: result.email });
     res.json({ ok: true, mailbox: result });
   } catch (error) {

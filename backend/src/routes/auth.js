@@ -19,6 +19,7 @@ import { sanitizeGtdPrefs } from '../utils/gtdPrefs.js';
 import { sanitizeRightSidebarPrefs } from '../utils/rightSidebarPrefs.js';
 import { redisClient } from '../services/redis.js';
 import { consume as rlConsume, reset as rlReset } from '../services/rateLimiter.js';
+import { resetCpanelMailboxPassword } from '../services/cpanelClient.js';
 
 const router = Router();
 
@@ -134,6 +135,22 @@ router.post('/register', authLimiter, async (req, res) => {
 
     const countResult = await client.query('SELECT COUNT(*) as count FROM users');
     const isFirstUser = parseInt(countResult.rows[0].count) === 0;
+    let invite = null;
+
+    if (inviteToken) {
+      const inviteResult = await client.query(
+        `SELECT id, email, invite_type, mailbox_email, email_account_id
+         FROM invites
+         WHERE token = $1 AND used_at IS NULL AND expires_at > NOW()
+         FOR UPDATE`,
+        [inviteToken],
+      );
+      if (!inviteResult.rows.length) {
+        await client.query('ROLLBACK');
+        return res.status(403).json({ error: 'Invalid or expired invite link.' });
+      }
+      invite = inviteResult.rows[0];
+    }
 
     if (!isFirstUser) {
       const settingResult = await client.query(
@@ -149,35 +166,28 @@ router.post('/register', authLimiter, async (req, res) => {
 
       const registrationOpen = settingsMap.registration_open === 'true';
 
-      if (!registrationOpen) {
-        if (!inviteToken) {
-          await client.query('ROLLBACK');
-          return res.status(403).json({ error: 'Registration is currently by invitation only.' });
-        }
-        // FOR UPDATE locks the invite row so a second concurrent request using
-        // the same token blocks until this transaction commits or rolls back.
-        const inviteResult = await client.query(
-          `SELECT id FROM invites
-           WHERE token = $1 AND used_at IS NULL AND expires_at > NOW()
-           FOR UPDATE`,
-          [inviteToken]
-        );
-        if (!inviteResult.rows.length) {
-          await client.query('ROLLBACK');
-          return res.status(403).json({ error: 'Invalid or expired invite link.' });
-        }
-      } else if (inviteToken) {
-        const inviteResult = await client.query(
-          `SELECT id FROM invites
-           WHERE token = $1 AND used_at IS NULL AND expires_at > NOW()
-           FOR UPDATE`,
-          [inviteToken]
-        );
-        if (!inviteResult.rows.length) {
-          await client.query('ROLLBACK');
-          return res.status(403).json({ error: 'Invalid or expired invite link.' });
-        }
+      if (!registrationOpen && !invite) {
+        await client.query('ROLLBACK');
+        return res.status(403).json({ error: 'Registration is currently by invitation only.' });
       }
+    }
+
+    if (invite?.invite_type === 'mailbox_activation') {
+      const mailboxEmail = invite.mailbox_email.toLowerCase();
+      if (trimmedUsername !== mailboxEmail) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: `Use ${mailboxEmail} as your MailFlow email address.` });
+      }
+      if (password.length < 12) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'Mailbox passwords must be at least 12 characters.' });
+      }
+      const existingUser = await client.query('SELECT id FROM users WHERE username = $1', [mailboxEmail]);
+      if (existingUser.rows.length) {
+        await client.query('ROLLBACK');
+        return res.status(409).json({ error: 'This mailbox is already activated.' });
+      }
+      await resetCpanelMailboxPassword(mailboxEmail, password);
     }
 
     const result = await client.query(
@@ -193,7 +203,7 @@ router.post('/register', authLimiter, async (req, res) => {
       );
     }
 
-    if (inviteToken) {
+    if (invite) {
       const inviteUpdateResult = await client.query(
         `UPDATE invites SET used_by = $1, used_at = NOW() WHERE token = $2 RETURNING email`,
         [newUser.id, inviteToken]
@@ -203,6 +213,15 @@ router.post('/register', authLimiter, async (req, res) => {
         await client.query(
           'UPDATE users SET recovery_email = $1 WHERE id = $2',
           [inviteEmail.toLowerCase().trim(), newUser.id]
+        );
+      }
+      if (invite.invite_type === 'mailbox_activation' && invite.email_account_id) {
+        await client.query(
+          `UPDATE email_accounts
+           SET user_id = $1, auth_user = $2, auth_pass = $3,
+               smtp_auth_user = $2, smtp_auth_pass = NULL, enabled = true, managed_mailbox = true
+           WHERE id = $4`,
+          [newUser.id, invite.mailbox_email, encrypt(password), invite.email_account_id],
         );
       }
     }
@@ -740,12 +759,17 @@ router.get('/registration-status', async (req, res) => {
 // Public endpoint: validate an invite token before showing the registration form
 router.get('/invite/:token', async (req, res) => {
   const result = await query(
-    `SELECT email, expires_at FROM invites
+    `SELECT email, expires_at, invite_type, mailbox_email FROM invites
      WHERE token = $1 AND used_at IS NULL AND expires_at > NOW()`,
     [req.params.token]
   );
   if (!result.rows.length) return res.status(404).json({ error: 'Invalid or expired invite' });
-  res.json({ valid: true, email: result.rows[0].email });
+  res.json({
+    valid: true,
+    email: result.rows[0].email,
+    inviteType: result.rows[0].invite_type,
+    mailboxEmail: result.rows[0].mailbox_email || null,
+  });
 });
 
 router.get('/preferences', async (req, res) => {
@@ -1110,33 +1134,64 @@ router.post('/reset-password', authLimiter, async (req, res) => {
   }
 
   const tokenHash = crypto.createHash('sha256').update(token.trim()).digest('hex');
+  const client = await pool.connect();
   try {
-    // Atomically consume the token — DELETE RETURNING prevents two concurrent resets
-    // from both reading a valid token, both updating the password, and only then deleting.
-    const tokenResult = await query(
-      `DELETE FROM password_reset_tokens
+    await client.query('BEGIN');
+    const tokenResult = await client.query(
+      `SELECT user_id FROM password_reset_tokens
        WHERE token_hash = $1 AND expires_at > NOW()
-       RETURNING user_id`,
+       FOR UPDATE`,
       [tokenHash]
     );
     if (!tokenResult.rows.length) {
+      await client.query('ROLLBACK');
       return res.status(400).json({ error: 'Invalid or expired reset link' });
     }
     const userId = tokenResult.rows[0].user_id;
+    const managedResult = await client.query(
+      `SELECT id, email_address FROM email_accounts
+       WHERE user_id = $1 AND managed_mailbox = true
+       ORDER BY created_at LIMIT 1`,
+      [userId],
+    );
+    const managedAccount = managedResult.rows[0] || null;
+    if (managedAccount && password.length < 12) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Mailbox passwords must be at least 12 characters.' });
+    }
+    if (managedAccount) await resetCpanelMailboxPassword(managedAccount.email_address, password);
 
     const hash = await bcrypt.hash(password, 12);
-    await query('UPDATE users SET password_hash = $1 WHERE id = $2', [hash, userId]);
+    await client.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hash, userId]);
+    if (managedAccount) {
+      await client.query(
+        'UPDATE email_accounts SET auth_pass = $1, sync_error = NULL WHERE id = $2',
+        [encrypt(password), managedAccount.id],
+      );
+    }
+    await client.query('DELETE FROM password_reset_tokens WHERE user_id = $1', [userId]);
+    await client.query('COMMIT');
 
     // Revoke all existing sessions and trusted devices so a pre-existing (possibly
     // attacker) session/device can't survive a compromise-driven password reset.
     await destroyUserSessions(userId);
     await query('DELETE FROM trusted_devices WHERE user_id = $1', [userId]);
+    if (managedAccount) {
+      imapManager.clearConnectCooldown(managedAccount.id);
+      imapManager.disconnectAccount(managedAccount.id)
+        .then(() => query('SELECT * FROM email_accounts WHERE id = $1', [managedAccount.id]))
+        .then(result => result.rows[0] && imapManager.connectAccount(result.rows[0]))
+        .catch(error => console.error('Reconnect after managed password reset failed:', error.message));
+    }
 
     res.locals.resetRateLimit?.();
     res.json({ ok: true });
   } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
     console.error('reset-password error:', err.message);
     res.status(500).json({ error: 'Failed to reset password' });
+  } finally {
+    client.release();
   }
 });
 

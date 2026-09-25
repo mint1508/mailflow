@@ -15,6 +15,7 @@ export default function LoginPage() {
   const [registrationOpen, setRegistrationOpen] = useState(null); // null = loading
   const [inviteToken, setInviteToken] = useState(null);
   const [inviteEmail, setInviteEmail] = useState(null);
+  const [inviteMailboxEmail, setInviteMailboxEmail] = useState(null);
   const [totpRequired, setTotpRequired] = useState(false);
   const [totpCode, setTotpCode] = useState('');
   const [rememberDevice, setRememberDevice] = useState(false);
@@ -46,6 +47,10 @@ export default function LoginPage() {
         .then(data => {
           setInviteToken(token);
           setInviteEmail(data.email);
+          if (data.inviteType === 'mailbox_activation' && data.mailboxEmail) {
+            setInviteMailboxEmail(data.mailboxEmail);
+            setUsername(data.mailboxEmail);
+          }
           setMode('register');
           window.history.replaceState({}, '', '/register?invite=' + token);
         })
@@ -88,6 +93,10 @@ export default function LoginPage() {
   const submit = async (e) => {
     e.preventDefault();
     if (!username || !password) return;
+    if (mode === 'register' && inviteMailboxEmail && password.length < 12) {
+      setError('Mailbox passwords must be at least 12 characters.');
+      return;
+    }
     setLoading(true);
     setError('');
     try {
@@ -874,6 +883,7 @@ export default function LoginPage() {
                 type="text"
                 value={username}
                 onChange={e => setUsername(e.target.value)}
+                readOnly={mode === 'register' && !!inviteMailboxEmail}
                 autoFocus
                 style={{
                   width: '100%', padding: '10px 14px',
