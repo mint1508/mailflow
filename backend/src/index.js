@@ -49,6 +49,7 @@ import { getUpdateStatus } from './services/updateCheck.js';
 import { recordHttp } from './services/performanceMetrics.js';
 import { readSchemaVersion } from './services/versionInfo.js';
 import { startCpanelTokenMonitor } from './services/cpanelClient.js';
+import { expireImpersonation } from './middleware/auth.js';
 
 const packageMeta = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf-8'));
 let buildMeta = {};
@@ -143,6 +144,17 @@ app.use((err, req, res, next) => {
 });
 app.use(sessionMiddleware);
 
+// Expire privileged impersonation before any API route can observe or mutate data.
+// Route-level auth guards also call this for direct unit-test usage.
+app.use('/api', async (req, res, next) => {
+  try {
+    await expireImpersonation(req);
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
 // CSRF defense-in-depth for the cookie-authenticated /api surface. A mutating
 // request must carry a custom header that a cross-site <form> cannot set and a
 // cross-origin fetch cannot send without a CORS preflight — which the CORS policy
@@ -161,7 +173,14 @@ app.use('/api', (req, res, next) => {
 // needed to render the lock screen, unlock, or sign out; everything else returns
 // 423 Locked until the PIN is verified (routes/auth.js sets req.session.locked).
 // Matches the full path (minus query) so it can't fail open on mount-relative paths.
-const LOCK_ALLOWED = new Set(['/api/auth/unlock', '/api/auth/logout', '/api/auth/me', '/api/health', '/api/version']);
+const LOCK_ALLOWED = new Set([
+  '/api/auth/unlock',
+  '/api/auth/logout',
+  '/api/auth/me',
+  '/api/auth/impersonation/stop',
+  '/api/health',
+  '/api/version',
+]);
 app.use('/api', (req, res, next) => {
   if (req.session?.locked && !LOCK_ALLOWED.has(req.originalUrl.split('?')[0])) {
     return res.status(423).json({ error: 'Locked', locked: true });

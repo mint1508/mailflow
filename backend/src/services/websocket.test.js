@@ -1,7 +1,12 @@
 import { EventEmitter } from 'node:events';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 vi.mock('./diagnosticsRing.js', () => ({ recordWsConnect: vi.fn(), recordWsDisconnect: vi.fn() }));
+vi.mock('../middleware/auth.js', () => ({
+  expireImpersonation: vi.fn().mockResolvedValue(null),
+  getImpersonationState: vi.fn().mockReturnValue(null),
+}));
 import { setupWebSocket } from './websocket.js';
+import { getImpersonationState } from '../middleware/auth.js';
 
 function setup(sessionMiddleware, manager = { connectAllForUser: vi.fn().mockResolvedValue() }) {
   const wss = new EventEmitter();
@@ -12,7 +17,11 @@ function setup(sessionMiddleware, manager = { connectAllForUser: vi.fn().mockRes
   wss.emit('connection', ws, { headers: {}, session: { userId: 'u1' } });
   return { ws, manager };
 }
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  vi.useRealTimers();
+  getImpersonationState.mockReturnValue(null);
+  vi.restoreAllMocks();
+});
 describe('WebSocket failure recovery', () => {
   it('absorbs transport errors even while session lookup is pending', () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -38,8 +47,17 @@ describe('WebSocket failure recovery', () => {
     const { ws } = setup((_req, _res, next) => next(), {
       connectAllForUser: vi.fn().mockRejectedValue(new Error('database unavailable')),
     });
-    await Promise.resolve();
-    expect(error).toHaveBeenCalledWith('WebSocket account reconnect failed:', 'database unavailable');
+    await vi.waitFor(() => {
+      expect(error).toHaveBeenCalledWith('WebSocket account reconnect failed:', 'database unavailable');
+    });
     expect(ws.send).toHaveBeenCalledWith(JSON.stringify({ type: 'connected' }));
+  });
+  it('closes an impersonated socket when its privilege window expires', async () => {
+    vi.useFakeTimers();
+    getImpersonationState.mockReturnValue({ expiresAt: new Date(Date.now() + 500).toISOString() });
+    const { ws } = setup((_req, _res, next) => next());
+    await Promise.resolve();
+    await vi.advanceTimersByTimeAsync(601);
+    expect(ws.close).toHaveBeenCalledWith(1008, 'Impersonation expired');
   });
 });

@@ -8442,6 +8442,7 @@ function SecurityTab() {
   const [step, setStep] = useState('idle'); // 'idle' | 'scan' | 'verify'
   const [setupData, setSetupData] = useState(null); // { qrCode, secret }
   const [verifyCode, setVerifyCode] = useState('');
+  const [setupPassword, setSetupPassword] = useState('');
   const [showDisable, setShowDisable] = useState(false);
   const [disablePassword, setDisablePassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -8473,6 +8474,7 @@ function SecurityTab() {
   // Personal: recovery email for email-OTP fallback
   const [recoveryEmail, setRecoveryEmail] = useState('');
   const [recoveryEmailLoaded, setRecoveryEmailLoaded] = useState('');
+  const [recoveryPassword, setRecoveryPassword] = useState('');
   const [recoverySaving, setRecoverySaving] = useState(false);
   const [recoverySaved, setRecoverySaved] = useState(false);
   const [recoveryError, setRecoveryError] = useState('');
@@ -8563,8 +8565,9 @@ function SecurityTab() {
     setRecoverySaving(true);
     setRecoveryError('');
     try {
-      await api.updateRecoveryEmail(recoveryEmail.trim() || null);
+      await api.updateRecoveryEmail(recoveryEmail.trim() || null, recoveryPassword);
       setRecoveryEmailLoaded(recoveryEmail.trim());
+      setRecoveryPassword('');
       setRecoverySaved(true);
       setTimeout(() => setRecoverySaved(false), 3000);
     } catch (err) {
@@ -8589,8 +8592,9 @@ function SecurityTab() {
     setLoading(true);
     setError('');
     try {
-      const data = await api.totp.setup();
+      const data = await api.totp.setup(setupPassword);
       setSetupData(data);
+      setSetupPassword('');
       setStep('scan');
     } catch (err) {
       setError(err.message);
@@ -8787,18 +8791,32 @@ function SecurityTab() {
             </div>
           </div>
           {!totpEnabled && step === 'idle' && (
-            <button
-              onClick={startSetup}
-              disabled={loading}
-              style={{
-                padding: '8px 16px', background: 'var(--accent)', border: 'none',
-                borderRadius: 7, color: 'var(--accent-text)', fontSize: 13, fontWeight: 500,
-                cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1,
-                flexShrink: 0,
-              }}
-            >
-              {loading ? t('admin.security.totpSetupLoading') : t('admin.security.totpSetup')}
-            </button>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+              <input
+                type="password"
+                autoComplete="current-password"
+                value={setupPassword}
+                onChange={e => setSetupPassword(e.target.value)}
+                placeholder={t('admin.security.totpDisablePh')}
+                style={{
+                  minWidth: 180, padding: '8px 10px', borderRadius: 7,
+                  border: '1px solid var(--border)', background: 'var(--bg-primary)',
+                  color: 'var(--text-primary)', fontSize: 13,
+                }}
+              />
+              <button
+                onClick={startSetup}
+                disabled={loading || !setupPassword}
+                style={{
+                  padding: '8px 16px', background: 'var(--accent)', border: 'none',
+                  borderRadius: 7, color: 'var(--accent-text)', fontSize: 13, fontWeight: 500,
+                  cursor: (loading || !setupPassword) ? 'not-allowed' : 'pointer',
+                  opacity: (loading || !setupPassword) ? 0.6 : 1, flexShrink: 0,
+                }}
+              >
+                {loading ? t('admin.security.totpSetupLoading') : t('admin.security.totpSetup')}
+              </button>
+            </div>
           )}
           {totpEnabled && !showDisable && (
             <button
@@ -9091,20 +9109,33 @@ function SecurityTab() {
           onFocus={e => e.target.style.borderColor = 'var(--accent)'}
           onBlur={e => e.target.style.borderColor = 'var(--border)'}
         />
+        <input
+          type="password"
+          autoComplete="current-password"
+          value={recoveryPassword}
+          onChange={e => setRecoveryPassword(e.target.value)}
+          placeholder={t('admin.security.totpDisablePh')}
+          style={{
+            width: '100%', padding: '8px 10px', borderRadius: 8,
+            border: '1px solid var(--border)', background: 'var(--bg-primary)',
+            color: 'var(--text-primary)', fontSize: 14, outline: 'none',
+            boxSizing: 'border-box', marginBottom: 10,
+          }}
+        />
         {recoveryError && (
           <div style={{ fontSize: 12, color: 'var(--red)', marginBottom: 8 }}>{recoveryError}</div>
         )}
         <button
           onClick={saveRecoveryEmail}
-          disabled={recoverySaving || recoveryEmail.trim() === recoveryEmailLoaded}
+          disabled={recoverySaving || !recoveryPassword || recoveryEmail.trim() === recoveryEmailLoaded}
           style={{
             padding: '8px 18px',
             background: recoverySaved ? 'rgba(34,197,94,0.15)' : 'var(--accent)',
             border: recoverySaved ? '1px solid rgba(34,197,94,0.4)' : 'none',
             borderRadius: 7, color: recoverySaved ? '#22c55e' : 'white',
             fontSize: 13, fontWeight: 500,
-            cursor: (recoverySaving || recoveryEmail.trim() === recoveryEmailLoaded) ? 'not-allowed' : 'pointer',
-            opacity: (recoverySaving || recoveryEmail.trim() === recoveryEmailLoaded) ? 0.6 : 1,
+            cursor: (recoverySaving || !recoveryPassword || recoveryEmail.trim() === recoveryEmailLoaded) ? 'not-allowed' : 'pointer',
+            opacity: (recoverySaving || !recoveryPassword || recoveryEmail.trim() === recoveryEmailLoaded) ? 0.6 : 1,
           }}
         >
           {recoverySaving ? t('common.saving') : recoverySaved ? t('admin.security.protectionSaved') : t('common.save')}

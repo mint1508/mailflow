@@ -1,6 +1,9 @@
 import { Router } from 'express';
+import bcrypt from 'bcryptjs';
 import { requireAdmin, requireMailboxManager } from '../middleware/auth.js';
 import { query } from '../services/db.js';
+import { encrypt } from '../services/encryption.js';
+import { destroyUserSessions } from '../services/sessionSecurity.js';
 import {
   getCpanelConfig,
   saveCpanelConfig,
@@ -226,6 +229,31 @@ router.post('/mailboxes/bulk', async (req, res) => {
 router.post('/mailboxes/:email/password', requireAdmin, async (req, res) => {
   try {
     const result = await resetCpanelMailboxPassword(req.params.email, req.body?.password);
+    const managed = await query(
+      `SELECT id, user_id FROM email_accounts
+       WHERE managed_mailbox = true AND lower(email_address) = lower($1)
+       LIMIT 1`,
+      [result.email],
+    );
+    const account = managed.rows[0];
+    if (account?.user_id) {
+      const passwordHash = await bcrypt.hash(result.password, 12);
+      const encryptedPassword = encrypt(result.password);
+      await query(
+        `UPDATE email_accounts
+         SET auth_pass = $1, smtp_auth_pass = $1, sync_error = NULL
+         WHERE id = $2 AND user_id = $3`,
+        [encryptedPassword, account.id, account.user_id],
+      );
+      await query('UPDATE users SET password_hash = $1 WHERE id = $2', [passwordHash, account.user_id]);
+      await query('DELETE FROM trusted_devices WHERE user_id = $1', [account.user_id]);
+      await destroyUserSessions(account.user_id);
+      const manager = req.app.get('imapManager');
+      manager?.clearConnectCooldown(account.id);
+      manager?.disconnectAccount(account.id).catch(error => {
+        console.error('Disconnect after managed password reset failed:', error.message);
+      });
+    }
     await audit(req.session.userId, 'mailbox_password_reset', true, { email: result.email });
     res.json({ ok: true, mailbox: result });
   } catch (error) {

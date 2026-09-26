@@ -125,6 +125,15 @@ function ImpersonationBanner({ impersonation }) {
     return () => clearInterval(timer);
   }, [impersonation?.expiresAt]);
 
+  useEffect(() => {
+    if (!impersonation?.expiresAt) return undefined;
+    const delay = Math.max(0, new Date(impersonation.expiresAt).getTime() - Date.now());
+    const timer = setTimeout(() => {
+      api.stopImpersonation().catch(() => {}).finally(() => window.location.assign('/'));
+    }, delay + 250);
+    return () => clearTimeout(timer);
+  }, [impersonation?.expiresAt]);
+
   if (!impersonation) return null;
   const remainingMs = Math.max(0, new Date(impersonation.expiresAt).getTime() - Date.now());
   const remainingMinutes = Math.floor(remainingMs / 60000);

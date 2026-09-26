@@ -1,4 +1,5 @@
 import { recordWsConnect, recordWsDisconnect } from './diagnosticsRing.js';
+import { expireImpersonation, getImpersonationState } from '../middleware/auth.js';
 
 // Derive the expected origin from APP_URL once at startup.
 // If APP_URL is not set, origin validation is skipped — log a warning so operators know.
@@ -40,7 +41,7 @@ export function setupWebSocket(wss, sessionMiddleware, imapManager) {
       end: () => {}
     };
 
-    sessionMiddleware(req, fakeRes, (err) => {
+    sessionMiddleware(req, fakeRes, async (err) => {
       if (ws.readyState !== 1) return;
       if (err) {
         // A temporary session-store outage should be retried, not treated as
@@ -48,6 +49,7 @@ export function setupWebSocket(wss, sessionMiddleware, imapManager) {
         ws.close(1011, 'Session unavailable');
         return;
       }
+      await expireImpersonation(req);
       const userId = req.session?.userId;
       if (!userId) {
         ws.close(1008, 'Unauthorized');
@@ -60,6 +62,14 @@ export function setupWebSocket(wss, sessionMiddleware, imapManager) {
         return;
       }
       ws.userId = userId;
+      const impersonation = getImpersonationState(req);
+      if (impersonation) {
+        const remaining = Math.max(0, Date.parse(impersonation.expiresAt) - Date.now());
+        ws._impersonationTimer = setTimeout(() => {
+          if (ws.readyState === 1) ws.close(1008, 'Impersonation expired');
+        }, remaining + 100);
+        ws._impersonationTimer.unref?.();
+      }
       recordWsConnect();
       ws._diagCounted = true;
       console.log(`WebSocket connected for user ${userId}`);
@@ -78,6 +88,7 @@ export function setupWebSocket(wss, sessionMiddleware, imapManager) {
     });
 
     ws.on('close', () => {
+      if (ws._impersonationTimer) clearTimeout(ws._impersonationTimer);
       if (ws._diagCounted) recordWsDisconnect();
       console.log(`WebSocket disconnected`);
     });

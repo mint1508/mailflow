@@ -7,6 +7,9 @@ vi.mock('../middleware/auth.js', () => ({
     next();
   },
 }));
+vi.mock('../services/mailAccess.js', () => ({
+  getAccessibleAccountIds: vi.fn(async () => ['included', 'excluded']),
+}));
 
 import express from 'express';
 import searchRoutes from './search.js';

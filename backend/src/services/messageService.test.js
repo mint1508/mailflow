@@ -1,22 +1,26 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('./db.js', () => ({ query: vi.fn() }));
+vi.mock('./mailAccess.js', () => ({ getAccessibleAccountIds: vi.fn() }));
 
 const { query } = await import('./db.js');
+const { getAccessibleAccountIds } = await import('./mailAccess.js');
 import { listMessages } from './messageService.js';
 
 beforeEach(() => {
   query.mockClear();
+  getAccessibleAccountIds.mockReset();
+  getAccessibleAccountIds.mockResolvedValue(['accessible-account']);
 });
 
 describe('listMessages — account scope', () => {
   it('returns empty result immediately when user has no enabled accounts', async () => {
-    query.mockResolvedValueOnce({ rows: [] });
+    getAccessibleAccountIds.mockResolvedValueOnce([]);
 
     const result = await listMessages({ userId: 'user-1' });
 
     expect(result).toEqual({ messages: [], total: 0 });
-    expect(query).toHaveBeenCalledOnce();
+    expect(query).not.toHaveBeenCalled();
   });
 
   it('falls back to unified inbox when accountId is not owned by the user', async () => {

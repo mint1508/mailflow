@@ -9,11 +9,16 @@ vi.mock('../services/redis.js', () => ({
 }));
 vi.mock('../index.js', () => ({ imapManager: { fetchAttachment: vi.fn() } }));
 vi.mock('../services/smtpTransport.js', () => ({ createAccountSmtpTransport: vi.fn() }));
+vi.mock('../services/mailAccess.js', () => ({
+  getAccessibleAccount: vi.fn(),
+  hasAccountAccess: vi.fn(),
+}));
 
 import express from 'express';
 import sendRoutes from './send.js';
 import { query } from '../services/db.js';
 import { imapManager } from '../index.js';
+import { getAccessibleAccount, hasAccountAccess } from '../services/mailAccess.js';
 
 const ACCOUNT_ID = 'a1a1a1a1-1111-4111-8111-a1a1a1a1a1a1';
 const MSG_ID = 'b2b2b2b2-2222-4222-8222-b2b2b2b2b2b2';
@@ -33,7 +38,14 @@ describe('POST /api/mail/send — forwarded attachment guards (#F2)', () => {
     base = `http://127.0.0.1:${server.address().port}`;
   });
   afterAll(async () => { await new Promise(r => server.close(r)); });
-  beforeEach(() => { query.mockReset(); imapManager.fetchAttachment.mockReset(); });
+  beforeEach(() => {
+    query.mockReset();
+    imapManager.fetchAttachment.mockReset();
+    getAccessibleAccount.mockReset();
+    getAccessibleAccount.mockResolvedValue(ACCOUNT);
+    hasAccountAccess.mockReset();
+    hasAccountAccess.mockResolvedValue(true);
+  });
 
   const post = (body) => fetch(`${base}/api/mail/send`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
@@ -50,7 +62,6 @@ describe('POST /api/mail/send — forwarded attachment guards (#F2)', () => {
 
   it('rejects an oversized forwarded batch by declared size, before fetching any attachment', async () => {
     query.mockImplementation((sql) => {
-      if (sql.includes('FROM email_accounts WHERE id = $1 AND user_id = $2')) return Promise.resolve({ rows: [ACCOUNT] });
       if (sql.includes('SELECT preferences FROM users')) return Promise.resolve({ rows: [{ preferences: {} }] });
       if (sql.includes('FROM messages m') && sql.includes('m.id = ANY')) {
         return Promise.resolve({ rows: [{

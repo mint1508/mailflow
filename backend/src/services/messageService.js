@@ -1,10 +1,13 @@
 import { query } from './db.js';
 import { resolveAccountScope } from './unifiedInbox.js';
+import { getAccessibleAccountIds } from './mailAccess.js';
 
 export async function listMessages({ userId, accountId, folder = 'INBOX', limit = 50, offset = 0, unreadOnly, threaded, category }) {
+  const accessibleIds = await getAccessibleAccountIds(userId);
+  if (!accessibleIds.length) return { messages: [], total: 0 };
   const accountsResult = await query(
-    'SELECT id, include_in_unified_inbox FROM email_accounts WHERE user_id = $1 AND enabled = true',
-    [userId]
+    'SELECT id, include_in_unified_inbox FROM email_accounts WHERE id = ANY($1::uuid[]) AND enabled = true',
+    [accessibleIds]
   );
   const {
     accountIds: scopedAccountIds,
@@ -116,7 +119,7 @@ export async function listMessages({ userId, accountId, folder = 'INBOX', limit 
                (co.id IS NOT NULL) AS has_contact_photo
         FROM messages m
         JOIN email_accounts a ON m.account_id = a.id
-        LEFT JOIN contacts co ON co.user_id = a.user_id
+        LEFT JOIN contacts co ON co.user_id = $${p + 3}
                               AND co.primary_email = lower(m.from_email)
                               AND co.photo_data IS NOT NULL
         WHERE ${where}
@@ -168,7 +171,7 @@ export async function listMessages({ userId, accountId, folder = 'INBOX', limit 
       FROM ranked
       WHERE rn = 1
       ORDER BY date DESC, id
-    `, [...filterValues, threadAccountParam, safeLimit, safeOffset]);
+    `, [...filterValues, threadAccountParam, safeLimit, safeOffset, userId]);
 
     const threadCountResult = await query(`
       SELECT COUNT(DISTINCT m.thread_key)::int AS total
@@ -199,7 +202,7 @@ export async function listMessages({ userId, accountId, folder = 'INBOX', limit 
            (co.id IS NOT NULL) AS has_contact_photo
     FROM messages m
     JOIN email_accounts a ON m.account_id = a.id
-    LEFT JOIN contacts co ON co.user_id = a.user_id
+    LEFT JOIN contacts co ON co.user_id = $${offsetParam + 1}
                           AND co.primary_email = lower(m.from_email)
                           AND co.photo_data IS NOT NULL
     WHERE ${where}
@@ -208,7 +211,7 @@ export async function listMessages({ userId, accountId, folder = 'INBOX', limit 
     -- collapse would receive the two copies of a message in an arbitrary order.
     ORDER BY m.date DESC, m.id
     LIMIT $${limitParam} OFFSET $${offsetParam}
-  `, values);
+  `, [...values, userId]);
 
   return {
     messages: result.rows,

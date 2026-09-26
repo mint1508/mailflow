@@ -168,11 +168,11 @@ export const api = {
 
   // Recovery email (profile security)
   getRecoveryEmail: () => request('GET', '/auth/profile/recovery-email'),
-  updateRecoveryEmail: (email) => request('PATCH', '/auth/profile/recovery-email', { email }),
+  updateRecoveryEmail: (email, password) => request('PATCH', '/auth/profile/recovery-email', { email, password }),
 
   // TOTP / 2FA
   totp: {
-    setup: () => request('GET', '/totp/setup'),
+    setup: (password) => request('POST', '/totp/setup', { password }),
     enable: (code) => request('POST', '/totp/enable', { code }),
     disable: (password) => request('POST', '/totp/disable', { password }),
     cancel: () => request('POST', '/totp/cancel'),

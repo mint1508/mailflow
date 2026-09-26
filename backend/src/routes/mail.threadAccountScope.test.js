@@ -17,6 +17,9 @@ vi.mock('../middleware/auth.js', () => ({
   },
 }));
 vi.mock('../index.js', () => ({ imapManager: {} }));
+vi.mock('../services/mailAccess.js', () => ({
+  getAccessibleAccountIds: vi.fn(async () => ['acct-1']),
+}));
 
 import express from 'express';
 import mailRoutes from './mail.js';

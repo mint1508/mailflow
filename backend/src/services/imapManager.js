@@ -3984,17 +3984,28 @@ export class ImapManager {
             // If the query fails for any reason, send the push without it so
             // notifications are never silently dropped.
             query(
-              `SELECT COUNT(*)::int AS total FROM messages m
-               JOIN email_accounts a ON a.id = m.account_id
-               WHERE a.user_id = $1 AND a.enabled = true AND m.folder = 'INBOX' AND m.is_read = false AND m.is_deleted = false`,
-              [account.user_id]
-            ).then(r => {
-              sendPushToUser(account.user_id, { ...basePayload, unreadCount: r.rows[0]?.total ?? 0 })
-                .catch(err => console.warn('Push notification error:', err.message));
-            }).catch(() => {
-              sendPushToUser(account.user_id, basePayload)
-                .catch(err => console.warn('Push notification error:', err.message));
-            });
+              `SELECT user_id FROM email_accounts WHERE id = $1 AND user_id IS NOT NULL
+               UNION
+               SELECT user_id FROM active_mailbox_memberships WHERE account_id = $1`,
+              [account.id],
+            ).then(({ rows: recipients }) => Promise.all(recipients.map(async ({ user_id: recipientId }) => {
+              try {
+                const unread = await query(
+                  `SELECT COUNT(*)::int AS total FROM messages m
+                   JOIN email_accounts a ON a.id = m.account_id
+                   WHERE a.enabled = true AND m.folder = 'INBOX' AND m.is_read = false AND m.is_deleted = false
+                     AND (a.user_id = $1 OR EXISTS (
+                       SELECT 1 FROM active_mailbox_memberships mm
+                       WHERE mm.account_id = a.id AND mm.user_id = $1
+                     ))`,
+                  [recipientId],
+                );
+                await sendPushToUser(recipientId, { ...basePayload, unreadCount: unread.rows[0]?.total ?? 0 });
+              } catch (error) {
+                await sendPushToUser(recipientId, basePayload).catch(() => {});
+                console.warn('Push notification error:', error.message);
+              }
+            }))).catch(error => console.warn('Push recipient lookup error:', error.message));
           }
           // Pre-warm the body cache for newly arrived messages so clicking one
           // immediately after receipt doesn't require a live IMAP fetch.
@@ -6323,12 +6334,29 @@ export class ImapManager {
     }
     recordBroadcast(data?.type);
     const msg = JSON.stringify(data);
-    this.wss.clients.forEach(ws => {
-      if (ws.readyState === 1 && (!userId || ws.userId === userId)) {
+    const sendTo = (allowedUserIds = null) => this.wss.clients.forEach(ws => {
+      if (ws.readyState === 1 && (!allowedUserIds || allowedUserIds.has(ws.userId))) {
         try { ws.send(msg); } catch (err) {
           console.error('WebSocket broadcast send error:', err.message);
         }
       }
+    });
+    if (!data?.accountId) {
+      sendTo(userId ? new Set([userId]) : null);
+      return;
+    }
+    query(
+      `SELECT user_id FROM email_accounts WHERE id = $1 AND user_id IS NOT NULL
+       UNION
+       SELECT user_id FROM active_mailbox_memberships WHERE account_id = $1`,
+      [data.accountId],
+    ).then(({ rows }) => {
+      const recipients = new Set(rows.map(row => row.user_id));
+      if (userId) recipients.add(userId);
+      sendTo(recipients);
+    }).catch(error => {
+      console.error('Shared mailbox broadcast lookup failed:', error.message);
+      sendTo(userId ? new Set([userId]) : new Set());
     });
   }
 

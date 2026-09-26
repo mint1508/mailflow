@@ -44,6 +44,7 @@ function restoreOriginalSession(session, state) {
   session.username = state.originalAdminUsername;
   session.isAdmin = true;
   delete session.canManageMailboxes;
+  delete session.locked;
   delete session.impersonatorUserId;
   delete session.impersonatorUsername;
   delete session.impersonatedUserId;

@@ -1,10 +1,13 @@
 import { Router } from 'express';
 import { authenticator } from 'otplib';
 import QRCode from 'qrcode';
-import bcrypt from 'bcryptjs';
 import { query } from '../services/db.js';
 import { requireAuth } from '../middleware/auth.js';
 import { encrypt } from '../services/encryption.js';
+import {
+  MailboxAuthenticationUnavailableError,
+  verifyUserCredential,
+} from '../services/mailboxAuth.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -34,13 +37,26 @@ function totpLimiter(req, res, next) {
   next();
 }
 
-// GET /api/totp/setup — generate a new TOTP secret and QR code
-router.get('/setup', async (req, res) => {
-  const userResult = await query('SELECT username FROM users WHERE id = $1', [req.session.userId]);
-  const username = userResult.rows[0]?.username || 'user';
+// Re-authenticate before issuing a new MFA secret so a stolen session cannot
+// replace the account's second factor.
+router.post('/setup', totpLimiter, async (req, res) => {
+  if (!req.body?.password) return res.status(400).json({ error: 'Current password required' });
+  const userResult = await query('SELECT id, username, password_hash FROM users WHERE id = $1', [req.session.userId]);
+  const user = userResult.rows[0];
+  if (!user) return res.status(401).json({ error: 'User not found' });
+  try {
+    if (!await verifyUserCredential(user, req.body.password)) {
+      return res.status(401).json({ error: 'Incorrect password' });
+    }
+  } catch (error) {
+    if (error instanceof MailboxAuthenticationUnavailableError) {
+      return res.status(503).json({ error: 'Mailbox authentication is temporarily unavailable. Please try again later.' });
+    }
+    throw error;
+  }
 
   const secret = authenticator.generateSecret(20);
-  const otpauthUrl = authenticator.keyuri(username, 'MailFlow', secret);
+  const otpauthUrl = authenticator.keyuri(user.username, 'MailFlow', secret);
   const qrCode = await QRCode.toDataURL(otpauthUrl);
 
   // Hold the secret in the session until the user verifies it (10 min TTL)
@@ -90,15 +106,19 @@ router.post('/disable', totpLimiter, async (req, res) => {
   const { password } = req.body;
   if (!password) return res.status(400).json({ error: 'Password required' });
 
-  const result = await query('SELECT password_hash FROM users WHERE id = $1', [req.session.userId]);
+  const result = await query('SELECT id, username, password_hash FROM users WHERE id = $1', [req.session.userId]);
   const user = result.rows[0];
   if (!user) return res.status(401).json({ error: 'User not found' });
-
-  if (!user.password_hash) {
-    return res.status(400).json({ error: 'Your account uses SSO login and has no password. Contact an administrator to disable 2FA.' });
+  try {
+    if (!await verifyUserCredential(user, password)) {
+      return res.status(401).json({ error: 'Incorrect password' });
+    }
+  } catch (error) {
+    if (error instanceof MailboxAuthenticationUnavailableError) {
+      return res.status(503).json({ error: 'Mailbox authentication is temporarily unavailable. Please try again later.' });
+    }
+    throw error;
   }
-  const valid = await bcrypt.compare(password, user.password_hash);
-  if (!valid) return res.status(401).json({ error: 'Incorrect password' });
 
   await query(
     'UPDATE users SET totp_secret = NULL, totp_enabled = false WHERE id = $1',

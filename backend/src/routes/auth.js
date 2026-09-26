@@ -18,14 +18,33 @@ import { invalidateGlobalCategorizationCache } from '../services/categorizer.js'
 import { sanitizeGtdPrefs } from '../utils/gtdPrefs.js';
 import { sanitizeRightSidebarPrefs } from '../utils/rightSidebarPrefs.js';
 import { redisClient } from '../services/redis.js';
+import { destroyUserSessions } from '../services/sessionSecurity.js';
 import { consume as rlConsume, reset as rlReset } from '../services/rateLimiter.js';
 import { resetCpanelMailboxPassword } from '../services/cpanelClient.js';
+import { expireImpersonation, getImpersonationState, stopImpersonation } from '../middleware/auth.js';
+import {
+  authenticateMailbox,
+  getManagedMailboxAccount,
+  getPendingManagedMailboxAccount,
+  MailboxAuthenticationError,
+  MailboxAuthenticationUnavailableError,
+  MailboxProvisioningError,
+  normalizeMailboxEmail,
+  provisionMailboxUser,
+  updateManagedMailboxCredentials,
+  verifyUserCredential,
+} from '../services/mailboxAuth.js';
 
 const router = Router();
 
 // A precomputed valid bcrypt hash used to equalize login timing when the account
 // doesn't exist or is SSO-only, so response latency doesn't leak account existence.
 const DUMMY_PASSWORD_HASH = bcrypt.hashSync('mailflow-timing-equalizer', 12);
+
+function saveSession(session) {
+  if (typeof session?.save !== 'function') return Promise.resolve();
+  return new Promise((resolve, reject) => session.save(error => (error ? reject(error) : resolve())));
+}
 
 function maskEmail(email) {
   if (!email) return '';
@@ -43,26 +62,6 @@ function getTrustDurationMs(setting) {
     case '30d': return 30 * 24 * 60 * 60 * 1000;
     case 'permanent': return 365 * 24 * 60 * 60 * 1000;
     default: return 0; // 'never'
-  }
-}
-
-// Delete every server-side session belonging to a user (Redis-backed store, keys
-// prefixed "sess:"). Used after a password reset so a pre-existing session can't
-// outlive a credential change. Best-effort — never throws to the caller.
-async function destroyUserSessions(userId) {
-  try {
-    let cursor = 0;
-    do {
-      const res = await redisClient.scan(cursor, { MATCH: 'sess:*', COUNT: 200 });
-      cursor = res.cursor;
-      for (const key of res.keys) {
-        const raw = await redisClient.get(key);
-        if (!raw) continue;
-        try { if (JSON.parse(raw).userId === userId) await redisClient.del(key); } catch { /* not this user / unparsable */ }
-      }
-    } while (cursor !== 0);
-  } catch (err) {
-    console.error('destroyUserSessions failed:', err.message);
   }
 }
 
@@ -139,7 +138,7 @@ router.post('/register', authLimiter, async (req, res) => {
 
     if (inviteToken) {
       const inviteResult = await client.query(
-        `SELECT id, email, invite_type, mailbox_email, email_account_id
+        `SELECT id, email, invite_type, mailbox_email, email_account_id, created_by
          FROM invites
          WHERE token = $1 AND used_at IS NULL AND expires_at > NOW()
          FOR UPDATE`,
@@ -187,6 +186,16 @@ router.post('/register', authLimiter, async (req, res) => {
         await client.query('ROLLBACK');
         return res.status(409).json({ error: 'This mailbox is already activated.' });
       }
+      const pendingAccount = await client.query(
+        `SELECT id FROM email_accounts
+         WHERE id = $1 AND user_id IS NULL AND managed_mailbox = true
+         FOR UPDATE`,
+        [invite.email_account_id],
+      );
+      if (!pendingAccount.rows.length) {
+        await client.query('ROLLBACK');
+        return res.status(409).json({ error: 'This mailbox is already activated.' });
+      }
       await resetCpanelMailboxPassword(mailboxEmail, password);
     }
 
@@ -216,13 +225,23 @@ router.post('/register', authLimiter, async (req, res) => {
         );
       }
       if (invite.invite_type === 'mailbox_activation' && invite.email_account_id) {
-        await client.query(
+        const accountUpdate = await client.query(
           `UPDATE email_accounts
            SET user_id = $1, auth_user = $2, auth_pass = $3,
-               smtp_auth_user = $2, smtp_auth_pass = NULL, enabled = true, managed_mailbox = true
-           WHERE id = $4`,
+               smtp_auth_user = $2, smtp_auth_pass = $3, enabled = true, managed_mailbox = true
+           WHERE id = $4 AND user_id IS NULL AND managed_mailbox = true
+           RETURNING id`,
           [newUser.id, invite.mailbox_email, encrypt(password), invite.email_account_id],
         );
+        if (!accountUpdate.rows.length) throw new Error('Mailbox activation ownership changed');
+        await client.query(
+          `INSERT INTO mailbox_memberships (account_id, user_id, permission, granted_by)
+           VALUES ($1, $2, 'read_send', $3)
+           ON CONFLICT (account_id, user_id) DO UPDATE SET
+             permission = 'read_send', revoked_at = NULL, updated_at = NOW()`,
+          [invite.email_account_id, newUser.id, invite.created_by || null],
+        );
+        await client.query('UPDATE users SET primary_email_account_id = $1 WHERE id = $2', [invite.email_account_id, newUser.id]);
       }
     }
 
@@ -256,26 +275,82 @@ router.post('/login', authLimiter, async (req, res) => {
     if (authSetting.rows[0]?.value === 'true') {
       return res.status(403).json({ error: 'Password login is disabled. Please sign in with your SSO provider.' });
     }
-
     const result = await query('SELECT * FROM users WHERE username = $1', [username.toLowerCase().trim()]);
-    const user = result.rows[0];
+    let user = result.rows[0];
+    const mailboxEmail = normalizeMailboxEmail(username);
+    let managedMailbox = null;
     if (!user) {
-      // Run a dummy bcrypt compare so the response time doesn't reveal whether the
-      // username exists (equalize with the real-user path below).
-      await bcrypt.compare(password, DUMMY_PASSWORD_HASH);
-      logAuthEvent('login_fail', { username: username.toLowerCase().trim(), ip: req.ip, success: false });
-      return res.status(401).json({ error: 'Invalid credentials' });
-    }
-
-    if (!user.password_hash) {
-      await bcrypt.compare(password, DUMMY_PASSWORD_HASH); // equalize timing for SSO-only accounts
-      logAuthEvent('login_fail', { username: user.username, userId: user.id, ip: req.ip, success: false });
-      return res.status(401).json({ error: 'This account uses single sign-on. Please sign in with your SSO provider.' });
-    }
-    const valid = await bcrypt.compare(password, user.password_hash);
-    if (!valid) {
-      logAuthEvent('login_fail', { username: user.username, userId: user.id, ip: req.ip, success: false });
-      return res.status(401).json({ error: 'Invalid credentials' });
+      const pendingMailbox = mailboxEmail
+        ? await getPendingManagedMailboxAccount(mailboxEmail)
+        : null;
+      if (!pendingMailbox) {
+        await bcrypt.compare(password, DUMMY_PASSWORD_HASH);
+        logAuthEvent('login_fail', { username: username.toLowerCase().trim(), ip: req.ip, success: false });
+        return res.status(401).json({ error: 'Invalid credentials' });
+      }
+      let mailboxLogin = null;
+      try {
+        mailboxLogin = await authenticateMailbox({ email: mailboxEmail, password });
+      } catch (error) {
+        if (error instanceof MailboxAuthenticationUnavailableError) {
+          return res.status(503).json({ error: 'Mailbox authentication is temporarily unavailable. Please try again later.' });
+        }
+        if (!(error instanceof MailboxAuthenticationError)) throw error;
+      }
+      if (!mailboxLogin) {
+        // Run a dummy bcrypt compare so the response time doesn't reveal whether the
+        // username exists or is a managed mailbox.
+        await bcrypt.compare(password, DUMMY_PASSWORD_HASH);
+        logAuthEvent('login_fail', { username: username.toLowerCase().trim(), ip: req.ip, success: false });
+        return res.status(401).json({ error: 'Invalid credentials' });
+      }
+      const passwordHash = await bcrypt.hash(password, 12);
+      let provisioned;
+      try {
+        provisioned = await provisionMailboxUser({
+          email: mailboxLogin.email,
+          password,
+          passwordHash,
+          config: mailboxLogin.config,
+        });
+      } catch (error) {
+        if (error instanceof MailboxProvisioningError) {
+          return res.status(403).json({ error: 'This mailbox must be activated by a mailbox manager before first sign-in.' });
+        }
+        throw error;
+      }
+      user = provisioned.user;
+      managedMailbox = provisioned.account;
+    } else {
+      managedMailbox = mailboxEmail
+        ? await getManagedMailboxAccount(user.id, mailboxEmail)
+        : null;
+      if (managedMailbox) {
+        try {
+          const mailboxLogin = await authenticateMailbox({ email: mailboxEmail, password });
+          if (!mailboxLogin) throw new MailboxAuthenticationError();
+          const passwordHash = await bcrypt.hash(password, 12);
+          await updateManagedMailboxCredentials({ accountId: managedMailbox.id, userId: user.id, email: mailboxEmail, password, passwordHash });
+        } catch (error) {
+          if (error instanceof MailboxAuthenticationUnavailableError) {
+            return res.status(503).json({ error: 'Mailbox authentication is temporarily unavailable. Please try again later.' });
+          }
+          if (!(error instanceof MailboxAuthenticationError)) throw error;
+          logAuthEvent('login_fail', { username: user.username, userId: user.id, ip: req.ip, success: false });
+          return res.status(401).json({ error: 'Invalid credentials' });
+        }
+      } else {
+        if (!user.password_hash) {
+          await bcrypt.compare(password, DUMMY_PASSWORD_HASH); // equalize timing for SSO-only accounts
+          logAuthEvent('login_fail', { username: user.username, userId: user.id, ip: req.ip, success: false });
+          return res.status(401).json({ error: 'This account uses single sign-on. Please sign in with your SSO provider.' });
+        }
+        const valid = await bcrypt.compare(password, user.password_hash);
+        if (!valid) {
+          logAuthEvent('login_fail', { username: user.username, userId: user.id, ip: req.ip, success: false });
+          return res.status(401).json({ error: 'Invalid credentials' });
+        }
+      }
     }
 
     // Regenerate session ID before storing any auth state to prevent session fixation
@@ -633,13 +708,32 @@ router.post('/logout', async (req, res) => {
   if (userId) imapManager.disconnectUser(userId);
 });
 
+router.post('/impersonation/stop', async (req, res) => {
+  if (!req.session?.userId) return res.status(401).json({ error: 'Not authenticated' });
+  const impersonation = await stopImpersonation(req);
+  if (!impersonation) return res.status(409).json({ error: 'No active impersonation session' });
+  await saveSession(req.session);
+  res.json({ ok: true, restoredAdminId: impersonation.originalAdminId });
+});
+
 router.get('/me', async (req, res) => {
+  await expireImpersonation(req);
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  const impersonation = getImpersonationState(req);
   const result = await query('SELECT id, username, display_name, avatar, is_admin, can_manage_mailboxes, totp_enabled, password_hash, lock_pin_hash FROM users WHERE id = $1', [req.session.userId]);
   const user = result.rows[0];
   if (!user) return res.status(401).json({ error: 'Not authenticated' });
-  req.session.isAdmin = user.is_admin;
-  res.json({ user: { id: user.id, username: user.username, displayName: user.display_name, avatar: user.avatar, isAdmin: user.is_admin, canManageMailboxes: user.can_manage_mailboxes, totpEnabled: user.totp_enabled, hasPassword: !!user.password_hash, hasLockPin: !!user.lock_pin_hash, locked: !!req.session.locked } });
+  if (!impersonation) req.session.isAdmin = user.is_admin;
+  res.json({
+    user: {
+      id: user.id, username: user.username, displayName: user.display_name, avatar: user.avatar,
+      isAdmin: impersonation ? false : user.is_admin,
+      canManageMailboxes: impersonation ? false : user.can_manage_mailboxes,
+      totpEnabled: user.totp_enabled, hasPassword: !!user.password_hash,
+      hasLockPin: !!user.lock_pin_hash, locked: !!req.session.locked,
+    },
+    impersonation,
+  });
 });
 
 // ── Screen-lock PIN (#235) ──────────────────────────────────────────────────
@@ -989,11 +1083,25 @@ router.get('/profile/recovery-email', async (req, res) => {
 
 router.patch('/profile/recovery-email', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
-  const { email } = req.body;
+  const { email, password } = req.body;
   if (email === undefined) return res.status(400).json({ error: 'email required' });
+  if (!password) return res.status(400).json({ error: 'Current password required' });
   const trimmed = email ? String(email).trim().toLowerCase() : null;
   if (trimmed && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
     return res.status(400).json({ error: 'Invalid email address' });
+  }
+  const userResult = await query('SELECT id, username, password_hash FROM users WHERE id = $1', [req.session.userId]);
+  const user = userResult.rows[0];
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    if (!await verifyUserCredential(user, password)) {
+      return res.status(401).json({ error: 'Incorrect password' });
+    }
+  } catch (error) {
+    if (error instanceof MailboxAuthenticationUnavailableError) {
+      return res.status(503).json({ error: 'Mailbox authentication is temporarily unavailable. Please try again later.' });
+    }
+    throw error;
   }
   await query('UPDATE users SET recovery_email = $1 WHERE id = $2', [trimmed || null, req.session.userId]);
   res.json({ ok: true });
@@ -1165,7 +1273,9 @@ router.post('/reset-password', authLimiter, async (req, res) => {
     await client.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hash, userId]);
     if (managedAccount) {
       await client.query(
-        'UPDATE email_accounts SET auth_pass = $1, sync_error = NULL WHERE id = $2',
+        `UPDATE email_accounts
+         SET auth_pass = $1, smtp_auth_pass = $1, sync_error = NULL
+         WHERE id = $2`,
         [encrypt(password), managedAccount.id],
       );
     }
