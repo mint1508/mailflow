@@ -17,7 +17,7 @@
 
 import net from 'node:net';
 import dns from 'node:dns';
-import { Agent, buildConnector } from 'undici';
+import { Agent, buildConnector, fetch as undiciFetch } from 'undici';
 import { validateHostLiteral } from './hostValidation.js';
 
 const baseConnect = buildConnector({});
@@ -74,5 +74,5 @@ export function safeFetch(url, options = {}, { allowPrivate = false, requireHttp
   if (requireHttps && parsed.protocol !== 'https:') {
     return Promise.reject(insecure());
   }
-  return fetch(url, { ...options, dispatcher: agentFor(allowPrivate, requireHttps) });
+  return undiciFetch(url, { ...options, dispatcher: agentFor(allowPrivate, requireHttps) });
 }
