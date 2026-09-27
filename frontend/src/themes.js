@@ -49,6 +49,56 @@ export const THEMES = {
     }
   },
 
+  hippy_light: {
+    label: 'HIPPY Light',
+    description: 'Fresh mint with HIPPY green',
+    preview: ['#f3f8f2', '#ffffff', '#2e9c34', '#153419'],
+    vars: {
+      '--bg-primary': '#f3f8f2',
+      '--bg-secondary': '#ffffff',
+      '--bg-tertiary': '#eaf4e9',
+      '--bg-elevated': '#ffffff',
+      '--bg-hover': '#e1efe0',
+      '--border': '#bdd7bc',
+      '--border-subtle': '#dcebdc',
+      '--text-primary': '#153419',
+      '--text-secondary': '#3f6243',
+      '--text-tertiary': '#58745b',
+      '--accent': '#2e9c34',
+      '--accent-text': '#071b09',
+      '--accent-dim': '#d4edd5',
+      '--accent-glow': 'rgba(46,156,52,0.16)',
+      '--green': '#237f2a',
+      '--red': '#c93636',
+      '--amber': '#9a6500',
+    }
+  },
+
+  hippy_dark: {
+    label: 'HIPPY Dark',
+    description: 'Deep forest with vivid green',
+    preview: ['#08110a', '#0d1a10', '#52c95a', '#f0f8f1'],
+    vars: {
+      '--bg-primary': '#08110a',
+      '--bg-secondary': '#0d1a10',
+      '--bg-tertiary': '#132719',
+      '--bg-elevated': '#19321f',
+      '--bg-hover': '#21412a',
+      '--border': '#31573a',
+      '--border-subtle': '#203b26',
+      '--text-primary': '#f0f8f1',
+      '--text-secondary': '#b5ccb7',
+      '--text-tertiary': '#82a186',
+      '--accent': '#52c95a',
+      '--accent-text': '#071509',
+      '--accent-dim': '#173d1d',
+      '--accent-glow': 'rgba(82,201,90,0.18)',
+      '--green': '#63d66b',
+      '--red': '#ff7b76',
+      '--amber': '#f6c453',
+    }
+  },
+
   gtd: {
     label: 'GTD',
     description: 'Getting Things Done — dark, per-state accents',
