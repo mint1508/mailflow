@@ -731,7 +731,8 @@
       "groupDisplay": "Schermo",
       "groupSecurityIntegrations": "Sicurezza e integrazioni",
       "groupAdmin": "Amministrazione",
-      "plugins": "Plugin"
+      "plugins": "Plugin",
+      "branding": "Branding"
     },
     "rules": {
       "title": "Regole posta in arrivo",
@@ -1677,6 +1678,21 @@
       "empty": "Nessun plugin disponibile in questa versione.",
       "error": "Impossibile aggiornare il plugin. Riprova.",
       "configureIn": "Configura le opzioni in {{location}}"
+    },
+    "branding": {
+      "title": "App branding",
+      "description": "Change the name and PWA logo shown to everyone in this MailFlow instance.",
+      "appName": "App name",
+      "shortName": "PWA short name",
+      "logo": "PWA logo",
+      "logoHint": "PNG, JPEG, or WebP up to 512 KB.",
+      "chooseLogo": "Choose logo",
+      "removeLogo": "Remove logo",
+      "save": "Save branding",
+      "saving": "Saving…",
+      "saved": "Branding saved.",
+      "invalidLogo": "Choose a PNG, JPEG, or WebP image up to 512 KB.",
+      "previewAlt": "App logo preview"
     }
   },
   "blockList": {

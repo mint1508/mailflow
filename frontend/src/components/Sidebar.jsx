@@ -16,6 +16,7 @@ import {
 } from '../utils/sidebar.js';
 import { useMobile } from '../hooks/useMobile.js';
 import LogoMark from './LogoMark.jsx';
+import { useBranding } from '../branding.js';
 import ProfileModal from './ProfileModal.jsx';
 import { useUiScale, descale } from '../hooks/useUiScale.js';
 
@@ -250,6 +251,7 @@ function CtxMenuItem({ icon, label, onClick, danger, disabled }) {
 
 // ─── Main Sidebar ─────────────────────────────────────────────────────────────
 export default function Sidebar() {
+  const branding = useBranding();
   const { t } = useTranslation();
   const uiScale = useUiScale();
   const {
@@ -858,23 +860,14 @@ export default function Sidebar() {
         {!sidebarCollapsed && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
             <LogoMark size={24} />
-            <span style={{ display: 'flex', alignItems: 'baseline', gap: 0 }}>
-              <span style={{
-                fontFamily: "'Syne', sans-serif",
-                fontSize: 17, fontWeight: 700,
-                color: 'var(--text-primary)',
-                letterSpacing: '-0.02em', whiteSpace: 'nowrap',
-              }}>
-                Mail
-              </span>
-              <span style={{
-                fontFamily: "'Syne', sans-serif",
-                fontSize: 17, fontWeight: 600,
-                color: 'var(--accent)',
-                letterSpacing: '-0.02em', whiteSpace: 'nowrap',
-              }}>
-                Flow
-              </span>
+            <span style={{
+              fontFamily: "'Syne', sans-serif",
+              fontSize: 17, fontWeight: 700,
+              color: 'var(--text-primary)',
+              letterSpacing: '-0.02em', whiteSpace: 'nowrap',
+              overflow: 'hidden', textOverflow: 'ellipsis',
+            }}>
+              {branding.name}
             </span>
           </div>
         )}

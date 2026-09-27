@@ -132,6 +132,20 @@ const SAME_VALUE_ALLOWED = {
   'admin.cpanel.modeCsv':                    'any', // CSV is a universal file format label
   'admin.cpanel.bulkPh':                     'any', // Technical row-format example
   'admin.tabs.cpanel':                       'any', // cPanel product name
+  'admin.tabs.branding':                     'any', // system branding label
+  'admin.branding.title':                    'any',
+  'admin.branding.description':              'any',
+  'admin.branding.appName':                  'any',
+  'admin.branding.shortName':                'any',
+  'admin.branding.logo':                     'any',
+  'admin.branding.logoHint':                 'any',
+  'admin.branding.chooseLogo':               'any',
+  'admin.branding.removeLogo':               'any',
+  'admin.branding.save':                     'any',
+  'admin.branding.saving':                   'any',
+  'admin.branding.saved':                    'any',
+  'admin.branding.invalidLogo':              'any',
+  'admin.branding.previewAlt':               'any',
   'admin.cpanel.createTitle':               'any',
   'admin.cpanel.localPartPh':               'any',
   'admin.cpanel.passwordOptional':          'any',

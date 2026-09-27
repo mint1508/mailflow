@@ -35,6 +35,7 @@ import { isValidForwardAddress } from '../utils/ruleActions.js';
 import { folderParentLabel } from '../utils/folderDisplay.js';
 import SpamSettings from './SpamSettings.jsx';
 import { parseCpanelBulkRows } from '../utils/cpanelMailbox.js';
+import { getBranding, setBranding } from '../branding.js';
 
 // ─── Shared field component ───────────────────────────────────────────────────
 function Field({ label, required, children, style }) {
@@ -7853,7 +7854,7 @@ const TAB_GROUPS = [
   { id: 'account-mail', labelKey: 'admin.tabs.groupAccountMail', tabIds: ['accounts', 'notifications', 'rules', 'categories', 'cleanup', 'antispam'] },
   { id: 'display', labelKey: 'admin.tabs.groupDisplay', tabIds: ['appearance', 'shortcuts'] },
   { id: 'security-integrations', labelKey: 'admin.tabs.groupSecurityIntegrations', tabIds: ['security', 'integrations', 'ai', 'ai-actions', 'plugins'] },
-  { id: 'admin', labelKey: 'admin.tabs.groupAdmin', tabIds: ['cpanel', 'users', 'sso'] },
+  { id: 'admin', labelKey: 'admin.tabs.groupAdmin', tabIds: ['cpanel', 'branding', 'users', 'sso'] },
 ];
 
 const TABS = [
@@ -7920,6 +7921,10 @@ const TABS = [
     adminOnly: true,
     mailboxManager: true,
     icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h5"/></svg>,
+  },
+  {
+    id: 'branding', labelKey: 'admin.tabs.branding', mailboxManager: true,
+    icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"><path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="8"/></svg>,
   },
   {
     id: 'users', labelKey: 'admin.tabs.users',
@@ -9642,6 +9647,69 @@ function CpanelTab() {
   );
 }
 
+function BrandingSection() {
+  const { t } = useTranslation();
+  const [form, setForm] = useState(() => getBranding());
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState(null);
+
+  const chooseLogo = (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type) || file.size > 512 * 1024) {
+      setMessage({ type: 'error', text: t('admin.branding.invalidLogo') });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setForm(current => ({ ...current, logo: reader.result }));
+    reader.readAsDataURL(file);
+  };
+
+  const save = async (event) => {
+    event.preventDefault();
+    setSaving(true); setMessage(null);
+    try {
+      const result = await api.admin.saveBranding({ name: form.name, shortName: form.shortName, logo: form.logo });
+      setForm(result.branding);
+      setBranding(result.branding);
+      setMessage({ type: 'success', text: t('admin.branding.saved') });
+    } catch (error) {
+      setMessage({ type: 'error', text: error.message });
+    } finally { setSaving(false); }
+  };
+
+  return (
+    <div>
+      <h2 style={{ fontSize: 18, fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 4px' }}>{t('admin.branding.title')}</h2>
+      <p style={{ fontSize: 13, color: 'var(--text-tertiary)', margin: '0 0 20px', lineHeight: 1.5 }}>{t('admin.branding.description')}</p>
+      <form onSubmit={save} style={{ maxWidth: 560 }}>
+        <Field label={t('admin.branding.appName')} required>
+          <input value={form.name || ''} maxLength={80} onChange={event => setForm(current => ({ ...current, name: event.target.value }))} style={inputStyle} />
+        </Field>
+        <Field label={t('admin.branding.shortName')} required>
+          <input value={form.shortName || ''} maxLength={30} onChange={event => setForm(current => ({ ...current, shortName: event.target.value }))} style={inputStyle} />
+        </Field>
+        <Field label={t('admin.branding.logo')}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <div style={{ width: 64, height: 64, borderRadius: 14, border: '1px solid var(--border)', background: 'var(--bg-tertiary)', display: 'grid', placeItems: 'center', overflow: 'hidden' }}>
+              {form.logo ? <img src={form.logo} alt={t('admin.branding.previewAlt')} style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>—</span>}
+            </div>
+            <div>
+              <input id="branding-logo" type="file" accept="image/png,image/jpeg,image/webp" onChange={chooseLogo} style={{ display: 'none' }} />
+              <label htmlFor="branding-logo" style={{ display: 'inline-block', padding: '8px 11px', border: '1px solid var(--border)', borderRadius: 7, background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', fontSize: 12, cursor: 'pointer' }}>{t('admin.branding.chooseLogo')}</label>
+              {form.logo && <button type="button" onClick={() => setForm(current => ({ ...current, logo: null }))} style={{ marginLeft: 8, padding: '8px 11px', border: '1px solid var(--border)', borderRadius: 7, background: 'transparent', color: 'var(--text-secondary)', fontSize: 12, cursor: 'pointer' }}>{t('admin.branding.removeLogo')}</button>}
+              <div style={{ marginTop: 6, fontSize: 11, color: 'var(--text-tertiary)' }}>{t('admin.branding.logoHint')}</div>
+            </div>
+          </div>
+        </Field>
+        {message && <div style={{ marginBottom: 12, fontSize: 12, color: message.type === 'error' ? 'var(--red)' : 'var(--green)' }}>{message.text}</div>}
+        <button type="submit" disabled={saving || !form.name.trim() || !form.shortName.trim()} style={{ padding: '9px 13px', background: 'var(--accent)', color: 'var(--accent-text)', border: 'none', borderRadius: 7, fontSize: 12, cursor: saving ? 'wait' : 'pointer', opacity: saving || !form.name.trim() || !form.shortName.trim() ? 0.5 : 1 }}>{saving ? t('admin.branding.saving') : t('admin.branding.save')}</button>
+      </form>
+    </div>
+  );
+}
+
 function makeSearchIndex(t) {
   const tabLabel = (id) => t(`admin.tabs.${id}`);
   const layoutCrumb = `${tabLabel('appearance')} › ${t('admin.appearance.layout')}`;
@@ -9653,6 +9721,7 @@ function makeSearchIndex(t) {
     { label: t('admin.accounts.title'), keywords: ['account', 'email', 'imap', 'smtp', 'gmail', 'yahoo', 'icloud', 'password', 'add account', 'connect'], tab: 'accounts', breadcrumb: tabLabel('accounts') },
     { label: t('admin.accounts.signatureSection'), keywords: ['signature', 'sign off', 'footer', 'alias', 'send as'], tab: 'accounts', breadcrumb: tabLabel('accounts') },
     { label: t('admin.cpanel.title'), keywords: ['cpanel', 'mailbox', 'quota', 'api token', 'inventory'], tab: 'cpanel', adminOnly: true, mailboxManager: true, breadcrumb: tabLabel('cpanel') },
+    { label: t('admin.tabs.branding'), keywords: ['branding', 'logo', 'app name', 'pwa', 'brand'], tab: 'branding', mailboxManager: true, breadcrumb: tabLabel('branding') },
     // Rules
     { label: t('admin.rules.title'), keywords: ['rule', 'filter', 'condition', 'action', 'move', 'auto', 'automate', 'inbox rule', 'sort'], tab: 'rules', subtab: 'rules', breadcrumb: `${tabLabel('rules')} › ${t('admin.rules.subTabRules')}` },
     { label: t('admin.rules.subTabBlockList'), keywords: ['block', 'blocked', 'sender', 'blacklist', 'spam', 'domain'], tab: 'rules', subtab: 'block-list', breadcrumb: `${tabLabel('rules')} › ${t('admin.rules.subTabBlockList')}` },
@@ -9838,6 +9907,7 @@ export default function AdminPanel() {
       {adminTab === 'ai-actions' && <AiActionsTab />}
       {adminTab === 'plugins' && <PluginsSection onNavigate={navigateTo} />}
       {adminTab === 'cpanel' && <CpanelTab />}
+      {adminTab === 'branding' && canManageMailboxes && <BrandingSection />}
       {adminTab === 'about' && <AboutTab />}
     </>
   );

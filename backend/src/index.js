@@ -28,6 +28,7 @@ import contactsRoutes from './routes/contacts.js';
 import todoistRoutes from './routes/todoist.js';
 import aiRoutes from './routes/ai.js';
 import categoriesRoutes from './routes/categories.js';
+import brandingRoutes from './routes/branding.js';
 import { pluginRegistry } from './plugins/registry.js';
 import { loadBundledPlugins } from './plugins/loadPlugins.js';
 import { setMailEngine } from './plugins/mailEngine.js';
@@ -197,6 +198,7 @@ setMailEngine(imapManager);
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/branding', brandingRoutes);
 app.use('/api/auth/oidc', oidcApiRouter);
 app.use('/auth/oidc', oidcBrowserRouter);
 app.use('/oauth', oauthRoutes);

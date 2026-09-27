@@ -4,8 +4,10 @@
 // variable resolution inside SVG, and updates on theme AND custom-CSS changes.
 import { useState, useEffect } from 'react';
 import { getEffectiveAccent, subscribeAccent } from '../themes.js';
+import { useBranding } from '../branding.js';
 
 export default function LogoMark({ size = 32 }) {
+  const branding = useBranding();
   const [accent, setAccent] = useState(getEffectiveAccent);
   useEffect(() => {
     // Re-sync in case the accent changed between render and this effect, then
@@ -13,6 +15,10 @@ export default function LogoMark({ size = 32 }) {
     setAccent(getEffectiveAccent());
     return subscribeAccent(setAccent);
   }, []);
+
+  if (branding.logo) {
+    return <img src="/api/branding/logo" alt="" width={size} height={size} style={{ flexShrink: 0, objectFit: 'contain', borderRadius: size * 0.23 }} />;
+  }
 
   const id = `lm_${size}`;
   return (

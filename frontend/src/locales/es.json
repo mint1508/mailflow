@@ -731,7 +731,8 @@
       "groupDisplay": "Visualización",
       "groupSecurityIntegrations": "Seguridad e integraciones",
       "groupAdmin": "Administración",
-      "plugins": "Complementos"
+      "plugins": "Complementos",
+      "branding": "Branding"
     },
     "rules": {
       "title": "Reglas de bandeja de entrada",
@@ -1677,6 +1678,21 @@
       "empty": "No hay complementos disponibles en esta versión.",
       "error": "No se pudo actualizar el complemento. Inténtalo de nuevo.",
       "configureIn": "Configura las opciones en {{location}}"
+    },
+    "branding": {
+      "title": "App branding",
+      "description": "Change the name and PWA logo shown to everyone in this MailFlow instance.",
+      "appName": "App name",
+      "shortName": "PWA short name",
+      "logo": "PWA logo",
+      "logoHint": "PNG, JPEG, or WebP up to 512 KB.",
+      "chooseLogo": "Choose logo",
+      "removeLogo": "Remove logo",
+      "save": "Save branding",
+      "saving": "Saving…",
+      "saved": "Branding saved.",
+      "invalidLogo": "Choose a PNG, JPEG, or WebP image up to 512 KB.",
+      "previewAlt": "App logo preview"
     }
   },
   "blockList": {

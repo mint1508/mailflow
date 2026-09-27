@@ -185,6 +185,8 @@ export const api = {
 
   // Admin
   admin: {
+    getBranding: () => request('GET', '/branding'),
+    saveBranding: (data) => request('PATCH', '/branding', data),
     getUsers: (params) => request('GET', '/admin/users' + (params ? '?' + new URLSearchParams(params) : '')),
     updateUser: (id, data) => request('PATCH', `/admin/users/${id}`, data),
     deleteUser: (id) => request('DELETE', `/admin/users/${id}`),

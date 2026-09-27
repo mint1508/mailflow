@@ -6,6 +6,7 @@ import { api } from './utils/api.js';
 import { applyTheme, getInitialTheme } from './themes.js';
 import { applyFontSet, effectiveFontSet } from './fonts.js'; // still used for the instant localStorage apply on mount
 import { applyLayout } from './layouts.js';
+import { loadBranding } from './branding.js';
 import LoginPage from './components/LoginPage.jsx';
 import MailApp from './components/MailApp.jsx';
 import LockScreen from './components/LockScreen.jsx';
@@ -16,6 +17,10 @@ export default function App() {
 
   // Register service worker on first mount — independent of auth state.
   // The SW itself does nothing until the user explicitly grants push permission.
+  useEffect(() => {
+    loadBranding();
+  }, []);
+
   useEffect(() => {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch((err) =>

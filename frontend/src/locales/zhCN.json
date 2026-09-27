@@ -731,7 +731,8 @@
       "groupDisplay": "显示",
       "groupSecurityIntegrations": "安全与集成",
       "groupAdmin": "管理",
-      "plugins": "插件"
+      "plugins": "插件",
+      "branding": "Branding"
     },
     "rules": {
       "title": "收件箱规则",
@@ -1677,6 +1678,21 @@
       "empty": "此版本中没有可用的插件。",
       "error": "无法更新插件，请重试。",
       "configureIn": "在「{{location}}」中配置选项"
+    },
+    "branding": {
+      "title": "App branding",
+      "description": "Change the name and PWA logo shown to everyone in this MailFlow instance.",
+      "appName": "App name",
+      "shortName": "PWA short name",
+      "logo": "PWA logo",
+      "logoHint": "PNG, JPEG, or WebP up to 512 KB.",
+      "chooseLogo": "Choose logo",
+      "removeLogo": "Remove logo",
+      "save": "Save branding",
+      "saving": "Saving…",
+      "saved": "Branding saved.",
+      "invalidLogo": "Choose a PNG, JPEG, or WebP image up to 512 KB.",
+      "previewAlt": "App logo preview"
     }
   },
   "blockList": {

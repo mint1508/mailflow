@@ -747,7 +747,8 @@
       "groupDisplay": "Wyświetlanie",
       "groupSecurityIntegrations": "Bezpieczeństwo i integracje",
       "groupAdmin": "Administracja",
-      "plugins": "Wtyczki"
+      "plugins": "Wtyczki",
+      "branding": "Branding"
     },
     "rules": {
       "title": "Reguły skrzynki odbiorczej",
@@ -1696,6 +1697,21 @@
       "empty": "Brak wtyczek w tej wersji.",
       "error": "Nie udało się zaktualizować wtyczki. Spróbuj ponownie.",
       "configureIn": "Skonfiguruj opcje w {{location}}"
+    },
+    "branding": {
+      "title": "App branding",
+      "description": "Change the name and PWA logo shown to everyone in this MailFlow instance.",
+      "appName": "App name",
+      "shortName": "PWA short name",
+      "logo": "PWA logo",
+      "logoHint": "PNG, JPEG, or WebP up to 512 KB.",
+      "chooseLogo": "Choose logo",
+      "removeLogo": "Remove logo",
+      "save": "Save branding",
+      "saving": "Saving…",
+      "saved": "Branding saved.",
+      "invalidLogo": "Choose a PNG, JPEG, or WebP image up to 512 KB.",
+      "previewAlt": "App logo preview"
     }
   },
   "blockList": {
