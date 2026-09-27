@@ -47,7 +47,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-        APP_VERSION: ${APP_VERSION:-3.5.9}
+      APP_VERSION: ${APP_VERSION:-3.5.9}
       BUILD_SHA: ${GIT_SHA:-dev}
       UPSTREAM_SHA: ${UPSTREAM_SHA:-unknown}
       SESSION_SECRET: ${SESSION_SECRET}
