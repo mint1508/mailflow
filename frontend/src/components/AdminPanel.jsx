@@ -9696,8 +9696,16 @@ function BrandingSection() {
               {form.logo ? <img src={form.logo} alt={t('admin.branding.previewAlt')} style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>—</span>}
             </div>
             <div>
-              <input id="branding-logo" type="file" accept="image/png,image/jpeg,image/webp" onChange={chooseLogo} style={{ display: 'none' }} />
-              <label htmlFor="branding-logo" style={{ display: 'inline-block', padding: '8px 11px', border: '1px solid var(--border)', borderRadius: 7, background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', fontSize: 12, cursor: 'pointer' }}>{t('admin.branding.chooseLogo')}</label>
+              <span style={{ position: 'relative', display: 'inline-block', overflow: 'hidden', padding: '8px 11px', border: '1px solid var(--border)', borderRadius: 7, background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', fontSize: 12, cursor: 'pointer' }}>
+                {t('admin.branding.chooseLogo')}
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  aria-label={t('admin.branding.chooseLogo')}
+                  onChange={chooseLogo}
+                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }}
+                />
+              </span>
               {form.logo && <button type="button" onClick={() => setForm(current => ({ ...current, logo: null }))} style={{ marginLeft: 8, padding: '8px 11px', border: '1px solid var(--border)', borderRadius: 7, background: 'transparent', color: 'var(--text-secondary)', fontSize: 12, cursor: 'pointer' }}>{t('admin.branding.removeLogo')}</button>}
               <div style={{ marginTop: 6, fontSize: 11, color: 'var(--text-tertiary)' }}>{t('admin.branding.logoHint')}</div>
             </div>
