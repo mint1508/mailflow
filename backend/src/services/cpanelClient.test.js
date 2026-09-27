@@ -34,6 +34,20 @@ describe('cPanel mailbox normalization', () => {
     });
   });
 
+  it('treats numeric cPanel disk quotas as megabytes', () => {
+    expect(normalizeMailbox({
+      user: 'support',
+      domain: 'example.com',
+      diskquota: '1024.00',
+      diskused: 0,
+      humandiskquota: '1 GB',
+      humandiskused: 'None',
+    }, 'example.com')).toMatchObject({
+      quotaBytes: 1024 * 1024 ** 2,
+      diskUsedBytes: 0,
+    });
+  });
+
   it('ignores malformed rows without an email', () => {
     expect(normalizeMailbox({ user: '', domain: '' }, 'example.com')).toBeNull();
   });

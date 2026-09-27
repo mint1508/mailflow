@@ -227,6 +227,13 @@ function parseBytes(value) {
   return Math.round(Number(match[1]) * units[match[2].toLowerCase()]);
 }
 
+function parseCpanelQuotaBytes(value) {
+  if (value == null || value === '' || String(value).toLowerCase() === 'unlimited') return null;
+  const text = String(value).trim().replace(/,/g, '');
+  const numeric = Number(text);
+  return Number.isFinite(numeric) ? Math.round(numeric * 1024 ** 2) : parseBytes(value);
+}
+
 function firstValue(row, keys) {
   for (const key of keys) if (row?.[key] !== undefined && row?.[key] !== null) return row[key];
   return null;
@@ -250,16 +257,22 @@ export function normalizeMailbox(row, configuredDomain) {
   const normalizedDomain = email.slice(at + 1) || domain;
   if (normalizedDomain !== String(configuredDomain || '').trim().toLowerCase()) return null;
   const quotaRaw = firstValue(row, ['diskquota', 'quota', 'quota_bytes', 'humandiskquota']);
+  const quotaHumanBytes = parseBytes(firstValue(row, ['humandiskquota']));
+  const quotaByteValue = parseBytes(firstValue(row, ['quota_bytes']));
+  const quotaMbBytes = parseCpanelQuotaBytes(firstValue(row, ['diskquota', 'quota']));
   const diskUsedRaw = firstValue(row, ['diskused', 'disk_used', 'diskused_bytes', 'humandiskused']);
+  const diskUsedHumanBytes = parseBytes(firstValue(row, ['humandiskused']));
+  const diskUsedByteValue = parseBytes(firstValue(row, ['diskused_bytes', 'diskused', 'disk_used']));
   const suspended = ['suspended', 'suspended_login', 'suspended_outgoing', 'suspended_incoming']
     .some(key => row?.[key] === true || row?.[key] === 1 || String(row?.[key]).toLowerCase() === '1' || String(row?.[key]).toLowerCase() === 'true');
   return {
     email,
     domain: normalizedDomain,
     localPart: normalizedLocalPart,
-    quotaBytes: parseBytes(quotaRaw),
+    // cPanel reports diskquota/quota as MB, while quota_bytes is already bytes.
+    quotaBytes: quotaHumanBytes ?? quotaByteValue ?? quotaMbBytes,
     quotaRaw: quotaRaw == null ? null : String(quotaRaw),
-    diskUsedBytes: parseBytes(diskUsedRaw),
+    diskUsedBytes: diskUsedHumanBytes ?? diskUsedByteValue,
     diskUsedRaw: diskUsedRaw == null ? null : String(diskUsedRaw),
     suspended,
     raw: INVENTORY_ROW_KEYS.reduce((safe, key) => {
