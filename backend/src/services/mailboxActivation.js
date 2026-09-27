@@ -13,6 +13,11 @@ function normalizeEmail(value, label) {
   return email;
 }
 
+function optionalEmail(value, label) {
+  const text = String(value || '').trim();
+  return text ? normalizeEmail(text, label) : null;
+}
+
 function activationUrl(token) {
   if (!process.env.APP_URL) throw new Error('APP_URL is not configured');
   return `${process.env.APP_URL}/register?invite=${token}`;
@@ -41,7 +46,7 @@ async function deliverActivation({ contactEmail, mailboxEmail, url }) {
 }
 
 export async function createMailboxActivation({ actorUserId, mailbox, contactEmail }) {
-  const cleanContactEmail = normalizeEmail(contactEmail, 'Contact email');
+  const cleanContactEmail = optionalEmail(contactEmail, 'Contact email');
   const mailboxEmail = normalizeEmail(mailbox?.email, 'Mailbox email');
   const config = await getCpanelConfig();
   if (!config) throw new Error('cPanel connector is not configured');
@@ -72,7 +77,7 @@ export async function createMailboxActivation({ actorUserId, mailbox, contactEma
     await client.query(
       `INSERT INTO invites (email, token, created_by, expires_at, invite_type, mailbox_email, email_account_id)
        VALUES ($1,$2,$3,$4,'mailbox_activation',$5,$6)`,
-      [cleanContactEmail, token, actorUserId, expiresAt, mailboxEmail, account.id],
+      [cleanContactEmail || mailboxEmail, token, actorUserId, expiresAt, mailboxEmail, account.id],
     );
     await client.query('COMMIT');
   } catch (error) {
@@ -84,13 +89,16 @@ export async function createMailboxActivation({ actorUserId, mailbox, contactEma
 
   let emailSent = false;
   let emailError = null;
-  try {
-    await deliverActivation({ contactEmail: cleanContactEmail, mailboxEmail, url });
-    emailSent = true;
-  } catch (error) {
-    emailError = error.message;
+  const emailSkipped = !cleanContactEmail;
+  if (cleanContactEmail) {
+    try {
+      await deliverActivation({ contactEmail: cleanContactEmail, mailboxEmail, url });
+      emailSent = true;
+    } catch (error) {
+      emailError = error.message;
+    }
   }
-  return { account, contactEmail: cleanContactEmail, activationUrl: url, emailSent, emailError, expiresAt };
+  return { account, contactEmail: cleanContactEmail, activationUrl: url, emailSent, emailSkipped, emailError, expiresAt };
 }
 
 export async function resendMailboxActivation(mailboxEmail) {
@@ -108,13 +116,17 @@ export async function resendMailboxActivation(mailboxEmail) {
   const expiresAt = new Date(Date.now() + INVITE_TTL_MS);
   const url = activationUrl(token);
   await query('UPDATE invites SET token = $1, expires_at = $2 WHERE id = $3', [token, expiresAt, invite.id]);
-  await deliverActivation({ contactEmail: invite.email, mailboxEmail: invite.mailbox_email, url });
-  return { activationUrl: url, contactEmail: invite.email, expiresAt };
+  const contactEmail = invite.email.toLowerCase() === invite.mailbox_email.toLowerCase() ? null : invite.email;
+  if (!contactEmail) {
+    return { activationUrl: url, contactEmail: null, emailSent: false, emailSkipped: true, emailError: null, expiresAt };
+  }
+  await deliverActivation({ contactEmail, mailboxEmail: invite.mailbox_email, url });
+  return { activationUrl: url, contactEmail, emailSent: true, emailSkipped: false, emailError: null, expiresAt };
 }
 
 export async function createExistingMailboxActivation({ actorUserId, mailboxEmail, contactEmail }) {
   const normalized = normalizeEmail(mailboxEmail, 'Mailbox email');
-  const cleanContactEmail = normalizeEmail(contactEmail, 'Contact email');
+  const cleanContactEmail = optionalEmail(contactEmail, 'Contact email');
   const config = await getCpanelConfig();
   if (!config) throw new Error('cPanel connector is not configured');
 
@@ -175,7 +187,7 @@ export async function createExistingMailboxActivation({ actorUserId, mailboxEmai
     await client.query(
       `INSERT INTO invites (email, token, created_by, expires_at, invite_type, mailbox_email, email_account_id)
        VALUES ($1,$2,$3,$4,'mailbox_activation',$5,$6)`,
-      [cleanContactEmail, token, actorUserId, expiresAt, normalized, accountId],
+      [cleanContactEmail || normalized, token, actorUserId, expiresAt, normalized, accountId],
     );
     await client.query('COMMIT');
   } catch (error) {
@@ -187,13 +199,16 @@ export async function createExistingMailboxActivation({ actorUserId, mailboxEmai
 
   let emailSent = false;
   let emailError = null;
-  try {
-    await deliverActivation({ contactEmail: cleanContactEmail, mailboxEmail: normalized, url });
-    emailSent = true;
-  } catch (error) {
-    emailError = error.message;
+  const emailSkipped = !cleanContactEmail;
+  if (cleanContactEmail) {
+    try {
+      await deliverActivation({ contactEmail: cleanContactEmail, mailboxEmail: normalized, url });
+      emailSent = true;
+    } catch (error) {
+      emailError = error.message;
+    }
   }
-  return { accountId, contactEmail: cleanContactEmail, activationUrl: url, emailSent, emailError, expiresAt };
+  return { accountId, contactEmail: cleanContactEmail, activationUrl: url, emailSent, emailSkipped, emailError, expiresAt };
 }
 
 export async function mailboxActivationState(mailboxEmails) {

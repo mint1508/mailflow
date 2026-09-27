@@ -72,7 +72,9 @@ async function withActivationState(mailboxes) {
       ...publicMailbox(mailbox),
       account_id: state?.account_id || null,
       owner_user_id: state?.user_id || null,
-      contact_email: state?.contact_email || state?.recovery_email || null,
+      contact_email: state?.contact_email && state.contact_email.toLowerCase() !== mailbox.email?.toLowerCase()
+        ? state.contact_email
+        : state?.recovery_email || null,
       activation_expires_at: state?.expires_at || null,
       activation_status: state?.used_at && state.enabled
         ? 'active'
@@ -161,7 +163,6 @@ router.post('/mailboxes/sync', async (req, res) => {
 router.post('/mailboxes', async (req, res) => {
   let result = null;
   try {
-    if (!req.body?.contactEmail) return res.status(400).json({ error: 'Contact email is required' });
     result = await createCpanelMailbox({ ...req.body, password: undefined });
     const activation = await createMailboxActivation({
       actorUserId: req.session.userId,
@@ -178,6 +179,7 @@ router.post('/mailboxes', async (req, res) => {
         contactEmail: activation.contactEmail,
         activationUrl: activation.activationUrl,
         emailSent: activation.emailSent,
+        emailSkipped: activation.emailSkipped,
         emailError: activation.emailError,
         expiresAt: activation.expiresAt,
       },
@@ -209,6 +211,7 @@ router.post('/mailboxes/bulk', async (req, res) => {
           contactEmail: activation.contactEmail,
           activationUrl: activation.activationUrl,
           emailSent: activation.emailSent,
+          emailSkipped: activation.emailSkipped,
           emailError: activation.emailError,
         });
       } catch (error) {

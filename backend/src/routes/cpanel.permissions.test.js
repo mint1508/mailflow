@@ -115,6 +115,17 @@ describe('cPanel mailbox-manager permissions', () => {
     });
   });
 
+  it('creates a mailbox without requiring a contact email', async () => {
+    const response = await request('/mailboxes', {
+      method: 'POST',
+      body: { localPart: 'new', quotaMb: 1024 },
+    });
+    expect(response.status).toBe(201);
+    expect(await response.json()).toMatchObject({
+      mailbox: { email: 'new@example.test', firstPassword: 'Generated-first-password!' },
+    });
+  });
+
   it.each(adminOnly)('denies mod access to %s %s', async (method, path, body) => {
     const response = await request(path, { method, body });
     expect(response.status).toBe(403);

@@ -653,7 +653,7 @@ function MailboxProvisioner({ config, limits, onChanged, onCredentials, onNotice
     const quotaMb = Number(createForm.quotaMb);
     if (!localPart) return t('admin.cpanel.localPartRequired');
     if (!/^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+$/.test(localPart)) return t('admin.cpanel.localPartInvalid');
-    if (!contactEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) return t('admin.cpanel.contactEmailInvalid');
+    if (contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) return t('admin.cpanel.contactEmailInvalid');
     if (!Number.isFinite(quotaMb) || quotaMb < 1 || quotaMb > maxQuotaMb) return t('admin.cpanel.quotaInvalid', { max: maxQuotaMb });
     return '';
   };
@@ -673,9 +673,11 @@ function MailboxProvisioner({ config, limits, onChanged, onCredentials, onNotice
       window.dispatchEvent(new CustomEvent('mailflow:accounts_refresh'));
       await onChanged?.();
       onNotice?.({
-        type: result.activation.emailSent ? 'success' : 'error',
+        type: result.activation.emailSent || result.activation.emailSkipped ? 'success' : 'error',
         message: result.activation.emailSent
           ? t('admin.cpanel.activationSent')
+          : result.activation.emailSkipped
+            ? t('admin.cpanel.created')
           : t('admin.cpanel.activationSendFailed', { error: activationDeliveryError(result.activation) }),
       });
     } catch (error) {
@@ -698,7 +700,7 @@ function MailboxProvisioner({ config, limits, onChanged, onCredentials, onNotice
       setBulkResult(result);
       window.dispatchEvent(new CustomEvent('mailflow:accounts_refresh'));
       await onChanged?.();
-      const activationFailures = result.created.filter(mailbox => mailbox.emailSent === false);
+      const activationFailures = result.created.filter(mailbox => mailbox.emailSent === false && !mailbox.emailSkipped);
       const hasFailures = result.failed.length > 0 || activationFailures.length > 0;
       const summary = t('admin.cpanel.bulkSummary', { created: result.created.length, failed: result.failed.length });
       const deliverySummary = activationFailures.length
@@ -721,9 +723,14 @@ function MailboxProvisioner({ config, limits, onChanged, onCredentials, onNotice
     event.target.value = '';
   };
 
-  const bulkCredentialsText = bulkResult?.created?.map(mailbox => (
-    `Email: ${mailbox.email}\nFirst password: ${mailbox.firstPassword || '(not returned)'}\nContact: ${mailbox.contactEmail}\nActivation: ${mailbox.activationUrl}\nActivation email: ${mailbox.emailSent ? 'sent' : `not sent${mailbox.emailError ? ` (${mailbox.emailError})` : ''}`}\nQuota: ${mailbox.quotaMb} MB`
-  )).join('\n\n') || '';
+  const bulkCredentialsText = bulkResult?.created?.map(mailbox => [
+    `Email: ${mailbox.email}`,
+    `First password: ${mailbox.firstPassword || '(not returned)'}`,
+    mailbox.contactEmail ? `Contact: ${mailbox.contactEmail}` : null,
+    mailbox.activationUrl ? `Activation: ${mailbox.activationUrl}` : null,
+    mailbox.emailSent ? 'Activation email: sent' : (!mailbox.emailSkipped ? `Activation email: not sent${mailbox.emailError ? ` (${mailbox.emailError})` : ''}` : null),
+    `Quota: ${mailbox.quotaMb} MB`,
+  ].filter(Boolean).join('\n')).join('\n\n') || '';
   const share = async (text) => {
     if (navigator.share) await navigator.share({ title: t('admin.cpanel.bulkCreate'), text }).catch(() => {});
     else await copyToClipboard(text);
@@ -761,7 +768,7 @@ function MailboxProvisioner({ config, limits, onChanged, onCredentials, onNotice
             </Field>
             <Field label={t('admin.cpanel.quotaWithLimit', { max: maxQuotaMb })} required style={{ flex: '0 1 150px', minWidth: 110 }}><input type="number" min="1" max={maxQuotaMb} value={createForm.quotaMb} onChange={e => setCreateForm(current => ({ ...current, quotaMb: Math.min(maxQuotaMb, Number(e.target.value)) }))} style={inputStyle} /></Field>
           </div>
-          <Field label={t('admin.cpanel.contactEmail')} required>
+          <Field label={`${t('admin.cpanel.contactEmail')} (optional)`}>
             <input type="email" value={createForm.contactEmail} onChange={e => setCreateForm(current => ({ ...current, contactEmail: e.target.value }))} placeholder={t('admin.cpanel.contactEmailPh')} style={inputStyle} />
           </Field>
           <button type="button" onClick={create} disabled={!!busy} style={{ padding: '9px 13px', background: 'var(--accent)', color: 'var(--accent-text)', border: 'none', borderRadius: 7, cursor: busy ? 'wait' : 'pointer', fontSize: 12 }}>{busy === 'create' ? t('admin.cpanel.creating') : t('admin.accounts.createMailbox')}</button>
@@ -776,7 +783,7 @@ function MailboxProvisioner({ config, limits, onChanged, onCredentials, onNotice
           {bulkResult && <div style={{ marginTop: 12, padding: 10, border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg-tertiary)' }}>
             <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 7 }}>{t('admin.cpanel.bulkSummary', { created: bulkResult.created.length, failed: bulkResult.failed.length })}</div>
             {bulkResult.failed.length > 0 && <div style={{ color: 'var(--red)', fontSize: 11, whiteSpace: 'pre-wrap', marginBottom: 8 }}>{bulkResult.failed.map(row => t('admin.cpanel.bulkFailure', { row: row.index + 1, error: row.error })).join('\n')}</div>}
-            {bulkResult.created.some(row => row.emailSent === false) && <div style={{ color: 'var(--red)', fontSize: 11, whiteSpace: 'pre-wrap', marginBottom: 8 }}>{bulkResult.created.filter(row => row.emailSent === false).map(row => t('admin.cpanel.bulkActivationFailureRow', { email: row.email, error: activationDeliveryError(row) })).join('\n')}</div>}
+            {bulkResult.created.some(row => row.emailSent === false && !row.emailSkipped) && <div style={{ color: 'var(--red)', fontSize: 11, whiteSpace: 'pre-wrap', marginBottom: 8 }}>{bulkResult.created.filter(row => row.emailSent === false && !row.emailSkipped).map(row => t('admin.cpanel.bulkActivationFailureRow', { email: row.email, error: activationDeliveryError(row) })).join('\n')}</div>}
             {bulkResult.created.length > 0 && <><pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-secondary)' }}>{bulkCredentialsText}</pre><div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 9 }}><button type="button" onClick={() => copyToClipboard(bulkCredentialsText)} style={{ padding: '6px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: 11 }}>{t('admin.cpanel.bulkCopyCredentials')}</button><button type="button" onClick={() => save(bulkCredentialsText, 'mailbox-credentials.txt')} style={{ padding: '6px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: 11 }}>{t('admin.cpanel.saveCredentials')}</button><button type="button" onClick={() => share(bulkCredentialsText)} style={{ padding: '6px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: 11 }}>{t('admin.cpanel.shareCredentials')}</button></div></>}
           </div>}
         </>
@@ -873,7 +880,12 @@ function AccountsTab() {
         ? await api.admin.cpanel.resendMailboxActivation(mailbox.email)
         : await api.admin.cpanel.sendMailboxResetLink(mailbox.email);
       if (pending) setActivationInfo({ email: mailbox.email, ...result.activation });
-      setProvisionNotice({ type: 'success', message: mailbox.activation_status === 'pending' ? t('admin.cpanel.activationResent') : t('admin.cpanel.resetLinkSent') });
+      setProvisionNotice({
+        type: 'success',
+        message: pending && result.activation?.emailSkipped
+          ? t('admin.cpanel.created')
+          : mailbox.activation_status === 'pending' ? t('admin.cpanel.activationResent') : t('admin.cpanel.resetLinkSent'),
+      });
       await reloadCpanelMailboxes();
     } catch (error) {
       await reloadCpanelMailboxes().catch(() => {});
@@ -885,7 +897,7 @@ function AccountsTab() {
     const contactEmail = String(activationEmailDraft[mailbox.email] || '').trim();
     setProvisionNotice(null);
     setActivationDialogError('');
-    if (!contactEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) {
+    if (contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) {
       setActivationDialogError(t('admin.cpanel.contactEmailInvalid'));
       return;
     }
@@ -898,6 +910,8 @@ function AccountsTab() {
       if (result.activation.emailSent) {
         setProvisionNotice({ type: 'success', message: t('admin.cpanel.activationSent') });
         setActivationDialogMailbox(null);
+      } else if (result.activation.emailSkipped) {
+        setProvisionNotice({ type: 'success', message: t('admin.cpanel.created') });
       } else {
         const message = t('admin.cpanel.activationSendFailed', { error: result.activation.emailError || t('admin.cpanel.activationSendFailedGeneric') });
         setActivationDialogError(message);
@@ -977,7 +991,13 @@ function AccountsTab() {
   const openMembership = (mailbox) => setMembershipMailbox(mailbox);
 
   const activationInfoText = activationInfo
-    ? `Email: ${activationInfo.email}\n${activationInfo.firstPassword ? `First password: ${activationInfo.firstPassword}\n` : ''}Contact: ${activationInfo.contactEmail || ''}\nActivation link: ${activationInfo.activationUrl || '(not available)'}`
+    ? [
+        `Email: ${activationInfo.email}`,
+        activationInfo.firstPassword ? `First password: ${activationInfo.firstPassword}` : null,
+        activationInfo.contactEmail ? `Contact: ${activationInfo.contactEmail}` : null,
+        activationInfo.activationUrl ? `Activation link: ${activationInfo.activationUrl}` : null,
+        activationInfo.emailSent ? 'Activation email: sent' : (activationInfo.emailSkipped ? null : `Activation email: not sent${activationInfo.emailError ? ` (${activationInfo.emailError})` : ''}`),
+      ].filter(Boolean).join('\n')
     : '';
   const saveActivationInfo = () => {
     const blob = new Blob([activationInfoText], { type: 'text/plain;charset=utf-8' });
@@ -1740,7 +1760,7 @@ function AccountsTab() {
         <div style={{ width: '100%', maxWidth: 420, padding: 20, border: '1px solid var(--border-subtle)', borderRadius: 12, background: 'var(--bg-secondary)', boxShadow: 'var(--shadow-modal)' }} onClick={event => event.stopPropagation()}>
           <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 5 }}>{t('admin.cpanel.sendActivation')}</div>
           <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 14 }}>{activationDialogMailbox.email}</div>
-          <label style={{ display: 'block', fontSize: 12, color: 'var(--text-secondary)', marginBottom: 5 }}>{t('admin.cpanel.contactEmail')}</label>
+          <label style={{ display: 'block', fontSize: 12, color: 'var(--text-secondary)', marginBottom: 5 }}>{t('admin.cpanel.contactEmail')} (optional)</label>
           <input autoFocus type="email" value={activationEmailDraft[activationDialogMailbox.email] || ''} onChange={event => setActivationEmailDraft(current => ({ ...current, [activationDialogMailbox.email]: event.target.value }))} placeholder={t('admin.cpanel.contactEmailPh')} style={inputStyle} />
           {activationDialogError && <div style={{ marginTop: 10, padding: '8px 10px', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 7, color: 'var(--red)', fontSize: 12 }}>{activationDialogError}</div>}
           {activationDialogInfo?.activationUrl && <div style={{ marginTop: 10, fontSize: 11, color: 'var(--text-secondary)', wordBreak: 'break-all' }}><div style={{ color: 'var(--text-tertiary)', marginBottom: 3 }}>{t('admin.cpanel.activationReady')}</div>{activationDialogInfo.activationUrl}<button type="button" onClick={() => copyToClipboard(activationDialogInfo.activationUrl)} style={{ display: 'block', marginTop: 6, padding: '5px 8px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 11 }}>{t('admin.cpanel.copyActivation')}</button></div>}
@@ -9649,6 +9669,7 @@ function CpanelTab() {
 
 function BrandingSection() {
   const { t } = useTranslation();
+  const isMobile = useMobile();
   const [form, setForm] = useState(() => getBranding());
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null);
@@ -9691,12 +9712,13 @@ function BrandingSection() {
           <input value={form.shortName || ''} maxLength={30} onChange={event => setForm(current => ({ ...current, shortName: event.target.value }))} style={inputStyle} />
         </Field>
         <Field label={t('admin.branding.logo')}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', gap: 12 }}>
             <div style={{ width: 64, height: 64, borderRadius: 14, border: '1px solid var(--border)', background: 'var(--bg-tertiary)', display: 'grid', placeItems: 'center', overflow: 'hidden' }}>
               {form.logo ? <img src={form.logo} alt={t('admin.branding.previewAlt')} style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>—</span>}
             </div>
-            <div>
-              <span style={{ position: 'relative', display: 'inline-block', overflow: 'hidden', padding: '8px 11px', border: '1px solid var(--border)', borderRadius: 7, background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', fontSize: 12, cursor: 'pointer' }}>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <span style={{ position: 'relative', display: 'inline-block', flex: '1 1 140px', overflow: 'hidden', padding: '8px 11px', border: '1px solid var(--border)', borderRadius: 7, background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', fontSize: 12, textAlign: 'center', cursor: 'pointer' }}>
                 {t('admin.branding.chooseLogo')}
                 <input
                   type="file"
@@ -9706,7 +9728,8 @@ function BrandingSection() {
                   style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }}
                 />
               </span>
-              {form.logo && <button type="button" onClick={() => setForm(current => ({ ...current, logo: null }))} style={{ marginLeft: 8, padding: '8px 11px', border: '1px solid var(--border)', borderRadius: 7, background: 'transparent', color: 'var(--text-secondary)', fontSize: 12, cursor: 'pointer' }}>{t('admin.branding.removeLogo')}</button>}
+              {form.logo && <button type="button" onClick={() => setForm(current => ({ ...current, logo: null }))} style={{ flex: '1 1 140px', padding: '8px 11px', border: '1px solid var(--border)', borderRadius: 7, background: 'transparent', color: 'var(--text-secondary)', fontSize: 12, cursor: 'pointer' }}>{t('admin.branding.removeLogo')}</button>}
+              </div>
               <div style={{ marginTop: 6, fontSize: 11, color: 'var(--text-tertiary)' }}>{t('admin.branding.logoHint')}</div>
             </div>
           </div>
