@@ -967,10 +967,8 @@ function AccountsTab() {
         setCpanelMailboxes(current => current.filter(item => item.email?.toLowerCase() !== mailbox.email.toLowerCase()));
         const linked = accounts.find(account => account.email_address?.toLowerCase() === mailbox.email.toLowerCase());
         if (linked) {
-          await api.deleteAccount(linked.id).catch(() => {});
           setAccounts(accounts.filter(account => account.id !== linked.id));
         }
-        await reloadCpanelMailboxes();
       },
     });
   };
