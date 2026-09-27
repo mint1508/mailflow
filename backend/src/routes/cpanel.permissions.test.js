@@ -28,7 +28,7 @@ vi.mock('../services/cpanelClient.js', () => ({
   saveCpanelConfig: vi.fn(async input => input),
   testCpanelConnection: vi.fn(async () => ({ ok: true, mailboxCount: 0 })),
   syncCpanelMailboxes: vi.fn(async () => []),
-  createCpanelMailbox: vi.fn(async () => ({ email: 'new@example.test', quotaMb: 1024 })),
+  createCpanelMailbox: vi.fn(async () => ({ email: 'new@example.test', password: 'Generated-first-password!', quotaMb: 1024 })),
   createCpanelMailboxes: vi.fn(async () => ({ requestedCount: 0, created: [], failed: [] })),
   resetCpanelMailboxPassword: vi.fn(async email => ({ email })),
   updateCpanelMailboxQuota: vi.fn(async (email, quotaMb) => ({ email, quotaMb })),
@@ -104,6 +104,17 @@ const adminOnly = [
 ];
 
 describe('cPanel mailbox-manager permissions', () => {
+  it('returns the generated first password once when creating a mailbox', async () => {
+    const response = await request('/mailboxes', {
+      method: 'POST',
+      body: { contactEmail: 'owner@example.test' },
+    });
+    expect(response.status).toBe(201);
+    expect(await response.json()).toMatchObject({
+      mailbox: { email: 'new@example.test', firstPassword: 'Generated-first-password!' },
+    });
+  });
+
   it.each(adminOnly)('denies mod access to %s %s', async (method, path, body) => {
     const response = await request(path, { method, body });
     expect(response.status).toBe(403);

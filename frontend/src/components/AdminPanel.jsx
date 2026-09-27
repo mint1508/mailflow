@@ -667,7 +667,7 @@ function MailboxProvisioner({ config, limits, onChanged, onCredentials, onNotice
     setBulkResult(null);
     try {
       const result = await api.admin.cpanel.createMailbox(createForm);
-      onCredentials?.({ email: result.mailbox.email, ...result.activation });
+      onCredentials?.({ email: result.mailbox.email, firstPassword: result.mailbox.firstPassword, ...result.activation });
       setCreateForm(current => ({ ...current, localPart: '', contactEmail: '' }));
       window.dispatchEvent(new CustomEvent('mailflow:accounts_refresh'));
       await onChanged?.();
@@ -721,7 +721,7 @@ function MailboxProvisioner({ config, limits, onChanged, onCredentials, onNotice
   };
 
   const bulkCredentialsText = bulkResult?.created?.map(mailbox => (
-    `Email: ${mailbox.email}\nContact: ${mailbox.contactEmail}\nActivation: ${mailbox.activationUrl}\nActivation email: ${mailbox.emailSent ? 'sent' : `not sent${mailbox.emailError ? ` (${mailbox.emailError})` : ''}`}\nQuota: ${mailbox.quotaMb} MB`
+    `Email: ${mailbox.email}\nFirst password: ${mailbox.firstPassword || '(not returned)'}\nContact: ${mailbox.contactEmail}\nActivation: ${mailbox.activationUrl}\nActivation email: ${mailbox.emailSent ? 'sent' : `not sent${mailbox.emailError ? ` (${mailbox.emailError})` : ''}`}\nQuota: ${mailbox.quotaMb} MB`
   )).join('\n\n') || '';
   const share = async (text) => {
     if (navigator.share) await navigator.share({ title: t('admin.cpanel.bulkCreate'), text }).catch(() => {});
@@ -976,7 +976,7 @@ function AccountsTab() {
   const openMembership = (mailbox) => setMembershipMailbox(mailbox);
 
   const activationInfoText = activationInfo
-    ? `Email: ${activationInfo.email}\nContact: ${activationInfo.contactEmail || ''}\nActivation link: ${activationInfo.activationUrl}`
+    ? `Email: ${activationInfo.email}\n${activationInfo.firstPassword ? `First password: ${activationInfo.firstPassword}\n` : ''}Contact: ${activationInfo.contactEmail || ''}\nActivation link: ${activationInfo.activationUrl || '(not available)'}`
     : '';
   const saveActivationInfo = () => {
     const blob = new Blob([activationInfoText], { type: 'text/plain;charset=utf-8' });
@@ -1170,7 +1170,7 @@ function AccountsTab() {
             <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>{t('admin.cpanel.activationReady')}</div>
             <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-secondary)' }}>{activationInfoText}</pre>
             <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 8 }}>
-              <button onClick={() => copyToClipboard(activationInfoText)} style={{ padding: '6px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 11 }}>{t('admin.cpanel.copyActivation')}</button>
+            <button onClick={() => copyToClipboard(activationInfoText)} style={{ padding: '6px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 11 }}>{activationInfo.firstPassword ? t('admin.cpanel.copyCredentials') : t('admin.cpanel.copyActivation')}</button>
               <button onClick={saveActivationInfo} style={{ padding: '6px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 11 }}>{t('admin.cpanel.saveCredentials')}</button>
               <button onClick={shareActivationInfo} style={{ padding: '6px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 11 }}>{t('admin.cpanel.shareActivation')}</button>
             </div>
@@ -1510,7 +1510,7 @@ function AccountsTab() {
           <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>{t('admin.cpanel.activationReady')}</div>
           <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-secondary)' }}>{activationInfoText}</pre>
           <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 8 }}>
-            <button onClick={() => copyToClipboard(activationInfoText)} style={{ padding: '6px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 11 }}>{t('admin.cpanel.copyActivation')}</button>
+              <button onClick={() => copyToClipboard(activationInfoText)} style={{ padding: '6px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 11 }}>{activationInfo.firstPassword ? t('admin.cpanel.copyCredentials') : t('admin.cpanel.copyActivation')}</button>
             <button onClick={saveActivationInfo} style={{ padding: '6px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 11 }}>{t('admin.cpanel.saveCredentials')}</button>
             <button onClick={shareActivationInfo} style={{ padding: '6px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 11 }}>{t('admin.cpanel.shareActivation')}</button>
           </div>

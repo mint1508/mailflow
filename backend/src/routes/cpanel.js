@@ -171,7 +171,9 @@ router.post('/mailboxes', async (req, res) => {
     await audit(req.session.userId, 'mailbox_created', true, { email: result.email, quotaMb: result.quotaMb, activationEmailSent: activation.emailSent });
     res.status(201).json({
       ok: true,
-      mailbox: { email: result.email, quotaMb: result.quotaMb },
+      // The generated cPanel password is returned only in this one-time creation
+      // response so the manager can hand credentials to the mailbox owner.
+      mailbox: { email: result.email, quotaMb: result.quotaMb, firstPassword: result.password },
       activation: {
         contactEmail: activation.contactEmail,
         activationUrl: activation.activationUrl,
@@ -203,6 +205,7 @@ router.post('/mailboxes/bulk', async (req, res) => {
           index: mailbox.index,
           email: mailbox.email,
           quotaMb: mailbox.quotaMb,
+          firstPassword: mailbox.password,
           contactEmail: activation.contactEmail,
           activationUrl: activation.activationUrl,
           emailSent: activation.emailSent,
