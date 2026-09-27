@@ -818,10 +818,17 @@ function AccountsTab() {
       setCpanelMailboxes([]);
       return;
     }
-    api.admin.cpanel.getConnection()
-      .then(result => setCpanelConfig(result.config?.configured ? result.config : null))
+    const loadConfig = user?.isAdmin
+      ? api.admin.cpanel.getConnection().then(result => result.config)
+      : api.admin.cpanel.getMailboxes().then(result => {
+          setCpanelMailboxes(result.mailboxes || []);
+          if (result.limits) setCpanelLimits(result.limits);
+          return { configured: !!result.domain, domain: result.domain };
+        });
+    loadConfig
+      .then(config => setCpanelConfig(config?.configured ? config : null))
       .catch(() => setCpanelConfig(null));
-  }, [canManageMailboxes]);
+  }, [canManageMailboxes, user?.isAdmin]);
 
   useEffect(() => {
     if (!canManageMailboxes && subview === 'provision') setSubview('list');
