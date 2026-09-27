@@ -210,8 +210,10 @@ app.use('/api/mail', mailRoutes);
 app.use('/api/mail', sendRoutes);
 app.use('/api/mail', draftRoutes);
 app.use('/api/search', searchRoutes);
-app.use('/api/admin', adminRoutes);
+// Mount the mailbox-manager router first so its narrower role gate runs before
+// the generic admin router intercepts the shared /api/admin prefix.
 app.use('/api/admin/cpanel', cpanelRoutes);
+app.use('/api/admin', adminRoutes);
 app.use('/api/totp', totpRoutes);
 app.use('/api/rules', rulesRoutes);
 app.use('/api/block-list', blockListRoutes);
