@@ -856,7 +856,7 @@ export default function LoginPage() {
           </h2>
           {mode === 'register' && inviteEmail && (
             <p style={{ margin: '0 0 20px', fontSize: 13, color: 'var(--text-tertiary)' }}>
-              {t('login.inviteEmail')} <span style={{ color: 'var(--text-secondary)' }}>{inviteEmail}</span>
+              {t('login.inviteEmail')} <span style={{ color: 'var(--text-secondary)' }}>{inviteMailboxEmail || inviteEmail}</span>
             </p>
           )}
           {mode === 'register' && !inviteEmail && (

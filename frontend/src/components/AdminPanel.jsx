@@ -813,10 +813,19 @@ function AccountsTab() {
   const [membershipMailbox, setMembershipMailbox] = useState(null);
 
   useEffect(() => {
+    if (!canManageMailboxes) {
+      setCpanelConfig(null);
+      setCpanelMailboxes([]);
+      return;
+    }
     api.admin.cpanel.getConnection()
       .then(result => setCpanelConfig(result.config?.configured ? result.config : null))
       .catch(() => setCpanelConfig(null));
-  }, []);
+  }, [canManageMailboxes]);
+
+  useEffect(() => {
+    if (!canManageMailboxes && subview === 'provision') setSubview('list');
+  }, [canManageMailboxes, subview]);
 
   const reloadCpanelMailboxes = useCallback(async () => {
     if (!cpanelConfig) {
@@ -1141,7 +1150,7 @@ function AccountsTab() {
   const linkedAccountEmails = new Set(accounts.map(account => account.email_address?.toLowerCase()));
   const unlinkedCpanelMailboxes = cpanelMailboxes.filter(mailbox => !linkedAccountEmails.has(mailbox.email?.toLowerCase()));
 
-  if (subview === 'provision') {
+  if (subview === 'provision' && canManageMailboxes) {
     return (
       <div>
         <button onClick={() => { setSubview('list'); setProvisionNotice(null); }} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 13, padding: '0 0 16px 0' }}>
@@ -1475,7 +1484,7 @@ function AccountsTab() {
         <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>
           {t('admin.accounts.title')}
         </div>
-        <button onClick={() => { setProvisionNotice(null); setSubview('provision'); }} style={{
+        {canManageMailboxes && <button onClick={() => { setProvisionNotice(null); setSubview('provision'); }} style={{
           display: 'flex', alignItems: 'center', gap: 6,
           padding: '7px 12px', background: 'var(--accent)',
           border: 'none', borderRadius: 7, color: 'var(--accent-text)',
@@ -1485,7 +1494,7 @@ function AccountsTab() {
             <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
           </svg>
           {t('admin.accounts.createMailbox')}
-        </button>
+        </button>}
       </div>
 
       {provisionNotice && <div style={{ marginBottom: 12, fontSize: 12, color: provisionNotice.type === 'error' ? 'var(--red)' : 'var(--green)' }}>{provisionNotice.message}</div>}
