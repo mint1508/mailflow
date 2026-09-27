@@ -94,10 +94,12 @@ export async function getMailboxMembership(accountId, userId, { includeRevoked =
 
 export async function listMailboxMemberships(accountId, { includeRevoked = false } = {}) {
   const { rows } = await query(
-    `SELECT account_id, user_id, permission, granted_by, revoked_at, created_at, updated_at
-       FROM mailbox_memberships
-      WHERE account_id = $1${includeRevoked ? '' : ' AND revoked_at IS NULL'}
-      ORDER BY created_at, user_id`,
+    `SELECT mm.account_id, mm.user_id, mm.permission, mm.granted_by,
+            mm.revoked_at, mm.created_at, mm.updated_at, u.username
+       FROM mailbox_memberships mm
+       JOIN users u ON u.id = mm.user_id
+      WHERE mm.account_id = $1${includeRevoked ? '' : ' AND mm.revoked_at IS NULL'}
+      ORDER BY mm.created_at, mm.user_id`,
     [accountId],
   );
   return rows;
