@@ -196,6 +196,7 @@
     "noSubject": "(sans objet)",
     "to": "À :",
     "via": "via",
+    "forwardedFrom": "Expéditeur d'origine (selon {{service}}) :",
     "attachment_one": "{{count}} pièce jointe",
     "attachment_other": "{{count}} pièces jointes",
     "loadingError": "Impossible de charger le corps du message",
@@ -220,6 +221,7 @@
     "archive": "Archiver",
     "star": "Étoile",
     "delete": "Supprimer",
+    "downloadEml": "Télécharger en .eml",
     "print": "Imprimer",
     "more": "Plus",
     "summarize": "Résumer",
@@ -285,6 +287,8 @@
     "messagesPerPage": "Messages par page",
     "selectAll": "Tout sélectionner",
     "deselectAll": "Tout désélectionner",
+    "starSelected": "Étoiler",
+    "unstarSelected": "Retirer l'étoile",
     "markReadSelected": "Marquer comme lu",
     "markUnreadSelected": "Marquer comme non lu",
     "archiveSelected": "Archiver la sélection",
@@ -370,6 +374,29 @@
       "promotion": "Promotions",
       "automated": "Automatisé",
       "social": "Réseaux sociaux"
+    },
+    "changeLayout": "Changer la disposition",
+    "layouts": {
+      "focused": {
+        "label": "Concentré",
+        "description": "Panneau de liste minimal, zone de lecture maximale"
+      },
+      "compact": {
+        "label": "Compact",
+        "description": "Lignes denses — plus de messages à la fois"
+      },
+      "comfortable": {
+        "label": "Confortable",
+        "description": "Lignes aérées avec des marges généreuses"
+      },
+      "wide": {
+        "label": "Large",
+        "description": "Liste large affichant des objets et aperçus plus longs"
+      },
+      "vertical": {
+        "label": "Division verticale",
+        "description": "Liste des messages au-dessus du volet de lecture"
+      }
     }
   },
   "lockScreen": {
@@ -478,6 +505,11 @@
     }
   },
   "commandPalette": {
+    "labelPicker": {
+      "copyTo": "Copier vers {{folder}}",
+      "error": "Impossible d’étiqueter le message",
+      "placeholder": "Copier ou étiqueter le message sélectionné…"
+    },
     "placeholder": "Rechercher des actions…",
     "noResults": "Aucune action trouvée",
     "hint": {
@@ -499,6 +531,11 @@
     "customizeHint": "Personnaliser les raccourcis dans Paramètres → Raccourcis",
     "closeHint": "Appuyez sur ? ou Échap pour fermer",
     "then": "puis",
+    "browserMailboxFallback": "Dans le navigateur : g puis 1–9 ouvre une boîte visible ; g puis l ouvre le sélecteur de dossiers.",
+    "visibleMailbox": {
+      "label": "Boîte visible {{number}}",
+      "description": "Ouvrir la boîte visible {{number}}"
+    },
     "groups": {
       "composeSearch": "Rédaction et recherche",
       "navigation": "Navigation",
@@ -506,6 +543,30 @@
       "gtd": "GTD"
     },
     "actions": {
+      "toggleLeftSidebar": {
+        "label": "Afficher ou masquer la barre latérale gauche",
+        "description": "Afficher ou masquer la barre latérale gauche"
+      },
+      "openLabelPicker": {
+        "label": "Ouvrir le sélecteur de dossiers",
+        "description": "Copier le message sélectionné dans un dossier"
+      },
+      "replyAllFromSelection": {
+        "label": "Répondre à tous depuis la sélection",
+        "description": "Répondre à tous les destinataires du message sélectionné"
+      },
+      "markUnread": {
+        "label": "Marquer comme non lu",
+        "description": "Marquer le message sélectionné comme non lu"
+      },
+      "unsubscribe": {
+        "label": "Se désabonner",
+        "description": "Se désabonner de la liste du message sélectionné"
+      },
+      "loadRemoteImages": {
+        "label": "Charger les images distantes",
+        "description": "Charger les images du message sélectionné"
+      },
       "compose": {
         "label": "Composer",
         "description": "Ouvrir une nouvelle fenêtre de rédaction"
@@ -566,6 +627,10 @@
         "label": "Sélectionner le message",
         "description": "Cocher ou décocher le message actuel"
       },
+      "undoAction": {
+        "label": "Annuler la dernière action",
+        "description": "Annule le dernier archivage, suppression, déplacement ou marquage spam tant que la notification est affichée"
+      },
       "printMessage": {
         "label": "Imprimer",
         "description": "Imprimer le message actuel"
@@ -581,9 +646,6 @@
       "gtdDelegated": {
         "label": "Marquer Délégué",
         "description": "Classer le message sélectionné comme Délégué"
-      },
-      "gtdUndo": {
-        "description": "Annuler le dernier classement GTD"
       },
       "toggleRightSidebar": {
         "label": "Afficher ou masquer la barre latérale droite",
@@ -1802,5 +1864,13 @@
     "copyFailed": "Échec de la copie",
     "generating": "Génération du rapport…",
     "error": "Impossible de générer le rapport."
+  },
+  "folders": {
+    "inbox": "Boîte de réception",
+    "sent": "Envoyés",
+    "drafts": "Brouillons",
+    "trash": "Corbeille",
+    "spam": "Indésirables",
+    "archive": "Archives"
   }
 }

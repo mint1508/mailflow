@@ -196,6 +196,7 @@
     "noSubject": "(no subject)",
     "to": "To:",
     "via": "via",
+    "forwardedFrom": "Original sender (per {{service}}):",
     "attachment_one": "{{count}} attachment",
     "attachment_other": "{{count}} attachments",
     "loadingError": "Unable to load message body",
@@ -220,6 +221,7 @@
     "archive": "Archive",
     "star": "Star",
     "delete": "Delete",
+    "downloadEml": "Download .eml",
     "print": "Print",
     "more": "More",
     "summarize": "Summarize",
@@ -285,6 +287,8 @@
     "messagesPerPage": "Messages per page",
     "selectAll": "Select all",
     "deselectAll": "Deselect all",
+    "starSelected": "Star",
+    "unstarSelected": "Remove star",
     "markReadSelected": "Mark as read",
     "markUnreadSelected": "Mark as unread",
     "archiveSelected": "Archive selected",
@@ -370,6 +374,29 @@
       "promotion": "Promotions",
       "automated": "Automated",
       "social": "Social"
+    },
+    "changeLayout": "Change layout",
+    "layouts": {
+      "focused": {
+        "label": "Focused",
+        "description": "Minimal list panel, maximum reading area"
+      },
+      "compact": {
+        "label": "Compact",
+        "description": "Dense rows — fit more messages at once"
+      },
+      "comfortable": {
+        "label": "Comfortable",
+        "description": "Spacious rows with generous padding for easy scanning"
+      },
+      "wide": {
+        "label": "Wide",
+        "description": "Broad list shows longer subjects and previews"
+      },
+      "vertical": {
+        "label": "Vertical Split",
+        "description": "Message list stacked above the reading pane"
+      }
     }
   },
   "lockScreen": {
@@ -478,6 +505,11 @@
     }
   },
   "commandPalette": {
+    "labelPicker": {
+      "copyTo": "Copy to {{folder}}",
+      "error": "Could not label message",
+      "placeholder": "Copy or label selected message…"
+    },
     "placeholder": "Search actions…",
     "noResults": "No actions found",
     "hint": {
@@ -499,6 +531,11 @@
     "customizeHint": "Customise shortcuts in Settings → Shortcuts",
     "closeHint": "Press ? or Esc to close",
     "then": "then",
+    "browserMailboxFallback": "In a browser: g then 1–9 opens a visible mailbox; g then l opens the label picker.",
+    "visibleMailbox": {
+      "label": "Visible mailbox {{number}}",
+      "description": "Open visible mailbox {{number}}"
+    },
     "groups": {
       "composeSearch": "Compose & Search",
       "navigation": "Navigation",
@@ -506,6 +543,30 @@
       "gtd": "GTD"
     },
     "actions": {
+      "toggleLeftSidebar": {
+        "label": "Toggle left sidebar",
+        "description": "Hide or show the left sidebar"
+      },
+      "openLabelPicker": {
+        "label": "Open label picker",
+        "description": "Copy the selected message to a folder"
+      },
+      "replyAllFromSelection": {
+        "label": "Reply all from selection",
+        "description": "Reply all to the selected message"
+      },
+      "markUnread": {
+        "label": "Mark unread",
+        "description": "Mark the selected message unread"
+      },
+      "unsubscribe": {
+        "label": "Unsubscribe",
+        "description": "Unsubscribe from the selected mailing list"
+      },
+      "loadRemoteImages": {
+        "label": "Load remote images",
+        "description": "Load images in the selected message"
+      },
       "compose": {
         "label": "Compose",
         "description": "Open new compose window"
@@ -566,6 +627,10 @@
         "label": "Select message",
         "description": "Check or uncheck the current message"
       },
+      "undoAction": {
+        "label": "Undo last action",
+        "description": "Undo the most recent archive, delete, move, or spam action while its toast is showing"
+      },
       "printMessage": {
         "label": "Print",
         "description": "Print the current message"
@@ -581,9 +646,6 @@
       "gtdDelegated": {
         "label": "Mark Delegated",
         "description": "Classify the selected message as Delegated"
-      },
-      "gtdUndo": {
-        "description": "Undo the latest GTD classification"
       },
       "toggleRightSidebar": {
         "label": "Toggle right sidebar",
@@ -1843,5 +1905,13 @@
     "copyFailed": "Copy failed",
     "generating": "Generating report…",
     "error": "Could not generate the report."
+  },
+  "folders": {
+    "inbox": "Inbox",
+    "sent": "Sent",
+    "drafts": "Drafts",
+    "trash": "Trash",
+    "spam": "Spam",
+    "archive": "Archive"
   }
 }

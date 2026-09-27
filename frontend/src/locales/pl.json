@@ -196,6 +196,7 @@
     "noSubject": "(brak tematu)",
     "to": "Do:",
     "via": "przez",
+    "forwardedFrom": "Pierwotny nadawca (według {{service}}):",
     "attachment_one": "{{count}} załącznik",
     "attachment_few": "{{count}} załączniki",
     "attachment_many": "{{count}} załączników",
@@ -222,6 +223,7 @@
     "archive": "Archiwizuj",
     "star": "Oznacz gwiazdką",
     "delete": "Usuń",
+    "downloadEml": "Pobierz jako .eml",
     "print": "Drukuj",
     "more": "Więcej",
     "summarize": "Podsumuj",
@@ -287,6 +289,8 @@
     "messagesPerPage": "Wiadomości na stronę",
     "selectAll": "Zaznacz wszystkie",
     "deselectAll": "Odznacz wszystkie",
+    "starSelected": "Oznacz gwiazdką",
+    "unstarSelected": "Usuń gwiazdkę",
     "markReadSelected": "Oznacz jako przeczytane",
     "markUnreadSelected": "Oznacz jako nieprzeczytane",
     "archiveSelected": "Zarchiwizuj zaznaczone",
@@ -384,6 +388,29 @@
       "promotion": "Promocje",
       "automated": "Automatyczne",
       "social": "Społecznościowe"
+    },
+    "changeLayout": "Zmień układ",
+    "layouts": {
+      "focused": {
+        "label": "Skupiony",
+        "description": "Minimalny panel listy, maksymalny obszar czytania"
+      },
+      "compact": {
+        "label": "Kompaktowy",
+        "description": "Gęste wiersze — więcej wiadomości naraz"
+      },
+      "comfortable": {
+        "label": "Wygodny",
+        "description": "Przestronne wiersze z dużymi odstępami"
+      },
+      "wide": {
+        "label": "Szeroki",
+        "description": "Szeroka lista pokazuje dłuższe tematy i podglądy"
+      },
+      "vertical": {
+        "label": "Podział pionowy",
+        "description": "Lista wiadomości nad panelem czytania"
+      }
     }
   },
   "lockScreen": {
@@ -494,6 +521,11 @@
     "copyLink": "Kopiuj link"
   },
   "commandPalette": {
+    "labelPicker": {
+      "copyTo": "Kopiuj do {{folder}}",
+      "error": "Nie udało się oznaczyć wiadomości etykietą",
+      "placeholder": "Kopiuj lub oznacz wybraną wiadomość etykietą…"
+    },
     "placeholder": "Wyszukaj działanie…",
     "noResults": "Nie znaleziono działań",
     "hint": {
@@ -515,6 +547,11 @@
     "customizeHint": "Dostosuj skróty w Ustawieniach → Skróty",
     "closeHint": "Naciśnij ? lub Esc, aby zamknąć",
     "then": "wtedy",
+    "browserMailboxFallback": "W przeglądarce: g, potem 1–9 otwiera widoczną skrzynkę; g, potem l otwiera wybór folderu.",
+    "visibleMailbox": {
+      "label": "Widoczna skrzynka {{number}}",
+      "description": "Otwórz widoczną skrzynkę {{number}}"
+    },
     "groups": {
       "composeSearch": "Napisz i wyszukaj",
       "navigation": "Nawigacja",
@@ -522,6 +559,30 @@
       "gtd": "GTD"
     },
     "actions": {
+      "toggleLeftSidebar": {
+        "label": "Przełącz lewy pasek boczny",
+        "description": "Pokaż lub ukryj lewy pasek boczny"
+      },
+      "openLabelPicker": {
+        "label": "Otwórz wybór folderu",
+        "description": "Skopiuj wybraną wiadomość do folderu"
+      },
+      "replyAllFromSelection": {
+        "label": "Odpowiedz wszystkim z wyboru",
+        "description": "Odpowiedz wszystkim odbiorcom wybranej wiadomości"
+      },
+      "markUnread": {
+        "label": "Oznacz jako nieprzeczytane",
+        "description": "Oznacz wybraną wiadomość jako nieprzeczytaną"
+      },
+      "unsubscribe": {
+        "label": "Wypisz się",
+        "description": "Wypisz się z listy mailingowej wybranej wiadomości"
+      },
+      "loadRemoteImages": {
+        "label": "Wczytaj zdalne obrazy",
+        "description": "Wczytaj obrazy w wybranej wiadomości"
+      },
       "compose": {
         "label": "Napisz",
         "description": "Otwórz nowe okno tworzenia wiadomości"
@@ -582,6 +643,10 @@
         "label": "Zaznacz wiadomość",
         "description": "Zaznacz lub odznacz bieżącą wiadomość"
       },
+      "undoAction": {
+        "label": "Cofnij ostatnią akcję",
+        "description": "Cofa ostatnią archiwizację, usunięcie, przeniesienie lub oznaczenie jako spam, dopóki widoczne jest powiadomienie"
+      },
       "printMessage": {
         "label": "Drukuj",
         "description": "Drukuj bieżącą wiadomość"
@@ -601,9 +666,6 @@
       "toggleRightSidebar": {
         "label": "Przełącz prawy panel",
         "description": "Ukryj lub pokaż prawy panel boczny"
-      },
-      "gtdUndo": {
-        "description": "Cofnij ostatnią klasyfikację GTD"
       }
     }
   },
@@ -1821,5 +1883,13 @@
     "copyFailed": "Kopiowanie nie powiodło się",
     "generating": "Generowanie raportu…",
     "error": "Nie udało się wygenerować raportu."
+  },
+  "folders": {
+    "inbox": "Odebrane",
+    "sent": "Wysłane",
+    "drafts": "Szkice",
+    "trash": "Kosz",
+    "spam": "Spam",
+    "archive": "Archiwum"
   }
 }

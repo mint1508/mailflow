@@ -7,7 +7,7 @@
 #   docker compose up -d
 #
 # Set the reviewed tag and image digests in your .env. Never use latest:
-#   MAILFLOW_VERSION=3.5.6-internal.1
+#   MAILFLOW_VERSION=3.5.9-internal.1
 #   FRONTEND_IMAGE_DIGEST=sha256:<digest-from-published-fork-image>
 #   BACKEND_IMAGE_DIGEST=sha256:<digest-from-published-fork-image>
 

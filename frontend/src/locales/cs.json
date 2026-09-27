@@ -173,6 +173,8 @@
     "messagesPerPage": "Zpráv na stránku",
     "selectAll": "Vybrat vše",
     "deselectAll": "Zrušit výběr",
+    "starSelected": "Označit hvězdičkou",
+    "unstarSelected": "Odebrat hvězdičku",
     "markReadSelected": "Označit jako přečtené",
     "markUnreadSelected": "Označit jako nepřečtené",
     "archiveSelected": "Archivovat vybrané",
@@ -270,6 +272,29 @@
       "promotion": "Propagace",
       "automated": "Automatické",
       "social": "Sociální sítě"
+    },
+    "changeLayout": "Změnit rozvržení",
+    "layouts": {
+      "focused": {
+        "label": "Soustředěné",
+        "description": "Minimální panel se seznamem, maximum prostoru pro čtení"
+      },
+      "compact": {
+        "label": "Kompaktní",
+        "description": "Husté řádky — více zpráv najednou"
+      },
+      "comfortable": {
+        "label": "Pohodlné",
+        "description": "Prostorné řádky s velkorysým odsazením"
+      },
+      "wide": {
+        "label": "Široké",
+        "description": "Široký seznam ukáže delší předměty a náhledy"
+      },
+      "vertical": {
+        "label": "Svislé rozdělení",
+        "description": "Seznam zpráv nad čtecím podoknem"
+      }
     }
   },
   "message": {
@@ -286,6 +311,7 @@
     "noSubject": "(bez předmětu)",
     "to": "Komu:",
     "via": "prostřednictvím",
+    "forwardedFrom": "Původní odesílatel (podle {{service}}):",
     "attachment_one": "{{count}} příloha",
     "attachment_few": "{{count}} přílohy",
     "attachment_many": "{{count}} přílohy",
@@ -312,6 +338,7 @@
     "archive": "Archivovat",
     "star": "Označit hvězdičkou",
     "delete": "Smazat",
+    "downloadEml": "Stáhnout jako .eml",
     "print": "Vytisknout",
     "more": "Další",
     "summarize": "Shrnout",
@@ -583,6 +610,11 @@
     "customizeHint": "Zkratky můžete upravit v Nastavení → Zkratky",
     "closeHint": "Zavřete stisknutím ? nebo Esc",
     "then": "potom",
+    "browserMailboxFallback": "V prohlížeči: g a potom 1–9 otevře viditelnou schránku; g a potom l otevře výběr složky.",
+    "visibleMailbox": {
+      "label": "Viditelná schránka {{number}}",
+      "description": "Otevřít viditelnou schránku {{number}}"
+    },
     "groups": {
       "composeSearch": "Psaní a hledání",
       "navigation": "Navigace",
@@ -590,6 +622,30 @@
       "gtd": "GTD"
     },
     "actions": {
+      "toggleLeftSidebar": {
+        "label": "Přepnout levý postranní panel",
+        "description": "Zobrazit nebo skrýt levý postranní panel"
+      },
+      "openLabelPicker": {
+        "label": "Otevřít výběr složky",
+        "description": "Zkopírovat vybranou zprávu do složky"
+      },
+      "replyAllFromSelection": {
+        "label": "Odpovědět všem z výběru",
+        "description": "Odpovědět všem příjemcům vybrané zprávy"
+      },
+      "markUnread": {
+        "label": "Označit jako nepřečtené",
+        "description": "Označit vybranou zprávu jako nepřečtenou"
+      },
+      "unsubscribe": {
+        "label": "Odhlásit odběr",
+        "description": "Odhlásit odběr seznamu z vybrané zprávy"
+      },
+      "loadRemoteImages": {
+        "label": "Načíst vzdálené obrázky",
+        "description": "Načíst obrázky ve vybrané zprávě"
+      },
       "compose": {
         "label": "Napsat",
         "description": "Otevřít okno nové zprávy"
@@ -650,6 +706,10 @@
         "label": "Vybrat zprávu",
         "description": "Vybrat nebo zrušit výběr aktuální zprávy"
       },
+      "undoAction": {
+        "label": "Vrátit poslední akci",
+        "description": "Vrátí poslední archivaci, smazání, přesun nebo označení spamu, dokud je oznámení zobrazeno"
+      },
       "printMessage": {
         "label": "Vytisknout",
         "description": "Vytisknout aktuální zprávu"
@@ -669,9 +729,6 @@
       "toggleRightSidebar": {
         "label": "Pravý postranní panel",
         "description": "Skrýt nebo zobrazit pravý postranní panel"
-      },
-      "gtdUndo": {
-        "description": "Vrátit zpět poslední klasifikaci GTD"
       }
     }
   },
@@ -795,6 +852,11 @@
     "errorAdd": "Odesílatele se nepodařilo zablokovat"
   },
   "commandPalette": {
+    "labelPicker": {
+      "copyTo": "Kopírovat do {{folder}}",
+      "error": "Zprávu se nepodařilo označit štítkem",
+      "placeholder": "Zkopírovat nebo označit vybranou zprávu štítkem…"
+    },
     "placeholder": "Hledat akce…",
     "noResults": "Nebyly nalezeny žádné akce",
     "hint": {
@@ -1821,5 +1883,13 @@
     "copyFailed": "Kopírování selhalo",
     "generating": "Generuji zprávu…",
     "error": "Zprávu se nepodařilo vytvořit."
+  },
+  "folders": {
+    "inbox": "Doručená pošta",
+    "sent": "Odeslané",
+    "drafts": "Koncepty",
+    "trash": "Koš",
+    "spam": "Spam",
+    "archive": "Archiv"
   }
 }

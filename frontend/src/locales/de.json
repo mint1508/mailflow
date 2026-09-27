@@ -196,6 +196,7 @@
     "noSubject": "(kein Betreff)",
     "to": "An:",
     "via": "über",
+    "forwardedFrom": "Ursprünglicher Absender (laut {{service}}):",
     "attachment_one": "{{count}} Anhang",
     "attachment_other": "{{count}} Anhänge",
     "loadingError": "Nachrichteninhalt konnte nicht geladen werden",
@@ -220,6 +221,7 @@
     "archive": "Archivieren",
     "star": "Markieren",
     "delete": "Löschen",
+    "downloadEml": "Als .eml herunterladen",
     "print": "Drucken",
     "more": "Mehr",
     "summarize": "Zusammenfassen",
@@ -285,6 +287,8 @@
     "messagesPerPage": "Nachrichten pro Seite",
     "selectAll": "Alle auswählen",
     "deselectAll": "Alle abwählen",
+    "starSelected": "Mit Stern versehen",
+    "unstarSelected": "Stern entfernen",
     "markReadSelected": "Als gelesen markieren",
     "markUnreadSelected": "Als ungelesen markieren",
     "archiveSelected": "Auswahl archivieren",
@@ -370,6 +374,29 @@
       "promotion": "Werbung",
       "automated": "Automatisch",
       "social": "Sozial"
+    },
+    "changeLayout": "Layout ändern",
+    "layouts": {
+      "focused": {
+        "label": "Fokussiert",
+        "description": "Minimale Listenspalte, maximaler Lesebereich"
+      },
+      "compact": {
+        "label": "Kompakt",
+        "description": "Dichte Zeilen — mehr Nachrichten auf einmal"
+      },
+      "comfortable": {
+        "label": "Komfortabel",
+        "description": "Großzügige Zeilen mit viel Abstand zum Überfliegen"
+      },
+      "wide": {
+        "label": "Breit",
+        "description": "Breite Liste zeigt längere Betreffs und Vorschauen"
+      },
+      "vertical": {
+        "label": "Vertikale Teilung",
+        "description": "Nachrichtenliste über dem Lesebereich"
+      }
     }
   },
   "lockScreen": {
@@ -478,6 +505,11 @@
     "markAsHam": "Als kein Spam markieren"
   },
   "commandPalette": {
+    "labelPicker": {
+      "copyTo": "Nach {{folder}} kopieren",
+      "error": "Nachricht konnte nicht etikettiert werden",
+      "placeholder": "Ausgewählte Nachricht kopieren oder mit Label versehen…"
+    },
     "placeholder": "Aktionen suchen…",
     "noResults": "Keine Aktionen gefunden",
     "hint": {
@@ -499,6 +531,11 @@
     "customizeHint": "Kürzel anpassen unter Einstellungen → Tastaturkürzel",
     "closeHint": "? oder Esc zum Schließen drücken",
     "then": "dann",
+    "browserMailboxFallback": "Im Browser: g und dann 1–9 öffnet ein sichtbares Postfach; g und dann l öffnet die Ordnerauswahl.",
+    "visibleMailbox": {
+      "label": "Sichtbares Postfach {{number}}",
+      "description": "Sichtbares Postfach {{number}} öffnen"
+    },
     "groups": {
       "composeSearch": "Verfassen & Suche",
       "navigation": "Navigation",
@@ -506,6 +543,30 @@
       "gtd": "GTD"
     },
     "actions": {
+      "toggleLeftSidebar": {
+        "label": "Linke Seitenleiste umschalten",
+        "description": "Linke Seitenleiste ein- oder ausblenden"
+      },
+      "openLabelPicker": {
+        "label": "Ordnerauswahl öffnen",
+        "description": "Ausgewählte Nachricht in einen Ordner kopieren"
+      },
+      "replyAllFromSelection": {
+        "label": "Allen antworten",
+        "description": "Allen Empfängern der ausgewählten Nachricht antworten"
+      },
+      "markUnread": {
+        "label": "Als ungelesen markieren",
+        "description": "Ausgewählte Nachricht als ungelesen markieren"
+      },
+      "unsubscribe": {
+        "label": "Abmelden",
+        "description": "Von der ausgewählten Mailingliste abmelden"
+      },
+      "loadRemoteImages": {
+        "label": "Externe Bilder laden",
+        "description": "Bilder in der ausgewählten Nachricht laden"
+      },
       "compose": {
         "label": "Verfassen",
         "description": "Neues Fenster zum Verfassen öffnen"
@@ -566,6 +627,10 @@
         "label": "Nachricht auswählen",
         "description": "Aktuelle Nachricht an- oder abwählen"
       },
+      "undoAction": {
+        "label": "Letzte Aktion rückgängig machen",
+        "description": "Macht das letzte Archivieren, Löschen, Verschieben oder Spam-Markieren rückgängig, solange der Hinweis angezeigt wird"
+      },
       "printMessage": {
         "label": "Drucken",
         "description": "Die aktuelle Nachricht drucken"
@@ -581,9 +646,6 @@
       "gtdDelegated": {
         "label": "Als Delegiert markieren",
         "description": "Die ausgewählte Nachricht als Delegiert einordnen"
-      },
-      "gtdUndo": {
-        "description": "Letzte GTD-Einordnung rückgängig machen"
       },
       "toggleRightSidebar": {
         "label": "Rechte Seitenleiste umschalten",
@@ -1802,5 +1864,13 @@
     "copyFailed": "Kopieren fehlgeschlagen",
     "generating": "Bericht wird erstellt…",
     "error": "Bericht konnte nicht erstellt werden."
+  },
+  "folders": {
+    "inbox": "Posteingang",
+    "sent": "Gesendet",
+    "drafts": "Entwürfe",
+    "trash": "Papierkorb",
+    "spam": "Spam",
+    "archive": "Archiv"
   }
 }

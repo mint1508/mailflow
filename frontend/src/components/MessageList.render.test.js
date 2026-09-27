@@ -20,7 +20,7 @@ registerHooks({
   load(url, context, nextLoad) {
     if (url.endsWith('react-i18next/dist/es/index.js') || url.endsWith('/react-i18next')) {
       return { format: 'module', shortCircuit: true, source: [
-        'export const useTranslation = () => ({ t: (k, d) => (typeof d === "string" ? d : k), i18n: { language: "en", changeLanguage: () => {} } });',
+        'export const useTranslation = () => ({ t: (k, d) => (typeof d === "string" ? d : d?.defaultValue ?? k), i18n: { language: "en", changeLanguage: () => {} } });',
         'export const initReactI18next = { type: "3rdParty", init: () => {} };',
         'export const Trans = ({ children }) => children ?? null;',
         'export const I18nextProvider = ({ children }) => children ?? null;',
@@ -60,6 +60,7 @@ Object.assign(globalThis, {
 dom.window.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {} });
 dom.window.ResizeObserver = class { observe() {} unobserve() {} disconnect() {} };
 globalThis.matchMedia = dom.window.matchMedia;
+dom.window.Element.prototype.scrollIntoView = () => {};
 globalThis.__VITE_ENV__ = { MODE: 'test', DEV: false, PROD: true };
 // MessageList loads its own messages on mount and overwrites anything seeded in the store,
 // so the fetch stub has to serve the row rather than the store. Only the messages endpoint
@@ -76,6 +77,7 @@ globalThis.fetch = async (url) => {
 const React = await import('react');
 const { createRoot } = await import('react-dom/client');
 const { useStore } = await import('../store/index.js');
+const { shortcutBus } = await import('../utils/shortcutBus.js');
 const MessageList = (await import('./MessageList.jsx')).default;
 
 const ACCOUNT = { id: 'acct-1', email_address: 'a@example.com', name: 'A', color: '#6366f1', include_in_unified_inbox: true };
@@ -133,5 +135,152 @@ describe('MessageList — drag source (#130)', () => {
     const el = draggableIn('msg-2');
     assert.ok(el, 'expected a conversation row to be draggable');
     assert.equal(el.getAttribute('draggable'), 'true');
+  });
+});
+
+describe('MessageList — selected-row shortcuts', () => {
+  test('mark unread updates a selected GTD rail copy and its section row', async () => {
+    await mount({ rows: [MESSAGE], threadedView: false });
+    const rail = { ...MESSAGE, id: 'rail-copy', message_id: '<rail@example.com>', is_read: true };
+    await React.act(async () => {
+      useStore.setState({ gtdSections: { reference: { threads: [rail] } } });
+      useStore.getState().setSelectedMessage(rail.id);
+    });
+    await React.act(async () => { shortcutBus.emit('markUnread'); });
+    assert.equal(useStore.getState().gtdSections.reference.threads[0].is_read, false);
+    await React.act(async () => { useStore.setState({ gtdSections: null, selectedMessageId: null }); });
+  });
+
+  test('forward and Reply All act on the selected row; no selection does nothing', async () => {
+    await mount({ rows: [MESSAGE], threadedView: false });
+    const drafts = [];
+    useStore.setState({ openCompose: draft => drafts.push(draft) });
+    await React.act(async () => { useStore.getState().setSelectedMessage('msg-1'); });
+    await React.act(async () => { shortcutBus.emit('forward'); await new Promise(r => setTimeout(r, 10)); });
+    assert.equal(drafts.length, 1);
+    assert.equal(drafts[0].isForward, true);
+    assert.equal(useStore.getState().selectedMessageId, 'msg-1');
+    await React.act(async () => { shortcutBus.emit('replyAllFromSelection'); await new Promise(r => setTimeout(r, 10)); });
+    assert.equal(drafts.length, 2);
+    assert.equal(drafts[1].isReplyAll, true);
+    useStore.getState().setSelectedMessage(null);
+    await React.act(async () => { shortcutBus.emit('forward'); shortcutBus.emit('replyAllFromSelection'); await new Promise(r => setTimeout(r, 10)); });
+    assert.equal(drafts.length, 2);
+  });
+});
+
+describe('MessageList — modifier-click enters multi-select (#220)', () => {
+  // Before this, modifiers only worked once ALREADY in selection mode; entering it took the
+  // avatar or the toolbar button. A Ctrl/Cmd- or Shift-click on a row must now enter it in
+  // one action, seeded with the open message as anchor, instead of opening the clicked mail.
+  const M2 = { ...MESSAGE, id: 'msg-b', uid: 2, message_id: '<m2@example.com>', subject: 'Second' };
+  const M3 = { ...MESSAGE, id: 'msg-c', uid: 3, message_id: '<m3@example.com>', subject: 'Third' };
+  // Checked and unchecked checkboxes draw the same polyline; stroke-width 3 vs 2.5 is what
+  // distinguishes a CHECKED row's checkmark.
+  const CHECK = 'svg[stroke-width="3"] polyline[points="20 6 9 17 4 12"]';
+
+  const clickRow = async (msgid, init = {}) => {
+    // The click handler sits on the inner draggable element, and DOM events bubble upward,
+    // so the dispatch has to start there, not on the [data-msgid] wrapper.
+    const row = container.querySelector(`[data-msgid="${msgid}"]`);
+    assert.ok(row, `expected a row for ${msgid}`);
+    const target = row.querySelector('[draggable]') || row;
+    await React.act(async () => {
+      target.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true, cancelable: true, ...init }));
+    });
+  };
+  const checkedRows = () => [...container.querySelectorAll('[data-msgid]')]
+    .filter(r => r.querySelector(CHECK)).map(r => r.getAttribute('data-msgid'));
+
+  test('ctrl-click seeds {open message, clicked row} and does not open the clicked mail', async () => {
+    await mount({ rows: [MESSAGE, M2, M3], threadedView: false });
+    await React.act(async () => { useStore.getState().setSelectedMessage('msg-1'); });
+
+    await clickRow('msg-c', { ctrlKey: true });
+
+    assert.equal(useStore.getState().selectedMessageId, 'msg-1'); // clicked mail did NOT open
+    assert.deepEqual(checkedRows().sort(), ['msg-1', 'msg-c']);   // anchor + clicked selected
+  });
+
+  test('shift-click seeds the whole range from the open message', async () => {
+    await mount({ rows: [MESSAGE, M2, M3], threadedView: false });
+    await React.act(async () => { useStore.getState().setSelectedMessage('msg-1'); });
+
+    await clickRow('msg-c', { shiftKey: true });
+
+    assert.deepEqual(checkedRows().sort(), ['msg-1', 'msg-b', 'msg-c']);
+  });
+
+  test('threaded view: ctrl-click on a ThreadRow enters selection too', async () => {
+    // The browser smoke caught ThreadRow missing the modifier branch — dev defaults to
+    // conversations on, so every earlier assertion here (threadedView: false) passed while
+    // the shipped default was broken. Conversations render through ThreadRow, not MessageRow.
+    const T1 = { ...MESSAGE, id: 'thr-a', thread_id: 't-a', message_count: 2, unread_count: 1 };
+    const T2 = { ...MESSAGE, id: 'thr-b', uid: 9, message_id: '<t2@example.com>', thread_id: 't-b', message_count: 3, unread_count: 0 };
+    await mount({ rows: [T1, T2], threadedView: true });
+    await React.act(async () => { useStore.getState().setSelectedMessage('thr-a'); });
+
+    await clickRow('thr-b', { ctrlKey: true });
+
+    assert.deepEqual(checkedRows().sort(), ['thr-a', 'thr-b']);
+  });
+
+  test('a plain click still just opens the message', async () => {
+    await mount({ rows: [MESSAGE, M2], threadedView: false });
+    await clickRow('msg-b');
+    assert.equal(useStore.getState().selectedMessageId, 'msg-b');
+    assert.deepEqual(checkedRows(), []); // no selection mode entered
+  });
+});
+
+describe('MessageList — Ctrl+Z undo shortcut (#449)', () => {
+  // The shortcut runs the same onUndo the visible toast button runs, newest first, and is
+  // a no-op once nothing is pending — the keyboard can never undo more than the toasts offer.
+  test('undoAction fires the newest pending undo, then the next, then nothing', async () => {
+    await mount({ rows: [MESSAGE], threadedView: false });
+    const undone = [];
+    await React.act(async () => {
+      useStore.getState().addNotification({ title: 'older', onUndo: () => undone.push('older') });
+      useStore.getState().addNotification({ title: 'newer', onUndo: () => undone.push('newer') });
+    });
+
+    await React.act(async () => { shortcutBus.emit('undoAction'); });
+    assert.deepEqual(undone, ['newer']);
+    assert.deepEqual(useStore.getState().notifications.filter(n => n.onUndo).map(n => n.title), ['older']);
+
+    await React.act(async () => { shortcutBus.emit('undoAction'); });
+    await React.act(async () => { shortcutBus.emit('undoAction'); }); // nothing left — no throw, no change
+    assert.deepEqual(undone, ['newer', 'older']);
+  });
+});
+
+describe('MessageList — configurable hover quick actions (#440)', () => {
+  // The stubbed t() returns key paths, so button titles ARE their i18n keys here.
+  const TITLES = {
+    markRead: 'contextMenu.markRead', star: 'contextMenu.star',
+    archive: 'shortcuts.actions.archive.label', snooze: 'contextMenu.snooze.label',
+    delete: 'common.delete', move: 'contextMenu.moveToFolder',
+  };
+  const hoverTitles = async (msgid) => {
+    const row = container.querySelector(`[data-msgid="${msgid}"]`);
+    assert.ok(row, `expected a row for ${msgid}`);
+    await React.act(async () => {
+      row.dispatchEvent(new dom.window.MouseEvent('mouseover', { bubbles: true }));
+    });
+    return [...row.querySelectorAll('button[title]')].map(b => b.getAttribute('title'));
+  };
+
+  test('the configured set picks which buttons render, in canonical order', async () => {
+    await mount({ rows: [MESSAGE], threadedView: false });
+    await React.act(async () => { useStore.setState({ hoverActionSet: ['archive', 'snooze', 'delete'] }); });
+    const titles = await hoverTitles('msg-1');
+    assert.deepEqual(titles, [TITLES.archive, TITLES.snooze, TITLES.delete]);
+  });
+
+  test('the default set is the pre-#440 cluster exactly', async () => {
+    await mount({ rows: [MESSAGE], threadedView: false });
+    await React.act(async () => { useStore.setState({ hoverActionSet: ['markRead', 'star', 'delete', 'move'] }); });
+    const titles = await hoverTitles('msg-1');
+    assert.deepEqual(titles, [TITLES.markRead, TITLES.star, TITLES.delete, TITLES.move]);
   });
 });

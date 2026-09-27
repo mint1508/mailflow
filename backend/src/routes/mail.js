@@ -472,7 +472,7 @@ router.get('/messages/:id/body', async (req, res) => {
       responseHtml = blockRemoteImages(html);
       hasBlockedRemoteImages = true;
     }
-    return res.json({ html: responseHtml, text: message.body_text, attachments, hasBlockedRemoteImages, senderEmail: message.sender_email, senderName: message.sender_name });
+    return res.json({ html: responseHtml, text: message.body_text, attachments, hasBlockedRemoteImages, senderEmail: message.sender_email, senderName: message.sender_name, forwardedFromEmail: message.forwarded_from_email, forwardedFromName: message.forwarded_from_name, forwardedVia: message.forwarded_via });
   }
 
   // Fetch from IMAP — signal user activity so background jobs back off during this request.
@@ -511,7 +511,7 @@ router.get('/messages/:id/body', async (req, res) => {
       responseHtml = blockRemoteImages(safeHtml);
       hasBlockedRemoteImages = true;
     }
-    res.json({ html: responseHtml, text: safeText, attachments: attachments || [], hasBlockedRemoteImages, senderEmail: message.sender_email, senderName: message.sender_name });
+    res.json({ html: responseHtml, text: safeText, attachments: attachments || [], hasBlockedRemoteImages, senderEmail: message.sender_email, senderName: message.sender_name, forwardedFromEmail: message.forwarded_from_email, forwardedFromName: message.forwarded_from_name, forwardedVia: message.forwarded_via });
   } catch (err) {
     const msg = err.message || 'Unknown error';
     console.error('Body fetch error:', msg);
@@ -735,6 +735,42 @@ router.get('/messages/:id/attachments/:part', async (req, res) => {
   } catch (err) {
     console.error('Attachment fetch error:', err);
     res.status(500).json({ error: 'Failed to fetch attachment' });
+  }
+});
+
+// Download the full message as an .eml file (#381). The raw RFC 822 source, exactly as the
+// server stores it, so attachments and original headers survive the round trip into any
+// other mail client.
+router.get('/messages/:id/raw.eml', async (req, res) => {
+  const { id } = req.params;
+  if (!UUID_RE.test(id)) return res.status(400).json({ error: 'Invalid message id' });
+
+  const result = await query(`
+    SELECT m.id, m.uid, m.folder, m.subject, m.account_id, a.user_id FROM messages m
+    JOIN email_accounts a ON m.account_id = a.id
+    WHERE m.id = $1 AND (a.user_id = $2 OR EXISTS (
+      SELECT 1 FROM mailbox_memberships mm
+       WHERE mm.account_id = a.id AND mm.user_id = $2
+         AND mm.permission IN ('read', 'read_send') AND mm.revoked_at IS NULL
+    ))
+  `, [id, req.session.userId]);
+  if (!result.rows.length) return res.status(404).json({ error: 'Message not found' });
+  const message = result.rows[0];
+
+  try {
+    const accountResult = await query('SELECT * FROM email_accounts WHERE id = $1', [message.account_id]);
+    if (!accountResult.rows.length) return res.status(404).json({ error: 'Account not found' });
+    const buffer = await imapManager.fetchRawMessage(accountResult.rows[0], message.uid, message.folder);
+    if (!buffer) return res.status(404).json({ error: 'Could not fetch message source' });
+
+    const name = `${(message.subject || 'message').slice(0, 80)}.eml`;
+    res.setHeader('Content-Type', 'message/rfc822');
+    res.setHeader('Content-Disposition', attachmentDisposition(name));
+    res.setHeader('Content-Length', buffer.length);
+    res.send(buffer);
+  } catch (err) {
+    console.error('Raw message fetch error:', err);
+    res.status(500).json({ error: 'Failed to fetch message source' });
   }
 });
 
@@ -1204,6 +1240,92 @@ router.post('/messages/bulk-read', async (req, res) => {
   }
 });
 
+// Bulk star/unstar (#434). Shaped like bulk-read: skip rows already at the target state,
+// optimistic DB write with the 30s local-wins stamp, then per-account IMAP \Flagged writes
+// with the durable retry queue. Stars never touch unread counts.
+router.post('/messages/bulk-star', async (req, res) => {
+  const { ids, starred } = req.body;
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: 'ids array required' });
+  }
+  if (ids.length > 500) {
+    return res.status(400).json({ error: 'Too many ids — maximum 500 per request' });
+  }
+  if (!areValidUUIDs(ids)) {
+    return res.status(400).json({ error: 'Invalid message IDs' });
+  }
+  if (typeof starred !== 'boolean') {
+    return res.status(400).json({ error: 'starred must be a boolean' });
+  }
+
+  try {
+    const result = await query(
+      `SELECT m.id, m.uid, m.folder, m.is_starred, m.account_id, m.message_id FROM messages m
+       JOIN email_accounts a ON m.account_id = a.id
+       WHERE m.id = ANY($2::uuid[]) AND (a.user_id = $1 OR EXISTS (
+         SELECT 1 FROM mailbox_memberships mm
+          WHERE mm.account_id = a.id AND mm.user_id = $1
+            AND mm.permission = 'read_send' AND mm.revoked_at IS NULL
+       ))`,
+      [req.session.userId, ids]
+    );
+
+    const owned = result.rows;
+    if (!owned.length) return res.json({ ok: true, updated: [] });
+
+    const toUpdate = owned.filter(m => !!m.is_starred !== !!starred);
+    if (!toUpdate.length) return res.json({ ok: true, updated: [] });
+
+    await query(
+      'UPDATE messages SET is_starred = $1, star_changed_at = NOW() WHERE id = ANY($2::uuid[])',
+      [starred, toUpdate.map(m => m.id)]
+    );
+
+    // GTD sibling fan-out, gated exactly like the single-message star handler. Per message
+    // because the star fan-out is keyed by Message-ID; bounded by the 500-id cap above.
+    const acctIds = [...new Set(toUpdate.map(m => m.account_id))];
+    const gtdAccts = new Set();
+    await Promise.all(acctIds.map(async (aid) => {
+      if (await accountMaintainsLabelSiblings(aid)) gtdAccts.add(aid);
+    }));
+    for (const msg of toUpdate) {
+      if (msg.message_id && gtdAccts.has(msg.account_id)) {
+        await fanOutStarToSiblings(msg.account_id, msg.message_id, starred);
+      }
+    }
+
+    imapManager.broadcast({ type: 'message_flags', changes: toUpdate.map(m => ({ id: m.id, is_starred: starred })) }, req.session.userId);
+
+    const byAccount = {};
+    for (const msg of toUpdate) {
+      (byAccount[msg.account_id] = byAccount[msg.account_id] || []).push(msg);
+    }
+    for (const [accountId, msgs] of Object.entries(byAccount)) {
+      const accountResult = await query('SELECT * FROM email_accounts WHERE id = $1', [accountId]);
+      const account = accountResult.rows[0];
+      const results = await runInBatches(
+        msgs, 3,
+        msg => imapManager.setFlag(account, msg.uid, msg.folder, '\\Flagged', starred)
+      );
+      results.forEach((r, i) => {
+        if (r.status === 'rejected') {
+          console.error(`bulk-star IMAP ${msgs[i].id}:`, extractImapError(r.reason));
+          imapManager._enqueueFlagPush(accountId, msgs[i].id, '\\Flagged', starred);
+        } else {
+          imapManager._resolveFlagPush(accountId, msgs[i].id, '\\Flagged');
+        }
+      });
+    }
+
+    notifyMailMutation(toUpdate, req.session.userId);
+
+    res.json({ ok: true, updated: toUpdate.map(m => m.id) });
+  } catch (err) {
+    console.error('bulk-star error:', err);
+    res.status(500).json({ error: 'Failed to update messages' });
+  }
+});
+
 // Bulk delete (move to trash)
 router.post('/messages/bulk-delete', async (req, res) => {
   const { ids } = req.body;
@@ -1611,6 +1733,47 @@ router.post('/messages/bulk-move', async (req, res) => {
     res.status(500).json({ error: 'Failed to move messages' });
   } finally {
     for (const g of moveGuards) imapManager._unguardMoveUid(g.accountId, g.folder, g.uid);
+  }
+});
+
+// Copy into a selectable account-owned folder.
+router.post('/messages/:id/copy', async (req, res) => {
+  const { id } = req.params;
+  const { folder } = req.body || {};
+  if (!areValidUUIDs([id]) || !isValidFolderName(folder)) {
+    return res.status(400).json({ error: 'Invalid message or folder' });
+  }
+  const source = await query(`
+    SELECT m.id, m.account_id, m.uid, m.folder, a.folder_mappings
+    FROM messages m JOIN email_accounts a ON a.id = m.account_id
+    WHERE m.id = $1 AND (a.user_id = $2 OR EXISTS (
+      SELECT 1 FROM mailbox_memberships mm
+       WHERE mm.account_id = a.id AND mm.user_id = $2
+         AND mm.permission = 'read_send' AND mm.revoked_at IS NULL
+    )) AND a.enabled = true AND m.is_deleted = false
+  `, [id, req.session.userId]);
+  const message = source.rows[0];
+  if (!message) return res.status(404).json({ error: 'Message not found' });
+  const destination = await query(`
+    SELECT path, name, special_use FROM folders
+    WHERE account_id = $1 AND path = $2 AND no_select = false
+  `, [message.account_id, folder]);
+  const target = destination.rows[0];
+  if (!target || message.folder === folder) return res.status(400).json({ error: 'Folder is not a copy target' });
+  const special = String(target.special_use || '').replaceAll('\\', '').toLowerCase();
+  const system = new Set(['inbox', 'sent', 'drafts', 'trash', 'junk', 'spam', 'archive', 'all', 'flagged']);
+  const names = new Set(['inbox', 'sent', 'drafts', 'trash', 'spam', 'junk', 'archive', 'all mail', 'starred', 'important']);
+  const mapped = Object.values(message.folder_mappings || {}).includes(folder);
+  if (system.has(special) || names.has(String(target.name || '').toLowerCase()) || mapped) {
+    return res.status(400).json({ error: 'System folder is not a label target' });
+  }
+  try {
+    const uid = await imapManager.copyMessage(message.account_id, message.uid, message.folder, folder);
+    imapManager.broadcast?.({ type: 'folder_updated', folder, accountId: message.account_id }, req.session.userId);
+    res.json({ ok: true, uid });
+  } catch (error) {
+    console.error('Message copy failed:', error.message);
+    res.status(502).json({ error: 'Could not copy message' });
   }
 });
 
