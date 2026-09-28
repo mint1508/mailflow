@@ -1848,17 +1848,18 @@ function MailboxMembershipModal({ mailbox, onClose }) {
 // ─── Themes Tab ───────────────────────────────────────────────────────────────
 function ThemesTab() {
   const { t } = useTranslation();
-  const { theme, setTheme } = useStore();
+  const { theme, setTheme, user } = useStore();
   const [customCss, setCustomCss] = useState('');
   const [cssSaving, setCssSaving] = useState(false);
   const [cssSaved, setCssSaved] = useState(false);
   const [cssError, setCssError] = useState('');
 
   useEffect(() => {
+    if (!user?.isAdmin) return;
     api.admin.getSettings()
       .then(d => setCustomCss(d.settings.custom_css || ''))
       .catch(() => {});
-  }, []);
+  }, [user?.isAdmin]);
 
   const handleSelect = (key) => {
     setTheme(key);
@@ -1941,7 +1942,7 @@ function ThemesTab() {
         ))}
       </div>
 
-      <div style={{ borderTop: '1px solid var(--border-subtle)', marginTop: 28, paddingTop: 28 }}>
+      {user?.isAdmin && <div style={{ borderTop: '1px solid var(--border-subtle)', marginTop: 28, paddingTop: 28 }}>
         <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>
           {t('admin.appearance.customCss')}
         </div>
@@ -1980,7 +1981,7 @@ function ThemesTab() {
             <span style={{ fontSize: 12, color: 'var(--red)' }}>{cssError}</span>
           )}
         </div>
-      </div>
+      </div>}
     </div>
   );
 }
@@ -6698,6 +6699,7 @@ const LANGUAGES = [
   { code: 'pl', nativeName: 'Polski' },
   { code: 'cs', nativeName: 'Čeština' },
   { code: 'ptBR', nativeName: 'Português (Brasil)' },
+  { code: 'vi', nativeName: 'Tiếng Việt' },
 ];
 
 function LanguageTab() {
@@ -9788,7 +9790,7 @@ function makeSearchIndex(t) {
     { label: t('admin.messageList.defaultReplyAction'), keywords: ['reply', 'reply all', 'default reply'], tab: 'appearance', subtab: 'layout', breadcrumb: layoutCrumb },
     { label: t('admin.messageList.markReadBehavior'), keywords: ['mark read', 'mark as read', 'read delay', 'auto read', 'manual read', 'unread'], tab: 'appearance', subtab: 'layout', breadcrumb: layoutCrumb },
     // Appearance > Fonts & Language
-    { label: t('admin.appearance.language'), keywords: ['language', 'locale', 'french', 'english', 'spanish', 'german', 'deutsch', 'russian', 'chinese', 'italian', 'czech', 'čeština', 'portuguese', 'português', 'brasil', 'français', 'español'], tab: 'appearance', subtab: 'fonts', breadcrumb: fontsCrumb },
+    { label: t('admin.appearance.language'), keywords: ['language', 'locale', 'vietnamese', 'vietnam', 'tiếng việt', 'french', 'english', 'spanish', 'german', 'deutsch', 'russian', 'chinese', 'italian', 'czech', 'čeština', 'portuguese', 'português', 'brasil', 'français', 'español'], tab: 'appearance', subtab: 'fonts', breadcrumb: fontsCrumb },
     { label: t('admin.appearance.fontSize'), keywords: ['font size', 'text size', 'zoom', 'scale', 'accessibility', 'larger text'], tab: 'appearance', subtab: 'fonts', breadcrumb: fontsCrumb },
     { label: t('admin.appearance.typography'), keywords: ['font', 'typography', 'typeface', 'serif', 'sans', 'monospace', 'reading font'], tab: 'appearance', subtab: 'fonts', breadcrumb: fontsCrumb },
     // Integrations

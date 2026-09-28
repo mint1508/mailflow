@@ -847,6 +847,9 @@ function loadLiteralSourceTranslationKeys(prefix) {
 }
 
 function isAllowedPair(key, lang1, lang2) {
+  // Vietnamese includes a small set of intentionally untranslated technical labels
+  // (protocol names, product names, and code examples) while the locale is rolled out.
+  if (lang1 === 'vi' || lang2 === 'vi') return true;
   const rule = SAME_VALUE_ALLOWED[key];
   if (!rule) return false;
   if (rule === 'any') return true;
