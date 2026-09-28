@@ -419,6 +419,7 @@
     "hideHidden": "Ẩn thư mục ẩn",
     "blockImages": "Chặn hình ảnh",
     "searchAllFolders": "Tìm kiếm tất cả thư mục",
+    "help": "Trợ giúp & hướng dẫn",
     "signOut": "Đăng xuất",
     "connectionError": "Lỗi kết nối",
     "folderMenu": {
@@ -653,6 +654,29 @@
     },
     "then": "sau đó"
   },
+  "tour": {
+    "next": "Tiếp theo",
+    "previous": "Quay lại",
+    "done": "Hoàn tất",
+    "skip": "Bỏ qua",
+    "progress": "{{current}} / {{total}}",
+    "compose": {
+      "title": "Soạn thư mới",
+      "description": "Bắt đầu một email tại đây. MailFlow tự lưu thư chưa hoàn thành vào Bản nháp."
+    },
+    "mailboxes": {
+      "title": "Hộp thư và thư mục",
+      "description": "Chọn hộp thư và thư mục muốn đọc. Hộp thư chung sẽ xuất hiện tại đây khi bạn được cấp quyền."
+    },
+    "search": {
+      "title": "Tìm thư nhanh",
+      "description": "Tìm bằng từ khóa hoặc bộ lọc như from:, subject:, is:unread và has:attachment."
+    },
+    "userMenu": {
+      "title": "Cài đặt và Trợ giúp",
+      "description": "Mở menu hồ sơ để vào cài đặt, Trợ giúp, quyền riêng tư, khóa màn hình và đăng xuất."
+    }
+  },
   "admin": {
     "cleanup": {
       "action": "Hành động dọn dẹp",
@@ -693,6 +717,7 @@
       "sso": "SSO",
       "integrations": "Tích hợp",
       "theme": "Chủ đề",
+      "help": "Trợ giúp",
       "about": "Giới thiệu",
       "antispam": "Chống thư rác",
       "categories": "Danh mục",
@@ -1658,6 +1683,101 @@
       "license": "Giấy phép",
       "website": "Trang web",
       "kofi": "Ko-fi"
+    },
+    "help": {
+      "title": "Trợ giúp & hướng dẫn sử dụng",
+      "intro": "Hướng dẫn các quy trình chính trong MailFlow. Các mục quản lý chỉ xuất hiện khi vai trò của bạn có quyền sử dụng.",
+      "startTour": "Xem hướng dẫn giao diện",
+      "sections": {
+        "gettingStarted": {
+          "title": "Bắt đầu sử dụng",
+          "items": [
+            "Đăng nhập bằng địa chỉ email hộp thư và mật khẩu MailFlow. Bạn không cần mở hoặc biết cách dùng cPanel.",
+            "Chọn tài khoản hoặc thư mục ở thanh bên trái. Tất cả hộp thư đến sẽ gộp thư khi bạn có nhiều tài khoản.",
+            "Chọn một thư trong danh sách để đọc. Trên điện thoại, dùng nút quay lại để trở về danh sách thư.",
+            "Menu hồ sơ ở góc dưới bên trái chứa hồ sơ, cài đặt, Trợ giúp, khóa màn hình và đăng xuất."
+          ]
+        },
+        "compose": {
+          "title": "Soạn, trả lời và gửi thư",
+          "items": [
+            "Chọn Soạn thư, chọn tài khoản gửi, nhập người nhận To/Cc/Bcc, tiêu đề và nội dung.",
+            "Đính kèm tệp trong cửa sổ soạn thư. Chờ tệp tải xong trước khi gửi.",
+            "Bản nháp được lưu tự động. Mở thư mục Bản nháp để tiếp tục một thư chưa hoàn thành.",
+            "Mở thư để Trả lời, Trả lời tất cả hoặc Chuyển tiếp. Kiểm tra đúng tài khoản gửi khi dùng hộp thư chung."
+          ]
+        },
+        "organize": {
+          "title": "Sắp xếp và xử lý thư",
+          "items": [
+            "Lưu trữ đưa thư ra khỏi Hộp thư đến nhưng vẫn có thể tìm kiếm. Xóa sẽ chuyển thư vào Thùng rác trước khi xóa vĩnh viễn.",
+            "Dùng đánh dấu sao, đã đọc/chưa đọc, Spam, Di chuyển, nhãn và chọn hàng loạt để xử lý nhiều thư nhanh hơn.",
+            "Trên máy tính, nhấp chuột phải vào thư mục hoặc tài khoản để đồng bộ và quản lý. Trên điện thoại, nhấn giữ tại nơi được hỗ trợ.",
+            "Quy tắc có thể tự động di chuyển, đánh dấu, xóa hoặc chuyển tiếp thư phù hợp. Hãy kiểm tra kỹ trước khi chạy quy tắc trên thư cũ."
+          ]
+        },
+        "search": {
+          "title": "Tìm kiếm",
+          "items": [
+            "Nhập từ khóa vào ô tìm kiếm để tìm trong tài khoản và thư mục đang chọn. Bật Tìm kiếm tất cả thư mục trong menu hồ sơ để tìm rộng hơn.",
+            "Dùng bộ lọc như from:sender, to:person, subject:invoice, has:attachment, is:unread, is:starred, after:2026-01-01 hoặc in:all.",
+            "Có thể kết hợp bộ lọc và từ khóa, ví dụ: from:vendor invoice has:attachment. Thêm dấu - trước bộ lọc để loại trừ."
+          ]
+        },
+        "appearance": {
+          "title": "Giao diện, ngôn ngữ và thông báo",
+          "items": [
+            "Mở Cài đặt > Giao diện để chọn theme, bố cục, phông chữ, cỡ chữ và ngôn ngữ riêng của bạn.",
+            "Cài đặt giao diện cá nhân được lưu theo tài khoản. Theme mặc định của admin chỉ áp dụng cho người dùng mới.",
+            "Mở Thông báo để cấu hình âm thanh, thông báo đẩy của trình duyệt và huy hiệu thư chưa đọc. Trình duyệt có thể yêu cầu cấp quyền."
+          ]
+        },
+        "security": {
+          "title": "Bảo mật và riêng tư",
+          "items": [
+            "Không chia sẻ mật khẩu, liên kết kích hoạt, API token hoặc thông tin đăng nhập lần đầu cho người không liên quan.",
+            "Bật PIN khóa màn hình khi dùng máy tính chung và đăng xuất sau khi sử dụng.",
+            "Ảnh từ xa có thể theo dõi lúc bạn mở thư. Nên giữ chặn ảnh và chỉ cho phép người gửi đáng tin khi cần.",
+            "Nếu phát hiện đăng nhập hoặc kết nối hộp thư đáng ngờ, hãy báo admin và đổi mật khẩu hộp thư."
+          ]
+        },
+        "mailboxes": {
+          "title": "Tài khoản và hộp thư chung",
+          "items": [
+            "User thường chỉ thấy hộp thư được gán cho tài khoản MailFlow của mình. Hộp thư chung hoặc alias chỉ xuất hiện khi admin cấp quyền.",
+            "Cài đặt > Tài khoản hiển thị hộp thư đã kết nối, trạng thái kết nối, chữ ký, alias và các thao tác được phép.",
+            "Lỗi đồng bộ thường xảy ra khi mật khẩu hộp thư hoặc kết nối máy chủ mail thay đổi. Dùng Kết nối lại hoặc nhờ mod/admin hỗ trợ."
+          ]
+        },
+        "mod": {
+          "title": "Mod: tạo và quản lý hộp thư",
+          "items": [
+            "Mở Cài đặt > Tài khoản để xem hộp thư cPanel, quota đã dùng, trạng thái kích hoạt và tài khoản MailFlow đã liên kết.",
+            "Có thể tạo một hộp thư, tạo hàng loạt hoặc nhập CSV. Đặt quota rồi sao chép, lưu tệp hoặc chia sẻ thông tin đăng nhập lần đầu ngay sau khi tạo.",
+            "Khi đã cấu hình system email, gửi liên kết kích hoạt đến email cá nhân của người dùng. Nếu chưa có, hãy gửi email và mật khẩu đầu tiên bằng kênh an toàn.",
+            "Mod chỉ tạo user thường. Chỉ admin được cấp quyền mod/admin và quản lý cấu hình máy chủ chung."
+          ]
+        },
+        "admin": {
+          "title": "Admin",
+          "items": [
+            "Cấu hình host, username, domain và API token cPanel trong mục cPanel. MailFlow kiểm tra kết nối và trạng thái token theo lịch.",
+            "Dùng Người dùng để quản lý vai trò, quyền hộp thư, kích hoạt, system email và phiên đăng nhập tạm thời dưới danh nghĩa user.",
+            "Dùng Thương hiệu để đổi tên app, logo PWA và nội dung SEO. Đặt theme mặc định cho user mới mà không ghi đè lựa chọn của user cũ.",
+            "Giữ kín API token, chỉ cấp quyền cPanel cần thiết, thay token đã lộ và kiểm tra lịch sử xác thực."
+          ]
+        },
+        "troubleshooting": {
+          "title": "Khắc phục sự cố",
+          "items": [
+            "Không đăng nhập được: kiểm tra đầy đủ địa chỉ email và mật khẩu hiện tại. Nếu tài khoản đang chờ, hãy kích hoạt hoặc nhờ mod đặt lại mật khẩu.",
+            "Thư không cập nhật: kiểm tra trạng thái kết nối, tải lại app, sau đó dùng Đồng bộ ngay hoặc Kết nối lại. Nếu còn lỗi, gửi nguyên văn thông báo lỗi.",
+            "Không gửi được kích hoạt: kiểm tra email cá nhân và cấu hình system email, hoặc sao chép thông tin đăng nhập lần đầu rồi gửi qua kênh an toàn.",
+            "cPanel từ chối yêu cầu: admin cần kiểm tra username cPanel, quyền API token, domain cấu hình, truy cập cổng 2083 và trạng thái nhà cung cấp.",
+            "Nếu lỗi kéo dài, mở Cài đặt > Giới thiệu và tạo báo cáo chẩn đoán. Báo cáo không chứa nội dung thư, mật khẩu, địa chỉ email hoặc API secret."
+          ]
+        }
+      }
     },
     "search": {
       "placeholder": "Tìm kiếm cài đặt…",

@@ -3098,6 +3098,7 @@ export default function MessageList() {
             </svg>
           </div>
           <input
+            data-tour="search"
             ref={searchInputRef}
             type="text"
             placeholder={t('messageList.search')}
@@ -3186,6 +3187,7 @@ export default function MessageList() {
               </svg>
             </div>
             <input
+              data-tour="search"
               ref={searchInputRef}
               type="text"
               placeholder={t('messageList.search')}

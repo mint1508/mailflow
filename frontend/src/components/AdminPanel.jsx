@@ -6970,6 +6970,64 @@ function AboutTab() {
   );
 }
 
+function HelpTab({ onStartTour }) {
+  const { t } = useTranslation();
+  const { user } = useStore();
+  const isMobile = useMobile();
+  const canManageMailboxes = !!(user?.isAdmin || user?.canManageMailboxes);
+  const isAdmin = !!user?.isAdmin;
+
+  const sections = [
+    ['gettingStarted', false],
+    ['compose', false],
+    ['organize', false],
+    ['search', false],
+    ['appearance', false],
+    ['security', false],
+    ['mailboxes', false],
+    ['mod', !canManageMailboxes],
+    ['admin', !isAdmin],
+    ['troubleshooting', false],
+  ].filter(([, hidden]) => !hidden);
+
+  const itemsFor = (id) => {
+    const value = t(`admin.help.sections.${id}.items`, { returnObjects: true });
+    return Array.isArray(value) ? value : [];
+  };
+
+  return (
+    <div style={{ maxWidth: 720 }}>
+      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 22 }}>
+        <div>
+          <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 5px' }}>{t('admin.help.title')}</h2>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>{t('admin.help.intro')}</p>
+        </div>
+        <button
+          type="button"
+          onClick={onStartTour}
+          style={{ flexShrink: 0, alignSelf: isMobile ? 'stretch' : 'auto', padding: '9px 12px', borderRadius: 8, border: '1px solid var(--accent)', background: 'var(--accent-dim)', color: 'var(--accent)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+        >
+          {t('admin.help.startTour')}
+        </button>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {sections.map(([id]) => {
+          const items = itemsFor(id);
+          return (
+            <section key={id} style={{ border: '1px solid var(--border-subtle)', borderRadius: 10, background: 'var(--bg-primary)', padding: '14px 16px' }}>
+              <h3 style={{ fontSize: 14, fontWeight: 650, color: 'var(--text-primary)', margin: '0 0 8px' }}>{t(`admin.help.sections.${id}.title`)}</h3>
+              <ul style={{ margin: 0, paddingLeft: 19, color: 'var(--text-secondary)', fontSize: 12.5, lineHeight: 1.65 }}>
+                {items.map((item, index) => <li key={`${id}-${index}`} style={{ marginBottom: index === items.length - 1 ? 0 : 4 }}>{item}</li>)}
+              </ul>
+            </section>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── Rules Tab ────────────────────────────────────────────────────────────────
 function RulesTab() {
   const { t } = useTranslation();
@@ -8017,6 +8075,10 @@ const TABS = [
     icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>,
   },
   // About (ungrouped, pinned to bottom)
+  {
+    id: 'help', labelKey: 'admin.tabs.help',
+    icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"><circle cx="12" cy="12" r="10"/><path d="M9.5 9a2.5 2.5 0 115 0c0 2-2.5 2-2.5 2v2"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
+  },
   {
     id: 'about', labelKey: 'admin.tabs.about',
     icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="8"/><line x1="12" y1="12" x2="12" y2="16"/></svg>,
@@ -9876,6 +9938,7 @@ function makeSearchIndex(t) {
     { label: t('admin.systemEmail.tabUsers'), keywords: ['user', 'invite', 'admin', 'role', 'manage users', 'add user'], tab: 'users', adminOnly: true, breadcrumb: tabLabel('users') },
     { label: t('admin.systemEmail.tabEmail'), keywords: ['system email', 'smtp', 'admin email', 'invite email', 'outgoing email'], tab: 'users', adminOnly: true, breadcrumb: tabLabel('users') },
     { label: t('admin.sso.title'), keywords: ['sso', 'oidc', 'single sign on', 'oauth', 'provider', 'identity provider'], tab: 'sso', adminOnly: true, breadcrumb: tabLabel('sso') },
+    { label: t('admin.tabs.help'), keywords: ['help', 'guide', 'tour', 'getting started', 'how to'], tab: 'help', breadcrumb: tabLabel('help') },
   ];
 }
 
@@ -10011,6 +10074,7 @@ export default function AdminPanel() {
       {adminTab === 'plugins' && <PluginsSection onNavigate={navigateTo} />}
       {adminTab === 'cpanel' && <CpanelTab />}
       {adminTab === 'branding' && canManageMailboxes && <BrandingSection />}
+      {adminTab === 'help' && <HelpTab onStartTour={() => { setShowAdmin(false); window.setTimeout(() => window.dispatchEvent(new CustomEvent('mailflow:start_first_use_tour')), 80); }} />}
       {adminTab === 'about' && <AboutTab />}
     </>
   );

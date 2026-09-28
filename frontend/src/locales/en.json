@@ -421,6 +421,7 @@
     "blockImages": "Block images",
     "searchAllFolders": "Search all folders",
     "settings": "Settings",
+    "help": "Help & guide",
     "lock": "Lock",
     "signOut": "Sign out",
     "connectionError": "Connection error",
@@ -656,6 +657,29 @@
   "notifications": {
     "newMessage": "New message"
   },
+  "tour": {
+    "next": "Next",
+    "previous": "Back",
+    "done": "Finish",
+    "skip": "Skip",
+    "progress": "{{current}} of {{total}}",
+    "compose": {
+      "title": "Compose a message",
+      "description": "Start a new email here. MailFlow saves unfinished messages as drafts."
+    },
+    "mailboxes": {
+      "title": "Mailboxes and folders",
+      "description": "Choose the mailbox and folder you want to read. Shared mailboxes appear here when you have access."
+    },
+    "search": {
+      "title": "Find mail quickly",
+      "description": "Search by words or use filters such as from:, subject:, is:unread, and has:attachment."
+    },
+    "userMenu": {
+      "title": "Settings and Help",
+      "description": "Open your profile menu for settings, Help, privacy controls, screen lock, and sign out."
+    }
+  },
   "signatureEditor": {
     "bold": "Bold (Ctrl+B)",
     "italic": "Italic (Ctrl+I)",
@@ -722,6 +746,7 @@
       "integrations": "Integrations",
       "theme": "Theme",
       "fontsAndLanguage": "Language & Font",
+      "help": "Help",
       "about": "About",
       "ai": "AI Assistant",
       "aiActions": "AI Actions",
@@ -1691,6 +1716,101 @@
       "sponsor": "Support development",
       "kofi": "Ko-fi",
       "githubSponsors": "GitHub Sponsors"
+    },
+    "help": {
+      "title": "Help & user guide",
+      "intro": "Learn the main MailFlow workflows. The guide only shows management sections that your role can access.",
+      "startTour": "Start UI tour",
+      "sections": {
+        "gettingStarted": {
+          "title": "Getting started",
+          "items": [
+            "Sign in with your mailbox email address and MailFlow password. You do not need to open cPanel.",
+            "Choose an account or folder in the left sidebar. All Inboxes combines mail when you have more than one account.",
+            "Select a message in the list to open it. On mobile, use the back button to return to the message list.",
+            "The profile menu at the bottom left contains your profile, settings, Help, screen lock, and sign out."
+          ]
+        },
+        "compose": {
+          "title": "Compose, reply, and send",
+          "items": [
+            "Select Compose, choose the sending account, add To/Cc/Bcc recipients, a subject, and your message.",
+            "Attach files from the composer. Wait for attachments to finish loading before sending.",
+            "Drafts are saved automatically. Open the Drafts folder to continue an unfinished message.",
+            "Open a message to Reply, Reply all, or Forward. Check the sender account before sending from a shared mailbox."
+          ]
+        },
+        "organize": {
+          "title": "Organize mail",
+          "items": [
+            "Archive removes mail from Inbox while keeping it searchable. Delete moves mail to Trash before permanent deletion.",
+            "Use Star, mark read or unread, Spam, Move, labels, and bulk selection to process several messages quickly.",
+            "Right-click a folder or account on desktop for sync, folder, and account actions. On mobile, press and hold where available.",
+            "Rules can automatically move, mark, delete, or forward matching incoming mail. Review a rule carefully before running it on existing mail."
+          ]
+        },
+        "search": {
+          "title": "Search",
+          "items": [
+            "Type words in the search box to search the selected account and folder. Enable Search all folders in the profile menu for a wider search.",
+            "Use filters such as from:sender, to:person, subject:invoice, has:attachment, is:unread, is:starred, after:2026-01-01, or in:all.",
+            "Combine filters and words, for example: from:vendor invoice has:attachment. Prefix a filter with - to exclude it."
+          ]
+        },
+        "appearance": {
+          "title": "Appearance, language, and notifications",
+          "items": [
+            "Open Settings > Appearance to choose your own theme, layout, font, text size, and language.",
+            "Your personal appearance settings stay with your account. The administrator's default theme only applies to new users.",
+            "Open Notifications to configure sounds, browser push notifications, and unread badges. Your browser may ask for permission."
+          ]
+        },
+        "security": {
+          "title": "Security and privacy",
+          "items": [
+            "Never share your password, activation link, API token, or copied first-login credentials with an unintended recipient.",
+            "Enable the screen-lock PIN when using a shared computer, and sign out when you finish.",
+            "Remote images may track when a message is opened. Keep image blocking enabled and allow trusted senders only when needed.",
+            "If a login or mailbox connection looks suspicious, contact an administrator and change the mailbox password."
+          ]
+        },
+        "mailboxes": {
+          "title": "Accounts and shared mailboxes",
+          "items": [
+            "A normal user sees only mailboxes assigned to their MailFlow account. Shared or alias mailboxes appear only when an administrator grants access.",
+            "Settings > Accounts lists connected mailboxes, connection status, signatures, aliases, and available account actions.",
+            "A sync error usually means the mailbox password or mail-server connection changed. Use Reconnect or ask a moderator or administrator for help."
+          ]
+        },
+        "mod": {
+          "title": "Moderator: create and manage mailboxes",
+          "items": [
+            "Open Settings > Accounts to view cPanel mailboxes, quota usage, activation state, and connected MailFlow accounts.",
+            "Create one mailbox, create several in bulk, or import CSV rows. Set the mailbox quota and copy, save, or share the generated first-login details immediately.",
+            "When system email is configured, send an activation link to the user's personal contact email. Otherwise securely deliver the copied email and first password.",
+            "Moderators create regular users. Only an administrator can assign moderator or administrator privileges and manage global server settings."
+          ]
+        },
+        "admin": {
+          "title": "Administrator",
+          "items": [
+            "Configure the cPanel host, username, domain, and API token in the cPanel section. MailFlow checks the connection and token status on a schedule.",
+            "Use Users to manage roles, mailbox access, activation, system email, and temporary login-as-user sessions.",
+            "Use Branding to change the app name, PWA logo, and SEO text. Set a default theme for new users without overwriting existing users' choices.",
+            "Keep API tokens private, grant only the required cPanel permissions, rotate exposed tokens, and review authentication activity."
+          ]
+        },
+        "troubleshooting": {
+          "title": "Troubleshooting",
+          "items": [
+            "Cannot sign in: confirm the full email address and current MailFlow/mailbox password. If the account is pending, complete activation or ask a moderator to reset it.",
+            "Mail does not refresh: check the connection indicator, refresh the app, then use Sync now or Reconnect. Report the exact error message if it continues.",
+            "Activation was not sent: verify the personal contact email and system-email configuration, or copy the first-login credentials and deliver them securely.",
+            "cPanel rejected a request: an administrator should verify the cPanel username, API token permissions, configured domain, port 2083 access, and provider availability.",
+            "For persistent problems, open Settings > About and generate a diagnostics report. It excludes message content, passwords, addresses, and API secrets."
+          ]
+        }
+      }
     },
     "search": {
       "placeholder": "Search settings…",

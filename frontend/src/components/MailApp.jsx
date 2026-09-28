@@ -19,6 +19,7 @@ import ReadingPane from './ReadingPane.jsx';
 import NotificationToasts from './NotificationToasts.jsx';
 import CommandPalette from './CommandPalette.jsx';
 import { usePluginSlot, PluginRuntime } from '../plugins/PluginSlot.jsx';
+import { createFirstUseTour, hasCompletedFirstUseTour } from '../tours/firstUseTour.js';
 
 const ContactsPage = lazy(() => import('./ContactsPage.jsx'));
 const WindowLayer  = lazy(() => import('./WindowLayer.jsx'));
@@ -64,7 +65,7 @@ const lazyFallback = (
 export default function MailApp() {
   const { t } = useTranslation();
   const {
-    setAccounts, setUnreadCounts, showAdmin,
+    user, setAccounts, setUnreadCounts, showAdmin,
     setShowAdmin, setAdminTab, composing, sidebarCollapsed, layout,
     unreadCounts, selectedAccountId, openCompose, setSelectedAccount,
     shortcuts, selectedMessageId, setSelectedMessage,
@@ -127,6 +128,47 @@ export default function MailApp() {
   const labelPickerRef = useRef(null);
   useEffect(() => { labelPickerRef.current = labelPickerMessage; }, [labelPickerMessage]);
   const isMobile = useMobile();
+  const firstUseTourRef = useRef(null);
+
+  const startFirstUseTour = useCallback(() => {
+    firstUseTourRef.current?.destroy();
+    const launch = () => {
+      firstUseTourRef.current = createFirstUseTour({
+        t,
+        userId: user?.id || user?.username || user?.email,
+        isMobile,
+        onDestroyed: () => {
+          firstUseTourRef.current = null;
+          if (isMobile) setMobileSidebarOpen(false);
+        },
+      });
+      firstUseTourRef.current.drive();
+    };
+    // The mobile sidebar is a drawer. Open it before Driver.js measures the targets.
+    if (isMobile) {
+      setMobileSidebarOpen(true);
+      window.setTimeout(launch, 320);
+    } else {
+      window.setTimeout(launch, 40);
+    }
+  }, [isMobile, setMobileSidebarOpen, t, user?.email, user?.id, user?.username]);
+
+  useEffect(() => {
+    const onStart = () => startFirstUseTour();
+    window.addEventListener('mailflow:start_first_use_tour', onStart);
+    return () => window.removeEventListener('mailflow:start_first_use_tour', onStart);
+  }, [startFirstUseTour]);
+
+  useEffect(() => {
+    if (!user?.id && !user?.username && !user?.email) return undefined;
+    if (showAdmin || composing) return undefined;
+    const userId = user.id || user.username || user.email;
+    if (hasCompletedFirstUseTour(userId)) return undefined;
+    const timer = window.setTimeout(startFirstUseTour, 650);
+    return () => window.clearTimeout(timer);
+  }, [composing, showAdmin, startFirstUseTour, user?.email, user?.id, user?.username]);
+
+  useEffect(() => () => firstUseTourRef.current?.destroy(), []);
   const sidebarDragRef = useRef(null);
   const sidebarResizeRef = useRef(null);
   const listResizeRef = useRef(null);

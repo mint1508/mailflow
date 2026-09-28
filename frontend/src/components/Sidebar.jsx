@@ -899,6 +899,7 @@ export default function Sidebar() {
       {/* Compose button */}
       <div style={{ padding: '12px 10px' }}>
         <button
+          data-tour="compose"
           onClick={() => openCompose({ accountId: selectedAccountId || undefined })}
           className="btn-press"
           style={{
@@ -918,7 +919,7 @@ export default function Sidebar() {
       </div>
 
       {/* Nav */}
-      <nav data-mailbox-sidebar="" style={{ flex: 1, overflow: 'hidden auto', padding: '4px 8px' }}>
+      <nav data-mailbox-sidebar="" data-tour="mailbox-sidebar" style={{ flex: 1, overflow: 'hidden auto', padding: '4px 8px' }}>
         {/* Unified Inbox — only shown with 2+ enabled accounts */}
         {accounts.filter(a => a.enabled).length >= 2 && (
           <NavItem
@@ -1733,6 +1734,7 @@ export default function Sidebar() {
 
           {/* Settings */}
           <div
+            data-tour="user-menu"
             onClick={() => { setAdminTab('accounts'); setShowAdmin(true); setMobileSidebarOpen(false); }}
             style={{
               display: 'flex', alignItems: 'center', gap: 10,
@@ -1753,6 +1755,20 @@ export default function Sidebar() {
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" strokeWidth="2" style={{ flexShrink: 0 }}>
               <polyline points="9 18 15 12 9 6"/>
             </svg>
+          </div>
+
+          {/* Help */}
+          <div
+            onClick={() => { setAdminTab('help'); setShowAdmin(true); setMobileSidebarOpen(false); }}
+            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px', cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
+            onTouchStart={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
+            onTouchEnd={e => e.currentTarget.style.background = ''}
+            onTouchCancel={e => e.currentTarget.style.background = ''}
+          >
+            <span style={{ color: 'var(--text-tertiary)', display: 'flex', flexShrink: 0 }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"><circle cx="12" cy="12" r="10"/><path d="M9.5 9a2.5 2.5 0 115 0c0 2-2.5 2-2.5 2v2"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </span>
+            <span style={{ flex: 1, fontSize: 13, color: 'var(--text-primary)' }}>{t('sidebar.help')}</span>
           </div>
 
           {/* Update available (#261) */}
@@ -1842,6 +1858,7 @@ export default function Sidebar() {
           <div style={{ padding: '8px', borderTop: '1px solid var(--border-subtle)' }}>
           <div
             ref={userMenuBtnRef}
+            data-tour="user-menu"
             onClick={openUserMenu}
             style={{
               display: 'flex', alignItems: 'center',
@@ -1990,6 +2007,8 @@ export default function Sidebar() {
             onClick={() => { setUserMenuOpen(false); setShowProfile(true); }} />
           <CtxMenuItem icon={ICONS.settings} label={t('sidebar.settings')}
             onClick={() => { setAdminTab('accounts'); setShowAdmin(true); setUserMenuOpen(false); }} />
+          <CtxMenuItem icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"><circle cx="12" cy="12" r="10"/><path d="M9.5 9a2.5 2.5 0 115 0c0 2-2.5 2-2.5 2v2"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>} label={t('sidebar.help')}
+            onClick={() => { setAdminTab('help'); setShowAdmin(true); setUserMenuOpen(false); }} />
           {user?.hasLockPin && (
             <CtxMenuItem
               icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>}
