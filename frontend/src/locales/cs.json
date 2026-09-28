@@ -1876,6 +1876,8 @@
       "description": "Change the name and PWA logo shown to everyone in this MailFlow instance.",
       "appName": "App name",
       "shortName": "PWA short name",
+      "seoTitle": "SEO title",
+      "seoDescription": "SEO description",
       "logo": "PWA logo",
       "logoHint": "PNG, JPEG, or WebP up to 512 KB.",
       "chooseLogo": "Choose logo",

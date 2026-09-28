@@ -33,7 +33,7 @@ describe('branding settings', () => {
     query.mockResolvedValueOnce({ rows: [] }).mockResolvedValueOnce({ rows: [] });
     const branding = await fetch(`${base}/api/branding`);
     expect(branding.status).toBe(200);
-    expect((await branding.json()).branding.name).toBe('MailFlow');
+    expect(await branding.json()).toMatchObject({ branding: { name: 'MailFlow', seoTitle: 'MailFlow' } });
     const manifest = await fetch(`${base}/api/branding/manifest.json`);
     expect(manifest.status).toBe(200);
     expect((await manifest.json()).short_name).toBe('MailFlow');
@@ -43,16 +43,21 @@ describe('branding settings', () => {
     query.mockResolvedValueOnce({ rows: [{ updated_at: '2026-01-01T00:00:00.000Z' }] });
     const response = await fetch(`${base}/api/branding`, {
       method: 'PATCH', headers: { 'content-type': 'application/json', 'x-test-role': 'mod' },
-      body: JSON.stringify({ name: 'Hippy Mail', shortName: 'Hippy', logo: null }),
+      body: JSON.stringify({ name: 'Hippy Mail', shortName: 'Hippy', seoTitle: 'Hippy private email', seoDescription: 'Private email for the Hippy team.', logo: null }),
     });
     expect(response.status).toBe(200);
-    expect((await response.json()).branding.name).toBe('Hippy Mail');
+    expect(await response.json()).toMatchObject({ branding: { name: 'Hippy Mail', seoTitle: 'Hippy private email' } });
+
+    query.mockResolvedValueOnce({ rows: [{ value: JSON.stringify({ name: 'Hippy Mail', shortName: 'Hippy', seoTitle: '<Hippy>', seoDescription: 'Private & secure' }) }] });
+    const head = await fetch(`${base}/api/branding/head.html`);
+    expect(head.status).toBe(200);
+    expect(await head.text()).toContain('<title>&lt;Hippy&gt;</title>');
   });
 
   it('rejects invalid logo formats', async () => {
     const response = await fetch(`${base}/api/branding`, {
       method: 'PATCH', headers: { 'content-type': 'application/json', 'x-test-role': 'mod' },
-      body: JSON.stringify({ name: 'Hippy Mail', shortName: 'Hippy', logo: 'data:image/svg+xml;base64,PHN2Zy8+' }),
+      body: JSON.stringify({ name: 'Hippy Mail', shortName: 'Hippy', seoTitle: 'Hippy Mail', seoDescription: 'Hippy inbox', logo: 'data:image/svg+xml;base64,PHN2Zy8+' }),
     });
     expect(response.status).toBe(400);
   });

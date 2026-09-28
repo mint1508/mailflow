@@ -9691,7 +9691,13 @@ function BrandingSection() {
     event.preventDefault();
     setSaving(true); setMessage(null);
     try {
-      const result = await api.admin.saveBranding({ name: form.name, shortName: form.shortName, logo: form.logo });
+      const result = await api.admin.saveBranding({
+        name: form.name,
+        shortName: form.shortName,
+        seoTitle: form.seoTitle,
+        seoDescription: form.seoDescription,
+        logo: form.logo,
+      });
       setForm(result.branding);
       setBranding(result.branding);
       setMessage({ type: 'success', text: t('admin.branding.saved') });
@@ -9710,6 +9716,12 @@ function BrandingSection() {
         </Field>
         <Field label={t('admin.branding.shortName')} required>
           <input value={form.shortName || ''} maxLength={30} onChange={event => setForm(current => ({ ...current, shortName: event.target.value }))} style={inputStyle} />
+        </Field>
+        <Field label={t('admin.branding.seoTitle')} required>
+          <input value={form.seoTitle || ''} maxLength={120} onChange={event => setForm(current => ({ ...current, seoTitle: event.target.value }))} style={inputStyle} />
+        </Field>
+        <Field label={t('admin.branding.seoDescription')} required>
+          <textarea value={form.seoDescription || ''} maxLength={320} rows={3} onChange={event => setForm(current => ({ ...current, seoDescription: event.target.value }))} style={{ ...inputStyle, resize: 'vertical' }} />
         </Field>
         <Field label={t('admin.branding.logo')}>
           <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', gap: 12 }}>
@@ -9735,7 +9747,7 @@ function BrandingSection() {
           </div>
         </Field>
         {message && <div style={{ marginBottom: 12, fontSize: 12, color: message.type === 'error' ? 'var(--red)' : 'var(--green)' }}>{message.text}</div>}
-        <button type="submit" disabled={saving || !form.name.trim() || !form.shortName.trim()} style={{ padding: '9px 13px', background: 'var(--accent)', color: 'var(--accent-text)', border: 'none', borderRadius: 7, fontSize: 12, cursor: saving ? 'wait' : 'pointer', opacity: saving || !form.name.trim() || !form.shortName.trim() ? 0.5 : 1 }}>{saving ? t('admin.branding.saving') : t('admin.branding.save')}</button>
+        <button type="submit" disabled={saving || !form.name.trim() || !form.shortName.trim() || !form.seoTitle.trim() || !form.seoDescription.trim()} style={{ padding: '9px 13px', background: 'var(--accent)', color: 'var(--accent-text)', border: 'none', borderRadius: 7, fontSize: 12, cursor: saving ? 'wait' : 'pointer', opacity: saving || !form.name.trim() || !form.shortName.trim() || !form.seoTitle.trim() || !form.seoDescription.trim() ? 0.5 : 1 }}>{saving ? t('admin.branding.saving') : t('admin.branding.save')}</button>
       </form>
     </div>
   );

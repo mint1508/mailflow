@@ -137,6 +137,8 @@ const SAME_VALUE_ALLOWED = {
   'admin.branding.description':              'any',
   'admin.branding.appName':                  'any',
   'admin.branding.shortName':                'any',
+  'admin.branding.seoTitle':                 'any',
+  'admin.branding.seoDescription':           'any',
   'admin.branding.logo':                     'any',
   'admin.branding.logoHint':                 'any',
   'admin.branding.chooseLogo':               'any',

@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react';
 
-export const DEFAULT_BRANDING = { name: 'MailFlow', shortName: 'MailFlow', logo: null };
+export const DEFAULT_BRANDING = {
+  name: 'MailFlow',
+  shortName: 'MailFlow',
+  seoTitle: 'MailFlow',
+  seoDescription: 'MailFlow — your unified inbox',
+  logo: null,
+};
 let currentBranding = { ...DEFAULT_BRANDING };
 const listeners = new Set();
 
@@ -10,6 +16,8 @@ export function setBranding(next) {
   currentBranding = {
     name: next?.name || DEFAULT_BRANDING.name,
     shortName: next?.shortName || DEFAULT_BRANDING.shortName,
+    seoTitle: next?.seoTitle || next?.name || DEFAULT_BRANDING.seoTitle,
+    seoDescription: next?.seoDescription || `${next?.name || DEFAULT_BRANDING.name} — your unified inbox`,
     logo: next?.logo || null,
   };
   if (typeof document !== 'undefined') applyBrandingToDocument(currentBranding);
@@ -41,8 +49,12 @@ export async function loadBranding() {
 
 export function applyBrandingToDocument(branding) {
   if (typeof document === 'undefined') return;
-  document.title = branding.name;
-  document.querySelector('meta[name="description"]')?.setAttribute('content', `${branding.name} — your unified inbox`);
+  document.title = branding.seoTitle;
+  document.querySelector('meta[name="description"]')?.setAttribute('content', branding.seoDescription);
+  document.querySelector('meta[property="og:title"]')?.setAttribute('content', branding.seoTitle);
+  document.querySelector('meta[property="og:description"]')?.setAttribute('content', branding.seoDescription);
+  document.querySelector('meta[name="twitter:title"]')?.setAttribute('content', branding.seoTitle);
+  document.querySelector('meta[name="twitter:description"]')?.setAttribute('content', branding.seoDescription);
   document.querySelector('meta[name="apple-mobile-web-app-title"]')?.setAttribute('content', branding.shortName);
   document.querySelector('link[rel="manifest"]')?.setAttribute('href', '/api/branding/manifest.json');
   document.querySelector('link[rel="icon"]')?.setAttribute('href', branding.logo ? '/api/branding/logo' : '/favicon.svg');
