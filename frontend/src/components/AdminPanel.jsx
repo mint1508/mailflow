@@ -8717,7 +8717,40 @@ function SecurityTab() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSaved, setPasswordSaved] = useState(false);
+
   const totpEnabled = user?.totpEnabled;
+
+  const savePassword = async () => {
+    setPasswordError('');
+    if (!currentPassword || !newPassword || !confirmNewPassword) {
+      setPasswordError(t('admin.security.passwordRequired'));
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      setPasswordError(t('admin.security.passwordMismatch'));
+      return;
+    }
+    setPasswordSaving(true);
+    try {
+      await api.changePassword(currentPassword, newPassword);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmNewPassword('');
+      setPasswordSaved(true);
+      setTimeout(() => setPasswordSaved(false), 4500);
+      setTimeout(() => { window.location.href = '/login'; }, 1400);
+    } catch (err) {
+      setPasswordError(err.message);
+    } finally {
+      setPasswordSaving(false);
+    }
+  };
 
   // Admin-only: login protection settings
   const [maxAttempts, setMaxAttempts] = useState(10);
@@ -8852,6 +8885,7 @@ function SecurityTab() {
       totp_success:  t('admin.security.eventTotpSuccess'),
       totp_fail:     t('admin.security.eventTotpFail'),
       sso_login:     t('admin.security.eventSsoLogin'),
+      password_change: t('admin.security.eventPasswordChange'),
     };
     return map[type] || type;
   };
@@ -8925,6 +8959,52 @@ function SecurityTab() {
       <p style={{ margin: '0 0 28px', fontSize: 13, color: 'var(--text-tertiary)' }}>
         {t('admin.security.description')}
       </p>
+
+      <div style={{
+        background: 'var(--bg-secondary)', border: '1px solid var(--border)',
+        borderRadius: 12, padding: '20px 24px', marginBottom: 20,
+      }}>
+        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>
+          {t('admin.security.changePasswordTitle')}
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 14, lineHeight: 1.5 }}>
+          {t('admin.security.changePasswordDesc')}
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+          <input
+            type="password" autoComplete="current-password" value={currentPassword}
+            onChange={e => setCurrentPassword(e.target.value)}
+            placeholder={t('admin.security.currentPasswordPh')} style={{ ...inputStyle }}
+          />
+          <input
+            type="password" autoComplete="new-password" value={newPassword}
+            onChange={e => setNewPassword(e.target.value)}
+            placeholder={t('admin.security.newPasswordPh')} style={{ ...inputStyle }}
+          />
+          <input
+            type="password" autoComplete="new-password" value={confirmNewPassword}
+            onChange={e => setConfirmNewPassword(e.target.value)}
+            placeholder={t('admin.security.confirmPasswordPh')} style={{ ...inputStyle }}
+          />
+        </div>
+        <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 9 }}>
+          {t('admin.security.passwordHint')}
+        </div>
+        {passwordError && <div style={{ fontSize: 12, color: 'var(--red)', marginTop: 9 }}>{passwordError}</div>}
+        {passwordSaved && <div style={{ fontSize: 12, color: 'var(--green)', marginTop: 9 }}>{t('admin.security.passwordChanged')}</div>}
+        <button
+          type="button" onClick={savePassword}
+          disabled={passwordSaving || !currentPassword || !newPassword || !confirmNewPassword}
+          style={{
+            marginTop: 12, padding: '8px 18px', background: 'var(--accent)', border: 'none',
+            borderRadius: 7, color: 'var(--accent-text)', fontSize: 13, fontWeight: 500,
+            cursor: passwordSaving ? 'not-allowed' : 'pointer',
+            opacity: passwordSaving || !currentPassword || !newPassword || !confirmNewPassword ? 0.6 : 1,
+          }}
+        >
+          {passwordSaving ? t('admin.security.passwordChanging') : t('admin.security.changePasswordButton')}
+        </button>
+      </div>
 
       <ScreenLockSection />
 

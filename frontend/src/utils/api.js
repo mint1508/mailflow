@@ -145,6 +145,7 @@ export const api = {
   me: () => request('GET', '/auth/me'),
   forgotPassword: (email) => request('POST', '/auth/forgot-password', { email }),
   resetPassword: (token, password) => request('POST', '/auth/reset-password', { token, password }),
+  changePassword: (currentPassword, newPassword) => request('POST', '/auth/password', { currentPassword, newPassword }),
   stopImpersonation: () => request('POST', '/auth/impersonation/stop'),
   getPreferences: () => request('GET', '/auth/preferences'),
   savePreferences: (prefs) => request('PATCH', '/auth/preferences', prefs),

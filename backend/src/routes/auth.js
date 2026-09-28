@@ -19,6 +19,7 @@ import { sanitizeGtdPrefs } from '../utils/gtdPrefs.js';
 import { sanitizeRightSidebarPrefs } from '../utils/rightSidebarPrefs.js';
 import { redisClient } from '../services/redis.js';
 import { destroyUserSessions } from '../services/sessionSecurity.js';
+import { changeUserPassword, PasswordChangeError } from '../services/passwordChange.js';
 import { consume as rlConsume, reset as rlReset } from '../services/rateLimiter.js';
 import { resetCpanelMailboxPassword } from '../services/cpanelClient.js';
 import { expireImpersonation, getImpersonationState, stopImpersonation } from '../middleware/auth.js';
@@ -1115,6 +1116,43 @@ router.patch('/profile/recovery-email', async (req, res) => {
   }
   await query('UPDATE users SET recovery_email = $1 WHERE id = $2', [trimmed || null, req.session.userId]);
   res.json({ ok: true });
+});
+
+// Changes both the MailFlow credential and, for managed users, the underlying
+// cPanel mailbox password. All sessions are revoked after a successful change.
+router.post('/password', authLimiter, async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  if (getImpersonationState(req)) {
+    return res.status(403).json({ error: 'Stop impersonating this user before changing a password' });
+  }
+
+  const userId = req.session.userId;
+  const username = req.session.username || null;
+  try {
+    const result = await changeUserPassword({
+      userId,
+      currentPassword: req.body?.currentPassword,
+      newPassword: req.body?.newPassword,
+      imapManager,
+    });
+    logAuthEvent('password_change', { username, userId, ip: req.ip, success: true });
+    res.locals.resetRateLimit?.();
+    await new Promise(resolve => req.session.destroy(error => {
+      if (error) console.error('Session destroy after password change failed:', error.message);
+      resolve();
+    }));
+    const cookieOpts = { path: '/', sameSite: 'lax', secure: req.secure };
+    res.clearCookie('connect.sid', cookieOpts);
+    res.clearCookie('mf_td', { ...cookieOpts, httpOnly: true });
+    res.json({ ok: true, signedOut: true, managedMailbox: result.managedMailbox });
+  } catch (error) {
+    logAuthEvent('password_change', { username, userId, ip: req.ip, success: false });
+    if (error instanceof PasswordChangeError) {
+      return res.status(error.status).json({ error: error.message });
+    }
+    console.error('password change error:', error.message);
+    res.status(500).json({ error: 'Failed to change password' });
+  }
 });
 
 // ── Password reset ────────────────────────────────────────────────────────────
