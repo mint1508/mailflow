@@ -110,6 +110,18 @@ body, #root {
 
 .unread-dot { animation: pulse-dot 2s ease-in-out infinite; }
 
+/* User-management actions must move below the identity block when the settings
+   window is narrow or the user has increased the app text scale. */
+.admin-user-row { flex-wrap: wrap; }
+.admin-user-actions { white-space: normal; }
+@media (max-width: 820px) {
+  .admin-user-actions {
+    flex-basis: 100% !important;
+    justify-content: flex-start !important;
+    padding-left: 42px;
+  }
+}
+
 /* Prevent iOS long-press from triggering the native "Copy | Look Up | Translate"
    callout on sidebar interactive rows. Stylesheet rules are more reliably honoured
    by WebKit than the equivalent inline styles. */

@@ -5905,8 +5905,8 @@ function UsersAndInvitesPanel() {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 28 }}>
         {users.map(u => (
-          <div key={u.id} style={{
-            display: 'flex', alignItems: 'center', gap: 10,
+          <div key={u.id} className="admin-user-row" style={{
+            display: 'flex', alignItems: 'flex-start', gap: 10,
             padding: '10px 12px', borderRadius: 8,
             background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)',
           }}>
@@ -5920,8 +5920,8 @@ function UsersAndInvitesPanel() {
               {u.username[0].toUpperCase()}
             </div>
 
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div className="admin-user-meta" style={{ flex: '1 1 260px', minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', columnGap: 6, rowGap: 4 }}>
                 <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>
                   {u.username}
                 </span>
@@ -5930,7 +5930,7 @@ function UsersAndInvitesPanel() {
                     fontSize: 10, padding: '2px 6px', borderRadius: 20,
                     background: 'rgba(124,106,247,0.15)', color: 'var(--accent)',
                     border: '1px solid rgba(124,106,247,0.25)', fontWeight: 600,
-                    letterSpacing: '0.04em', textTransform: 'uppercase',
+                    letterSpacing: '0.04em', textTransform: 'uppercase', whiteSpace: 'nowrap', flexShrink: 0,
                   }}>
                     {t('admin.users.adminBadge')}
                   </span>
@@ -5940,7 +5940,7 @@ function UsersAndInvitesPanel() {
                     fontSize: 10, padding: '2px 6px', borderRadius: 20,
                     background: 'rgba(34,197,94,0.12)', color: 'var(--green)',
                     border: '1px solid rgba(34,197,94,0.25)', fontWeight: 600,
-                    letterSpacing: '0.04em', textTransform: 'uppercase',
+                    letterSpacing: '0.04em', textTransform: 'uppercase', whiteSpace: 'nowrap', flexShrink: 0,
                   }}>
                     {t('admin.users.mailboxManagerBadge')}
                   </span>
@@ -5955,14 +5955,14 @@ function UsersAndInvitesPanel() {
             </div>
 
             {u.id !== currentUser?.id && (
-              <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
+              <div className="admin-user-actions" style={{ display: 'flex', gap: 5, flexWrap: 'wrap', justifyContent: 'flex-end', flex: '0 1 auto', minWidth: 0 }}>
                 <button
                   onClick={() => setImpersonateUser(u)}
                   title={t('admin.users.loginAs')}
                   style={{
-                    padding: '5px 10px', borderRadius: 6, fontSize: 11, fontWeight: 500,
+                    padding: '7px 10px', borderRadius: 6, fontSize: 11, fontWeight: 500,
                     border: '1px solid var(--border)', background: 'transparent',
-                    color: 'var(--text-primary)', cursor: 'pointer',
+                    color: 'var(--text-primary)', cursor: 'pointer', whiteSpace: 'nowrap',
                   }}
                 >
                   {t('admin.users.loginAs')}
@@ -5971,11 +5971,11 @@ function UsersAndInvitesPanel() {
                   onClick={() => handleToggleAdmin(u)}
                   title={u.isAdmin ? t('admin.users.removeAdmin') : t('admin.users.makeAdmin')}
                   style={{
-                    padding: '5px 10px', borderRadius: 6, fontSize: 11, fontWeight: 500,
+                    padding: '7px 10px', borderRadius: 6, fontSize: 11, fontWeight: 500,
                     border: '1px solid var(--border)',
                     background: u.isAdmin ? 'var(--bg-elevated)' : 'transparent',
                     color: u.isAdmin ? 'var(--text-secondary)' : 'var(--accent)',
-                    cursor: 'pointer', transition: 'all 0.1s',
+                    cursor: 'pointer', transition: 'all 0.1s', whiteSpace: 'nowrap',
                   }}
                   onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--accent)'}
                   onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
@@ -5986,11 +5986,11 @@ function UsersAndInvitesPanel() {
                   onClick={() => handleToggleMailboxAccess(u)}
                   title={u.canManageMailboxes ? t('admin.users.revokeMailboxAccess') : t('admin.users.grantMailboxAccess')}
                   style={{
-                    padding: '5px 10px', borderRadius: 6, fontSize: 11, fontWeight: 500,
+                    padding: '7px 10px', borderRadius: 6, fontSize: 11, fontWeight: 500,
                     border: '1px solid var(--border)',
                     background: u.canManageMailboxes ? 'var(--bg-elevated)' : 'transparent',
                     color: u.canManageMailboxes ? 'var(--text-secondary)' : 'var(--green)',
-                    cursor: 'pointer', transition: 'all 0.1s',
+                    cursor: 'pointer', transition: 'all 0.1s', whiteSpace: 'nowrap',
                   }}
                   onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--green)'; }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; }}
@@ -10251,8 +10251,8 @@ export default function AdminPanel() {
     >
       <div className="admin-panel admin-window" style={{
         background: 'var(--bg-secondary)', border: '1px solid var(--border)',
-        borderRadius: 16, width: '100%', maxWidth: adminTab === 'help' ? 1040 : 740,
-        height: '82vh', maxHeight: 700, display: 'flex', overflow: 'hidden',
+        borderRadius: 16, width: '100%', maxWidth: adminTab === 'help' ? 1120 : 1020,
+        height: '86vh', maxHeight: 820, display: 'flex', overflow: 'hidden',
         boxShadow: 'var(--shadow-modal)',
         animation: 'modal-enter var(--motion-normal) var(--ease-emphasized) both',
       }}>
