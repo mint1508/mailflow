@@ -764,15 +764,15 @@ function MailboxProvisioner({ config, limits, isAdmin, onChanged, onCredentials,
       </div>
       {mode === 'single' ? (
         <>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-            <Field label={t('admin.cpanel.localPart')} required style={{ flex: '1 1 220px', minWidth: 0 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10, alignItems: 'start', marginBottom: 2 }}>
+            <Field label={t('admin.cpanel.localPart')} required style={{ minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
                 <input value={createForm.localPart} onChange={e => setCreateForm(current => ({ ...current, localPart: e.target.value }))} placeholder={t('admin.cpanel.localPartPh')} style={{ ...inputStyle, flex: '1 1 auto', minWidth: 0 }} />
-                <span style={{ color: 'var(--text-tertiary)', fontSize: 12, overflowWrap: 'anywhere' }}>@{config.domain}</span>
+                <span style={{ color: 'var(--text-tertiary)', fontSize: 12, whiteSpace: 'nowrap', flexShrink: 0 }}>@{config.domain}</span>
               </div>
             </Field>
-            <Field label={t('admin.cpanel.quotaWithLimit', { max: maxQuotaMb })} required style={{ flex: '0 1 150px', minWidth: 110 }}><input type="number" min="1" max={maxQuotaMb} value={createForm.quotaMb} onChange={e => setCreateForm(current => ({ ...current, quotaMb: Math.min(maxQuotaMb, Number(e.target.value)) }))} style={inputStyle} /></Field>
-            <Field label={t('admin.cpanel.mailboxRole')} required style={{ flex: '0 1 150px', minWidth: 130 }}>
+            <Field label={t('admin.cpanel.quotaWithLimit', { max: maxQuotaMb })} required style={{ minWidth: 0 }}><input type="number" min="1" max={maxQuotaMb} value={createForm.quotaMb} onChange={e => setCreateForm(current => ({ ...current, quotaMb: Math.min(maxQuotaMb, Number(e.target.value)) }))} style={inputStyle} /></Field>
+            <Field label={t('admin.cpanel.mailboxRole')} required style={{ minWidth: 0 }}>
               <select value={isAdmin ? createForm.role : 'user'} onChange={e => setCreateForm(current => ({ ...current, role: e.target.value }))} disabled={!isAdmin} style={inputStyle}>
                 <option value="user">{t('admin.cpanel.roleUser')}</option>
                 {isAdmin && <option value="mod">{t('admin.cpanel.roleMod')}</option>}
