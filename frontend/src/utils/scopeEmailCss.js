@@ -80,12 +80,12 @@ export function prepareEmailHtml(rawHtml, uid) {
       float: none !important;
       margin: 0 !important;
       padding: 0;
-      background-color: #ffffff;
-      color-scheme: light;
+      background-color: var(--bg-secondary, #ffffff);
+      color-scheme: light dark;
       font-family: -apple-system, Arial, sans-serif;
       font-size: 14px;
       line-height: 1.6;
-      color: #1a1a1a;
+      color: var(--text-primary, #1a1a1a);
       overflow-wrap: break-word;
     }
     .${prefix} img { max-width: 100% !important; height: auto !important; }
@@ -94,9 +94,9 @@ export function prepareEmailHtml(rawHtml, uid) {
     .${prefix} td, .${prefix} th { min-width: 0 !important; }
     .${prefix} th { overflow-wrap: normal; word-break: normal; }
     .${prefix} td { word-break: break-word; }
-    .${prefix} a { color: #6366f1; }
+    .${prefix} a { color: var(--accent, #6366f1); }
     .${prefix} pre, .${prefix} code { overflow-x: auto; white-space: pre-wrap; word-break: break-all; }
-    .${prefix} blockquote { border-left: 3px solid #ddd; margin: 0; padding-left: 12px; color: #555; }
+    .${prefix} blockquote { border-left: 3px solid var(--border-subtle, #ddd); margin: 0; padding-left: 12px; color: var(--text-secondary, #555); }
   `);
 
   // Mirror the iframe's rel="noopener noreferrer" injection on all links.

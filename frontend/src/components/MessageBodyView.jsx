@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { measureContentHeight, createHeightController, forceEagerImages } from '../utils/emailFrameHeight.js';
+import { useStore } from '../store/index.js';
+import { THEMES } from '../themes.js';
 
 // The email body, rendered in its own sandboxed frame.
 //
@@ -16,6 +18,16 @@ import { measureContentHeight, createHeightController, forceEagerImages } from '
 // by default and untested, and moving it would double the size of this change.
 function MessageBodyView({ body, messageId, emailScaleRef, hasNativeContextTarget, onContextMenu, iframeRef }) {
   const { t } = useTranslation();
+  const theme = useStore(state => state.theme);
+  const themeVars = THEMES[theme]?.vars || THEMES.dark.vars;
+  const frameBackground = themeVars['--bg-secondary'] || '#ffffff';
+  const frameText = themeVars['--text-primary'] || '#1a1a1a';
+  const frameAccent = themeVars['--accent'] || '#6366f1';
+  const frameBorder = themeVars['--border-subtle'] || '#ddd';
+  const frameMutedText = themeVars['--text-secondary'] || '#555';
+  const frameColorScheme = /^(light|hippy_light|catppuccin_latte|parchment|winxp|win9x)$/.test(theme)
+    ? 'light'
+    : 'dark';
   // Holds the ResizeObserver watching the frame's document, so the effect can disconnect the
   // previous one before observing a new document.
   const roRef = useRef(null);
@@ -304,7 +316,7 @@ function MessageBodyView({ body, messageId, emailScaleRef, hasNativeContextTarge
       ref={iframeRef}
       srcDoc={`<!DOCTYPE html><html><head><meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
-      <meta name="color-scheme" content="only light">
+      <meta name="color-scheme" content="${frameColorScheme}">
       <meta http-equiv="Content-Security-Policy" content="script-src 'none'; object-src 'none'; frame-src 'none'; form-action 'none'; style-src 'unsafe-inline';">
       <base target="_blank">
     </head><body><div id="mf-scale-wrapper">${
@@ -313,11 +325,13 @@ function MessageBodyView({ body, messageId, emailScaleRef, hasNativeContextTarge
         /* Injected AFTER email HTML so our rules win the source-order tiebreak
            for same-specificity !important declarations inside the email's own
            <style> blocks (which land in <body> after the email HTML). */
-        html, body { height: auto !important; min-height: 0 !important; overflow: hidden !important; }
+        html { background-color: ${frameBackground} !important; }
+        html, body { height: auto !important; min-height: 0 !important; overflow: hidden !important;
+                     background-color: ${frameBackground} !important; }
         body { margin: 0 !important; padding: 0 !important;
-               background-color: #ffffff !important; color-scheme: light;
+               color-scheme: ${frameColorScheme};
                font-family: -apple-system, Arial, sans-serif;
-               font-size: 14px; line-height: 1.6; color: #1a1a1a;
+               font-size: 14px; line-height: 1.6; color: ${frameText};
                word-wrap: break-word; overflow-wrap: break-word; }
         img { max-width: 100% !important; height: auto !important; }
         /* Force top-level wrapper tables to fill the viewport. Selectors cover
@@ -334,9 +348,9 @@ function MessageBodyView({ body, messageId, emailScaleRef, hasNativeContextTarge
         td, th { min-width: 0 !important; }
         td { word-break: break-word; }
         th { overflow-wrap: normal; word-break: normal; }
-        a { color: #6366f1; }
+        a { color: ${frameAccent}; }
         pre, code { overflow-x: auto; white-space: pre-wrap; word-break: break-all; }
-        blockquote { border-left: 3px solid #ddd; margin: 0; padding-left: 12px; color: #555; }
+        blockquote { border-left: 3px solid ${frameBorder}; margin: 0; padding-left: 12px; color: ${frameMutedText}; }
       </style></body></html>`}
       scrolling="no"
       style={{ width: '1px', minWidth: '100%', border: 'none', display: 'block', height: '300px' }}
