@@ -138,7 +138,7 @@ router.post('/register', authLimiter, async (req, res) => {
 
     if (inviteToken) {
       const inviteResult = await client.query(
-        `SELECT id, email, invite_type, mailbox_email, email_account_id, created_by
+        `SELECT id, email, invite_type, mailbox_email, email_account_id, created_by, mailbox_role
          FROM invites
          WHERE token = $1 AND used_at IS NULL AND expires_at > NOW()
          FOR UPDATE`,
@@ -200,8 +200,11 @@ router.post('/register', authLimiter, async (req, res) => {
     }
 
     const result = await client.query(
-      'INSERT INTO users (username, password_hash, is_admin) VALUES ($1, $2, $3) RETURNING id, username, is_admin, can_manage_mailboxes',
-      [username.toLowerCase().trim(), hash, isFirstUser]
+      `INSERT INTO users (username, password_hash, is_admin, can_manage_mailboxes, preferences)
+       VALUES ($1, $2, $3, $4,
+               jsonb_build_object('theme', COALESCE((SELECT value FROM system_settings WHERE key = 'default_theme'), 'dark')))
+       RETURNING id, username, is_admin, can_manage_mailboxes`,
+      [username.toLowerCase().trim(), hash, isFirstUser, invite?.invite_type === 'mailbox_activation' && invite.mailbox_role === 'mod']
     );
     const newUser = result.rows[0];
 

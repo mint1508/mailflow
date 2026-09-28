@@ -976,7 +976,11 @@
       "customCssDescription": "Wstrzyknij dodatkowy CSS po aktywnym motywie. Użyj własnych właściwości CSS (np. --accent, --bg-primary), aby nadpisać wartości motywu, lub dodaj własne reguły. Zostaną zastosowane do wszystkich użytkowników.",
       "customCssPlaceholder": ":root {\n  --accent: #e74c3c;\n}",
       "customCssSave": "Zapisz",
-      "customCssSaved": "Zapisano"
+      "customCssSaved": "Zapisano",
+      "defaultTheme": "Default theme for new users",
+      "defaultThemeDescription": "Choose the theme assigned to users created after you save this setting. Existing users keep their current theme.",
+      "setDefaultTheme": "Set as default",
+      "defaultThemeSaved": "Default theme saved"
     },
     "messageList": {
       "title": "Lista wiadomości",
@@ -1443,7 +1447,10 @@
       "actions": "Zarządzane w Kontach",
       "adminDescription": "Ustawienia łącznika tylko dla administratora. Tworzenie i zarządzanie są w Kontach.",
       "adminOnlyHint": "Użyj Kont",
-      "quotaWithLimit": "Limit (MB, maks. {{max}})"
+      "quotaWithLimit": "Limit (MB, maks. {{max}})",
+      "mailboxRole": "MailFlow role",
+      "roleUser": "User",
+      "roleMod": "Mod — mailbox manager"
     },
     "systemEmail": {
       "tabUsers": "Użytkownicy i zaproszenia",

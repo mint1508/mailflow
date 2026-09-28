@@ -7,6 +7,12 @@ import { getCpanelConfig } from './cpanelClient.js';
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
+function normalizeMailboxRole(value) {
+  const role = String(value || 'user').trim().toLowerCase();
+  if (!['user', 'mod'].includes(role)) throw new Error('Mailbox role must be user or mod');
+  return role;
+}
+
 function normalizeEmail(value, label) {
   const email = String(value || '').trim().toLowerCase();
   if (!EMAIL_RE.test(email)) throw new Error(`${label} must be a valid email address`);
@@ -45,9 +51,10 @@ async function deliverActivation({ contactEmail, mailboxEmail, url }) {
   await sendSystemEmail({ to: contactEmail, subject, text, html });
 }
 
-export async function createMailboxActivation({ actorUserId, mailbox, contactEmail }) {
+export async function createMailboxActivation({ actorUserId, mailbox, contactEmail, role = 'user' }) {
   const cleanContactEmail = optionalEmail(contactEmail, 'Contact email');
   const mailboxEmail = normalizeEmail(mailbox?.email, 'Mailbox email');
+  const mailboxRole = normalizeMailboxRole(role);
   const config = await getCpanelConfig();
   if (!config) throw new Error('cPanel connector is not configured');
 
@@ -75,9 +82,9 @@ export async function createMailboxActivation({ actorUserId, mailbox, contactEma
     );
     account = accountResult.rows[0];
     await client.query(
-      `INSERT INTO invites (email, token, created_by, expires_at, invite_type, mailbox_email, email_account_id)
-       VALUES ($1,$2,$3,$4,'mailbox_activation',$5,$6)`,
-      [cleanContactEmail || mailboxEmail, token, actorUserId, expiresAt, mailboxEmail, account.id],
+      `INSERT INTO invites (email, token, created_by, expires_at, invite_type, mailbox_email, email_account_id, mailbox_role)
+       VALUES ($1,$2,$3,$4,'mailbox_activation',$5,$6,$7)`,
+      [cleanContactEmail || mailboxEmail, token, actorUserId, expiresAt, mailboxEmail, account.id, mailboxRole],
     );
     await client.query('COMMIT');
   } catch (error) {
@@ -98,7 +105,7 @@ export async function createMailboxActivation({ actorUserId, mailbox, contactEma
       emailError = error.message;
     }
   }
-  return { account, contactEmail: cleanContactEmail, activationUrl: url, emailSent, emailSkipped, emailError, expiresAt };
+  return { account, contactEmail: cleanContactEmail, activationUrl: url, emailSent, emailSkipped, emailError, expiresAt, role: mailboxRole };
 }
 
 export async function resendMailboxActivation(mailboxEmail) {
@@ -124,9 +131,10 @@ export async function resendMailboxActivation(mailboxEmail) {
   return { activationUrl: url, contactEmail, emailSent: true, emailSkipped: false, emailError: null, expiresAt };
 }
 
-export async function createExistingMailboxActivation({ actorUserId, mailboxEmail, contactEmail }) {
+export async function createExistingMailboxActivation({ actorUserId, mailboxEmail, contactEmail, role = 'user' }) {
   const normalized = normalizeEmail(mailboxEmail, 'Mailbox email');
   const cleanContactEmail = optionalEmail(contactEmail, 'Contact email');
+  const mailboxRole = normalizeMailboxRole(role);
   const config = await getCpanelConfig();
   if (!config) throw new Error('cPanel connector is not configured');
 
@@ -185,9 +193,9 @@ export async function createExistingMailboxActivation({ actorUserId, mailboxEmai
       [normalized],
     );
     await client.query(
-      `INSERT INTO invites (email, token, created_by, expires_at, invite_type, mailbox_email, email_account_id)
-       VALUES ($1,$2,$3,$4,'mailbox_activation',$5,$6)`,
-      [cleanContactEmail || normalized, token, actorUserId, expiresAt, normalized, accountId],
+      `INSERT INTO invites (email, token, created_by, expires_at, invite_type, mailbox_email, email_account_id, mailbox_role)
+       VALUES ($1,$2,$3,$4,'mailbox_activation',$5,$6,$7)`,
+      [cleanContactEmail || normalized, token, actorUserId, expiresAt, normalized, accountId, mailboxRole],
     );
     await client.query('COMMIT');
   } catch (error) {
@@ -208,7 +216,7 @@ export async function createExistingMailboxActivation({ actorUserId, mailboxEmai
       emailError = error.message;
     }
   }
-  return { accountId, contactEmail: cleanContactEmail, activationUrl: url, emailSent, emailSkipped, emailError, expiresAt };
+  return { accountId, contactEmail: cleanContactEmail, activationUrl: url, emailSent, emailSkipped, emailError, expiresAt, role: mailboxRole };
 }
 
 export async function mailboxActivationState(mailboxEmails) {

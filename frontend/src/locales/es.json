@@ -960,7 +960,11 @@
       "customCssDescription": "Inyecta CSS adicional después del tema activo. Usa propiedades CSS personalizadas (p. ej. --accent, --bg-primary) para anular los valores del tema o añadir tus propias reglas. Se aplica a todos los usuarios.",
       "customCssPlaceholder": ":root {\n  --accent: #e74c3c;\n}",
       "customCssSave": "Guardar",
-      "customCssSaved": "Guardado"
+      "customCssSaved": "Guardado",
+      "defaultTheme": "Default theme for new users",
+      "defaultThemeDescription": "Choose the theme assigned to users created after you save this setting. Existing users keep their current theme.",
+      "setDefaultTheme": "Set as default",
+      "defaultThemeSaved": "Default theme saved"
     },
     "messageList": {
       "title": "Lista de mensajes",
@@ -1424,7 +1428,10 @@
       "actions": "Gestionado en Cuentas",
       "adminDescription": "Ajustes del conector solo para administradores. La creación y gestión diaria están en Cuentas.",
       "adminOnlyHint": "Usar Cuentas",
-      "quotaWithLimit": "Cuota (MB, máx. {{max}})"
+      "quotaWithLimit": "Cuota (MB, máx. {{max}})",
+      "mailboxRole": "MailFlow role",
+      "roleUser": "User",
+      "roleMod": "Mod — mailbox manager"
     },
     "systemEmail": {
       "tabUsers": "Usuarios e invitaciones",

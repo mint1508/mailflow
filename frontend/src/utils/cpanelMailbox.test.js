@@ -11,8 +11,8 @@ describe('cPanel mailbox bulk input', () => {
   });
 
   it('parses CSV headers and quoted values', () => {
-    assert.deepEqual(parseCpanelBulkRows('email,contactEmail,quotaMb\n"support@example.com","owner@example.net",1024', 'csv'), [
-      { email: 'support@example.com', contactEmail: 'owner@example.net', quotaMb: '1024' },
+    assert.deepEqual(parseCpanelBulkRows('email,contactEmail,quotaMb,role\n"support@example.com","owner@example.net",1024,mod', 'csv'), [
+      { email: 'support@example.com', contactEmail: 'owner@example.net', quotaMb: '1024', role: 'mod' },
     ]);
   });
 });

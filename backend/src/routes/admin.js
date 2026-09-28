@@ -17,6 +17,14 @@ import { MailboxAuthenticationUnavailableError, verifyUserCredential } from '../
 
 const router = Router();
 
+const DEFAULT_THEME_KEYS = new Set([
+  'dark', 'light', 'hippy_light', 'hippy_dark', 'gtd', 'gruvbox',
+  'catppuccin_mocha', 'catppuccin_latte', 'nord', 'tokyo_night',
+  'solarized', 'dracula', 'rose_pine', 'midnight_blue', 'cyberpunk',
+  'forest', 'sunset', 'executive', 'parchment', 'slate_pro', 'monokai',
+  'high_contrast', 'espresso', 'winxp', 'win9x',
+]);
+
 function saveSession(session) {
   if (typeof session?.save !== 'function') return Promise.resolve();
   return new Promise((resolve, reject) => session.save(error => (error ? reject(error) : resolve())));
@@ -190,7 +198,7 @@ router.get('/auth-events', async (req, res) => {
 router.patch('/settings', async (req, res) => {
   const { registration_open, internal_auth_disabled, auth_max_attempts, auth_window_minutes,
     allow_private_hosts, allow_insecure_tls, allow_nonstandard_ports,
-    mfa_enforcement, mfa_device_trust, custom_css } = req.body;
+    mfa_enforcement, mfa_device_trust, custom_css, default_theme } = req.body;
   if (typeof registration_open === 'boolean') {
     await query(
       `INSERT INTO system_settings (key, value, updated_at)
@@ -300,6 +308,17 @@ router.patch('/settings', async (req, res) => {
       [sanitized]
     );
     console.log(`[admin] ${req.session.username} updated custom_css (${sanitized.length} chars)`);
+  }
+  if (default_theme !== undefined) {
+    if (typeof default_theme !== 'string' || !DEFAULT_THEME_KEYS.has(default_theme)) {
+      return res.status(400).json({ error: 'default_theme is not a supported theme' });
+    }
+    await query(
+      `INSERT INTO system_settings (key, value, updated_at) VALUES ('default_theme', $1, NOW())
+       ON CONFLICT (key) DO UPDATE SET value = $1, updated_at = NOW()`,
+      [default_theme],
+    );
+    console.log(`[admin] ${req.session.username} set default_theme=${default_theme}`);
   }
   invalidateConnectionPolicyCache();
   res.json({ ok: true });

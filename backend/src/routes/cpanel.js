@@ -91,6 +91,16 @@ function audit(actorUserId, action, success, detail = {}) {
   ).catch(error => console.warn('cPanel audit write failed:', error.message));
 }
 
+async function mailboxRole(req, value) {
+  const role = String(value || 'user').trim().toLowerCase();
+  if (!['user', 'mod'].includes(role)) throw new Error('Mailbox role must be user or mod');
+  if (role === 'mod') {
+    const result = await query('SELECT is_admin FROM users WHERE id = $1', [req.session.userId]);
+    if (!result.rows[0]?.is_admin) throw Object.assign(new Error('Only admins can assign the mailbox manager role'), { status: 403 });
+  }
+  return role;
+}
+
 router.get('/connection', requireAdmin, async (_req, res) => {
   const config = await getCpanelConfig();
   res.json({ config: publicConfig(config) });
@@ -163,11 +173,13 @@ router.post('/mailboxes/sync', async (req, res) => {
 router.post('/mailboxes', async (req, res) => {
   let result = null;
   try {
+    const role = await mailboxRole(req, req.body.role);
     result = await createCpanelMailbox({ ...req.body, password: undefined });
     const activation = await createMailboxActivation({
       actorUserId: req.session.userId,
       mailbox: result,
       contactEmail: req.body.contactEmail,
+      role,
     });
     await audit(req.session.userId, 'mailbox_created', true, { email: result.email, quotaMb: result.quotaMb, activationEmailSent: activation.emailSent });
     res.status(201).json({
@@ -187,12 +199,15 @@ router.post('/mailboxes', async (req, res) => {
   } catch (error) {
     if (result?.email) await deleteCpanelMailbox(result.email).catch(cleanupError => console.warn('Mailbox cleanup failed:', cleanupError.message));
     await audit(req.session.userId, 'mailbox_created', false, { error: error.message });
-    res.status(400).json({ error: error.message });
+    res.status(error.status || 400).json({ error: error.message });
   }
 });
 
 router.post('/mailboxes/bulk', async (req, res) => {
   try {
+    const items = Array.isArray(req.body?.items) ? req.body.items : [];
+    const roles = [];
+    for (const item of items) roles.push(await mailboxRole(req, item?.role || req.body?.role));
     const result = await createCpanelMailboxes(req.body || {});
     const activated = [];
     for (const mailbox of result.created) {
@@ -202,6 +217,7 @@ router.post('/mailboxes/bulk', async (req, res) => {
           actorUserId: req.session.userId,
           mailbox,
           contactEmail: item.contactEmail,
+          role: roles[mailbox.index] || 'user',
         });
         activated.push({
           index: mailbox.index,
@@ -228,7 +244,7 @@ router.post('/mailboxes/bulk', async (req, res) => {
     res.json({ ok: result.failed.length === 0, ...result });
   } catch (error) {
     await audit(req.session.userId, 'mailboxes_bulk_created', false, { error: error.message });
-    res.status(400).json({ error: error.message });
+    res.status(error.status || 400).json({ error: error.message });
   }
 });
 
@@ -281,16 +297,18 @@ router.post('/mailboxes/:email/activation/resend', async (req, res) => {
 
 router.post('/mailboxes/:email/activation', async (req, res) => {
   try {
+    const role = await mailboxRole(req, req.body?.role);
     const result = await createExistingMailboxActivation({
       actorUserId: req.session.userId,
       mailboxEmail: req.params.email,
       contactEmail: req.body?.contactEmail,
+      role,
     });
     await audit(req.session.userId, 'mailbox_activation_created', true, { email: req.params.email, activationEmailSent: result.emailSent });
     res.status(201).json({ ok: true, activation: result });
   } catch (error) {
     await audit(req.session.userId, 'mailbox_activation_created', false, { email: req.params.email, error: error.message });
-    res.status(400).json({ error: error.message });
+    res.status(error.status || 400).json({ error: error.message });
   }
 });
 

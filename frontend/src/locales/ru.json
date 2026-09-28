@@ -960,7 +960,11 @@
       "customCssDescription": "Добавляет CSS после активной темы. Используйте CSS-переменные (например, --accent, --bg-primary) для переопределения значений темы или добавления собственных правил. Применяется ко всем пользователям.",
       "customCssPlaceholder": ":root {\n  --accent: #e74c3c;\n}",
       "customCssSave": "Сохранить",
-      "customCssSaved": "Сохранено"
+      "customCssSaved": "Сохранено",
+      "defaultTheme": "Default theme for new users",
+      "defaultThemeDescription": "Choose the theme assigned to users created after you save this setting. Existing users keep their current theme.",
+      "setDefaultTheme": "Set as default",
+      "defaultThemeSaved": "Default theme saved"
     },
     "messageList": {
       "title": "Список сообщений",
@@ -1424,7 +1428,10 @@
       "actions": "Управляется в Аккаунтах",
       "adminDescription": "Настройки коннектора доступны только администратору. Создание и управление находятся в Аккаунтах.",
       "adminOnlyHint": "Используйте Аккаунты",
-      "quotaWithLimit": "Квота (МБ, макс. {{max}})"
+      "quotaWithLimit": "Квота (МБ, макс. {{max}})",
+      "mailboxRole": "MailFlow role",
+      "roleUser": "User",
+      "roleMod": "Mod — mailbox manager"
     },
     "systemEmail": {
       "tabUsers": "Пользователи и приглашения",

@@ -60,6 +60,7 @@ vi.mock('../services/mailAccess.js', () => ({
 import express from 'express';
 import cpanelRoutes from './cpanel.js';
 import { query } from '../services/db.js';
+import { createMailboxActivation } from '../services/mailboxActivation.js';
 
 function request(path, { role = 'mod', method = 'GET', body } = {}) {
   return fetch(`${base}/api/cpanel${path}`, {
@@ -124,6 +125,28 @@ describe('cPanel mailbox-manager permissions', () => {
     expect(await response.json()).toMatchObject({
       mailbox: { email: 'new@example.test', firstPassword: 'Generated-first-password!' },
     });
+  });
+
+  it('lets an admin assign the mailbox manager role to the activation invite', async () => {
+    query.mockResolvedValueOnce({ rows: [{ is_admin: true }] });
+    const response = await request('/mailboxes', {
+      role: 'admin',
+      method: 'POST',
+      body: { localPart: 'new', quotaMb: 1024, role: 'mod' },
+    });
+    expect(response.status).toBe(201);
+    expect(createMailboxActivation).toHaveBeenLastCalledWith(expect.objectContaining({ role: 'mod' }));
+  });
+
+  it('prevents a mod from assigning the mailbox manager role', async () => {
+    query.mockResolvedValueOnce({ rows: [{ is_admin: false }] });
+    const response = await request('/mailboxes', {
+      role: 'mod',
+      method: 'POST',
+      body: { localPart: 'new', quotaMb: 1024, role: 'mod' },
+    });
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ error: 'Only admins can assign the mailbox manager role' });
   });
 
   it.each(adminOnly)('denies mod access to %s %s', async (method, path, body) => {

@@ -209,10 +209,16 @@ export async function provisionMailboxUser({ email, password, passwordHash, conf
     }
 
     const userResult = await client.query(
-      `INSERT INTO users (username, password_hash, is_admin)
-       VALUES ($1, $2, false)
+      `INSERT INTO users (username, password_hash, is_admin, can_manage_mailboxes, preferences)
+       VALUES ($1, $2, false,
+               EXISTS (
+                 SELECT 1 FROM invites
+                 WHERE email_account_id = $3 AND invite_type = 'mailbox_activation'
+                   AND used_at IS NULL AND expires_at > NOW() AND mailbox_role = 'mod'
+               ),
+               jsonb_build_object('theme', COALESCE((SELECT value FROM system_settings WHERE key = 'default_theme'), 'dark')))
        RETURNING id, username, display_name, avatar, is_admin, can_manage_mailboxes, totp_enabled`,
-      [email, passwordHash],
+      [email, passwordHash, managedAccount.id],
     );
     const user = userResult.rows[0];
     const encryptedPassword = encrypt(password);

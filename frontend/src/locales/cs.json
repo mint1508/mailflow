@@ -983,7 +983,11 @@
       "customCssDescription": "Vložte doplňující CSS, které se použije po aktivním motivu. Hodnoty motivu můžete přepsat pomocí vlastních proměnných CSS (např. --accent, --bg-primary) nebo přidat vlastní pravidla. Použije se pro všechny uživatele.",
       "customCssPlaceholder": ":root {\n  --accent: #e74c3c;\n}",
       "customCssSave": "Uložit",
-      "customCssSaved": "Uloženo"
+      "customCssSaved": "Uloženo",
+      "defaultTheme": "Default theme for new users",
+      "defaultThemeDescription": "Choose the theme assigned to users created after you save this setting. Existing users keep their current theme.",
+      "setDefaultTheme": "Set as default",
+      "defaultThemeSaved": "Default theme saved"
     },
     "accounts": {
       "title": "E-mailové účty",
@@ -1558,7 +1562,10 @@
       "actions": "Spravovat v Účtech",
       "adminDescription": "Nastavení konektoru pouze pro správce. Vytváření a správa probíhá v Účtech.",
       "adminOnlyHint": "Použít Účty",
-      "quotaWithLimit": "Kvóta (MB, max. {{max}})"
+      "quotaWithLimit": "Kvóta (MB, max. {{max}})",
+      "mailboxRole": "MailFlow role",
+      "roleUser": "User",
+      "roleMod": "Mod — mailbox manager"
     },
     "systemEmail": {
       "tabUsers": "Uživatelé a pozvánky",

@@ -67,11 +67,14 @@ describe('createExistingMailboxActivation', () => {
     pool.connect.mockResolvedValue(client);
 
     await expect(createExistingMailboxActivation({
-      actorUserId: 'manager', mailboxEmail: 'user@example.test', contactEmail: 'owner@personal.test',
-    })).resolves.toMatchObject({ accountId: 'pending', emailSent: true });
+      actorUserId: 'manager', mailboxEmail: 'user@example.test', contactEmail: 'owner@personal.test', role: 'mod',
+    })).resolves.toMatchObject({ accountId: 'pending', emailSent: true, role: 'mod' });
 
     const credentialClear = client.query.mock.calls.find(([sql]) => String(sql).includes('auth_pass = NULL'));
     expect(credentialClear?.[0]).toContain('smtp_auth_pass = NULL');
+    const inviteInsert = client.query.mock.calls.find(([sql]) => String(sql).includes('INSERT INTO invites'));
+    expect(inviteInsert?.[0]).toContain('mailbox_role');
+    expect(inviteInsert?.[1]).toContain('mod');
     expect(client.query).toHaveBeenLastCalledWith('COMMIT');
   });
 });

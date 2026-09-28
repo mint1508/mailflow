@@ -960,7 +960,11 @@
       "customCssDescription": "Inject additional CSS after the active theme. Use CSS custom properties (e.g. --accent, --bg-primary) to override theme values, or add your own rules. Applied to all users.",
       "customCssPlaceholder": ":root {\n  --accent: #e74c3c;\n}",
       "customCssSave": "Save",
-      "customCssSaved": "Saved"
+      "customCssSaved": "Saved",
+      "defaultTheme": "Default theme for new users",
+      "defaultThemeDescription": "Choose the theme assigned to users created after you save this setting. Existing users keep their current theme.",
+      "setDefaultTheme": "Set as default",
+      "defaultThemeSaved": "Default theme saved"
     },
     "messageList": {
       "title": "Message List",
@@ -1465,7 +1469,10 @@
       "actions": "Managed from Accounts",
       "adminOnlyHint": "Use Accounts",
       "linked": "Mailbox added to Accounts.",
-      "quotaWithLimit": "Quota (MB, max {{max}})"
+      "quotaWithLimit": "Quota (MB, max {{max}})",
+      "mailboxRole": "MailFlow role",
+      "roleUser": "User",
+      "roleMod": "Mod — mailbox manager"
     },
     "systemEmail": {
       "tabUsers": "Users & Invites",

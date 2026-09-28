@@ -629,12 +629,13 @@ function AccountForm({ initial, onSave, onCancel, cpanelConfig = null }) {
 }
 
 // ─── Mailbox provisioning (used by the mod-facing Accounts tab) ───────────────
-function MailboxProvisioner({ config, limits, onChanged, onCredentials, onNotice }) {
+function MailboxProvisioner({ config, limits, isAdmin, onChanged, onCredentials, onNotice }) {
   const { t } = useTranslation();
   const [mode, setMode] = useState('single');
-  const [createForm, setCreateForm] = useState({ localPart: '', quotaMb: 1024, contactEmail: '' });
+  const [createForm, setCreateForm] = useState({ localPart: '', quotaMb: 1024, contactEmail: '', role: 'user' });
   const [bulkText, setBulkText] = useState('');
   const [bulkQuotaMb, setBulkQuotaMb] = useState(1024);
+  const [bulkRole, setBulkRole] = useState('user');
   const [bulkResult, setBulkResult] = useState(null);
   const [busy, setBusy] = useState('');
   const csvInputRef = useRef(null);
@@ -667,7 +668,7 @@ function MailboxProvisioner({ config, limits, onChanged, onCredentials, onNotice
     setBusy('create');
     setBulkResult(null);
     try {
-      const result = await api.admin.cpanel.createMailbox(createForm);
+      const result = await api.admin.cpanel.createMailbox({ ...createForm, role: isAdmin ? createForm.role : 'user' });
       onCredentials?.({ email: result.mailbox.email, firstPassword: result.mailbox.firstPassword, ...result.activation });
       setCreateForm(current => ({ ...current, localPart: '', contactEmail: '' }));
       window.dispatchEvent(new CustomEvent('mailflow:accounts_refresh'));
@@ -696,7 +697,11 @@ function MailboxProvisioner({ config, limits, onChanged, onCredentials, onNotice
     setBusy('bulk');
     setBulkResult(null);
     try {
-      const result = await api.admin.cpanel.createMailboxesBulk({ items, quotaMb: bulkQuotaMb });
+      const result = await api.admin.cpanel.createMailboxesBulk({
+        items: items.map(item => ({ ...item, role: isAdmin ? (item.role || bulkRole) : 'user' })),
+        quotaMb: bulkQuotaMb,
+        role: isAdmin ? bulkRole : 'user',
+      });
       setBulkResult(result);
       window.dispatchEvent(new CustomEvent('mailflow:accounts_refresh'));
       await onChanged?.();
@@ -767,6 +772,12 @@ function MailboxProvisioner({ config, limits, onChanged, onCredentials, onNotice
               </div>
             </Field>
             <Field label={t('admin.cpanel.quotaWithLimit', { max: maxQuotaMb })} required style={{ flex: '0 1 150px', minWidth: 110 }}><input type="number" min="1" max={maxQuotaMb} value={createForm.quotaMb} onChange={e => setCreateForm(current => ({ ...current, quotaMb: Math.min(maxQuotaMb, Number(e.target.value)) }))} style={inputStyle} /></Field>
+            <Field label={t('admin.cpanel.mailboxRole')} required style={{ flex: '0 1 150px', minWidth: 130 }}>
+              <select value={isAdmin ? createForm.role : 'user'} onChange={e => setCreateForm(current => ({ ...current, role: e.target.value }))} disabled={!isAdmin} style={inputStyle}>
+                <option value="user">{t('admin.cpanel.roleUser')}</option>
+                {isAdmin && <option value="mod">{t('admin.cpanel.roleMod')}</option>}
+              </select>
+            </Field>
           </div>
           <Field label={`${t('admin.cpanel.contactEmail')} (optional)`}>
             <input type="email" value={createForm.contactEmail} onChange={e => setCreateForm(current => ({ ...current, contactEmail: e.target.value }))} placeholder={t('admin.cpanel.contactEmailPh')} style={inputStyle} />
@@ -777,6 +788,12 @@ function MailboxProvisioner({ config, limits, onChanged, onCredentials, onNotice
         <>
           <div style={{ fontSize: 11, color: 'var(--text-tertiary)', lineHeight: 1.5, marginBottom: 8 }}>{mode === 'csv' ? t('admin.cpanel.csvHint') : t('admin.cpanel.bulkHint')}</div>
           <Field label={t('admin.cpanel.quotaWithLimit', { max: maxQuotaMb })} required><input type="number" min="1" max={maxQuotaMb} value={bulkQuotaMb} onChange={e => setBulkQuotaMb(Math.min(maxQuotaMb, Number(e.target.value)))} style={{ ...inputStyle, maxWidth: 160 }} /></Field>
+          <Field label={t('admin.cpanel.mailboxRole')} required style={{ maxWidth: 260 }}>
+            <select value={isAdmin ? bulkRole : 'user'} onChange={e => setBulkRole(e.target.value)} disabled={!isAdmin} style={inputStyle}>
+              <option value="user">{t('admin.cpanel.roleUser')}</option>
+              {isAdmin && <option value="mod">{t('admin.cpanel.roleMod')}</option>}
+            </select>
+          </Field>
           <textarea value={bulkText} onChange={e => setBulkText(e.target.value)} placeholder={t('admin.cpanel.bulkPh')} rows={5} style={{ ...inputStyle, resize: 'vertical', fontFamily: 'var(--font-mono)', marginBottom: 10 }} />
           {mode === 'csv' && <label style={{ display: 'block', marginBottom: 10, color: 'var(--text-secondary)', fontSize: 12 }}>{t('admin.cpanel.csvChoose')}<input ref={csvInputRef} type="file" accept=".csv,text/csv" onChange={readCsv} style={{ display: 'block', marginTop: 5, color: 'var(--text-secondary)', fontSize: 12 }} /></label>}
           <button type="button" onClick={createBulk} disabled={!!busy || !bulkText.trim()} style={{ padding: '9px 13px', background: 'var(--accent)', color: 'var(--accent-text)', border: 'none', borderRadius: 7, cursor: busy ? 'wait' : 'pointer', fontSize: 12 }}>{busy === 'bulk' ? t('admin.cpanel.bulkCreating') : t('admin.accounts.createMailboxes')}</button>
@@ -816,6 +833,7 @@ function AccountsTab() {
   const [quotaSaving, setQuotaSaving] = useState(false);
   const [activationEmailDraft, setActivationEmailDraft] = useState({});
   const [activationDialogMailbox, setActivationDialogMailbox] = useState(null);
+  const [activationRole, setActivationRole] = useState('user');
   const [activationDialogError, setActivationDialogError] = useState('');
   const [activationDialogInfo, setActivationDialogInfo] = useState(null);
   const [activationSending, setActivationSending] = useState(false);
@@ -903,7 +921,7 @@ function AccountsTab() {
     }
     setActivationSending(true);
     try {
-      const result = await api.admin.cpanel.createMailboxActivation(mailbox.email, contactEmail);
+      const result = await api.admin.cpanel.createMailboxActivation(mailbox.email, contactEmail, isAdmin ? activationRole : 'user');
       setActivationInfo({ email: mailbox.email, ...result.activation });
       setActivationDialogInfo({ email: mailbox.email, ...result.activation });
       setActivationEmailDraft(current => ({ ...current, [mailbox.email]: '' }));
@@ -927,6 +945,7 @@ function AccountsTab() {
 
   const openActivationDialog = (mailbox) => {
     setActivationDialogMailbox(mailbox);
+    setActivationRole('user');
     setActivationDialogError('');
     setActivationDialogInfo(null);
   };
@@ -1185,7 +1204,7 @@ function AccountsTab() {
           {t('sidebar.backToAccounts')}
         </button>
         <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 16 }}>{t('admin.accounts.createMailboxTitle')}</div>
-        <MailboxProvisioner config={cpanelConfig} limits={cpanelLimits} onChanged={reloadCpanelMailboxes} onNotice={setProvisionNotice} onCredentials={setActivationInfo} />
+        <MailboxProvisioner config={cpanelConfig} limits={cpanelLimits} isAdmin={isAdmin} onChanged={reloadCpanelMailboxes} onNotice={setProvisionNotice} onCredentials={setActivationInfo} />
         {activationInfo && (
           <div style={{ marginTop: 12, padding: 12, border: '1px solid var(--green)', borderRadius: 8, background: 'rgba(34,197,94,0.08)' }}>
             <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>{t('admin.cpanel.activationReady')}</div>
@@ -1762,6 +1781,11 @@ function AccountsTab() {
           <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 14 }}>{activationDialogMailbox.email}</div>
           <label style={{ display: 'block', fontSize: 12, color: 'var(--text-secondary)', marginBottom: 5 }}>{t('admin.cpanel.contactEmail')} (optional)</label>
           <input autoFocus type="email" value={activationEmailDraft[activationDialogMailbox.email] || ''} onChange={event => setActivationEmailDraft(current => ({ ...current, [activationDialogMailbox.email]: event.target.value }))} placeholder={t('admin.cpanel.contactEmailPh')} style={inputStyle} />
+          <label style={{ display: 'block', fontSize: 12, color: 'var(--text-secondary)', margin: '12px 0 5px' }}>{t('admin.cpanel.mailboxRole')}</label>
+          <select value={isAdmin ? activationRole : 'user'} onChange={event => setActivationRole(event.target.value)} disabled={!isAdmin} style={inputStyle}>
+            <option value="user">{t('admin.cpanel.roleUser')}</option>
+            {isAdmin && <option value="mod">{t('admin.cpanel.roleMod')}</option>}
+          </select>
           {activationDialogError && <div style={{ marginTop: 10, padding: '8px 10px', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 7, color: 'var(--red)', fontSize: 12 }}>{activationDialogError}</div>}
           {activationDialogInfo?.activationUrl && <div style={{ marginTop: 10, maxWidth: '100%', minWidth: 0, fontSize: 11, color: 'var(--text-secondary)', overflowWrap: 'anywhere', wordBreak: 'break-word' }}><div style={{ color: 'var(--text-tertiary)', marginBottom: 3 }}>{t('admin.cpanel.activationReady')}</div><div>{activationDialogInfo.activationUrl}</div><button type="button" onClick={() => copyToClipboard(activationDialogInfo.activationUrl)} style={{ display: 'block', marginTop: 6, padding: '5px 8px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 11 }}>{t('admin.cpanel.copyActivation')}</button></div>}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 18 }}>
@@ -1853,11 +1877,17 @@ function ThemesTab() {
   const [cssSaving, setCssSaving] = useState(false);
   const [cssSaved, setCssSaved] = useState(false);
   const [cssError, setCssError] = useState('');
+  const [defaultTheme, setDefaultTheme] = useState('dark');
+  const [defaultThemeSaving, setDefaultThemeSaving] = useState(false);
+  const [defaultThemeSaved, setDefaultThemeSaved] = useState(false);
 
   useEffect(() => {
     if (!user?.isAdmin) return;
     api.admin.getSettings()
-      .then(d => setCustomCss(d.settings.custom_css || ''))
+      .then(d => {
+        setCustomCss(d.settings.custom_css || '');
+        if (THEMES[d.settings.default_theme]) setDefaultTheme(d.settings.default_theme);
+      })
       .catch(() => {});
   }, [user?.isAdmin]);
 
@@ -1879,6 +1909,21 @@ function ThemesTab() {
       setCssError(err.message || 'Failed to save');
     } finally {
       setCssSaving(false);
+    }
+  };
+
+  const handleSaveDefaultTheme = async () => {
+    setDefaultThemeSaving(true);
+    setDefaultThemeSaved(false);
+    setCssError('');
+    try {
+      await api.admin.updateSettings({ default_theme: defaultTheme });
+      setDefaultThemeSaved(true);
+      setTimeout(() => setDefaultThemeSaved(false), 2000);
+    } catch (err) {
+      setCssError(err.message || 'Failed to save');
+    } finally {
+      setDefaultThemeSaving(false);
     }
   };
 
@@ -1941,6 +1986,19 @@ function ThemesTab() {
           </button>
         ))}
       </div>
+
+      {user?.isAdmin && <div style={{ borderTop: '1px solid var(--border-subtle)', marginTop: 28, paddingTop: 28 }}>
+        <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>{t('admin.appearance.defaultTheme')}</div>
+        <div style={{ fontSize: 13, color: 'var(--text-tertiary)', marginBottom: 12 }}>{t('admin.appearance.defaultThemeDescription')}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <select value={defaultTheme} onChange={event => setDefaultTheme(event.target.value)} style={{ ...inputStyle, width: 'auto', minWidth: 200 }}>
+            {Object.entries(THEMES).map(([key, themeObj]) => <option key={key} value={key}>{themeObj.label}</option>)}
+          </select>
+          <button type="button" onClick={handleSaveDefaultTheme} disabled={defaultThemeSaving} style={{ padding: '8px 13px', border: 'none', borderRadius: 7, background: 'var(--accent)', color: 'var(--accent-text)', fontSize: 12, cursor: defaultThemeSaving ? 'wait' : 'pointer', opacity: defaultThemeSaving ? 0.7 : 1 }}>
+            {defaultThemeSaving ? t('common.saving') : defaultThemeSaved ? t('admin.appearance.defaultThemeSaved') : t('admin.appearance.setDefaultTheme')}
+          </button>
+        </div>
+      </div>}
 
       {user?.isAdmin && <div style={{ borderTop: '1px solid var(--border-subtle)', marginTop: 28, paddingTop: 28 }}>
         <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>

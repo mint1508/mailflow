@@ -960,7 +960,11 @@
       "customCssDescription": "在当前主题之后注入额外的 CSS。使用 CSS 自定义属性（如 --accent、--bg-primary）覆盖主题值或添加自定义规则。对所有用户生效。",
       "customCssPlaceholder": ":root {\n  --accent: #e74c3c;\n}",
       "customCssSave": "保存",
-      "customCssSaved": "已保存"
+      "customCssSaved": "已保存",
+      "defaultTheme": "Default theme for new users",
+      "defaultThemeDescription": "Choose the theme assigned to users created after you save this setting. Existing users keep their current theme.",
+      "setDefaultTheme": "Set as default",
+      "defaultThemeSaved": "Default theme saved"
     },
     "messageList": {
       "title": "邮件列表",
@@ -1424,7 +1428,10 @@
       "actions": "在账户中管理",
       "adminDescription": "仅管理员可配置连接器。邮箱创建和日常管理位于账户中。",
       "adminOnlyHint": "请在账户中操作",
-      "quotaWithLimit": "配额（MB，最多 {{max}}）"
+      "quotaWithLimit": "配额（MB，最多 {{max}}）",
+      "mailboxRole": "MailFlow role",
+      "roleUser": "User",
+      "roleMod": "Mod — mailbox manager"
     },
     "systemEmail": {
       "tabUsers": "用户与邀请",

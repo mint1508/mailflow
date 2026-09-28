@@ -17,7 +17,7 @@ export function parseCpanelBulkRows(text, mode = 'bulk') {
   const rows = String(text || '').split(/\r?\n/).map(line => line.trim()).filter(Boolean).map(parseCsvLine);
   if (!rows.length) return [];
   const first = rows[0].map(value => value.toLowerCase().replace(/[^a-z0-9]/g, ''));
-  const headerNames = new Set(['localpart', 'email', 'user', 'contactemail', 'contact', 'quotamb', 'quota']);
+  const headerNames = new Set(['localpart', 'email', 'user', 'contactemail', 'contact', 'quotamb', 'quota', 'role']);
   const hasHeader = mode === 'csv' && first.some(value => headerNames.has(value));
   const headers = hasHeader ? first : ['localpart', 'contactemail', 'quotamb'];
   const sourceRows = hasHeader ? rows.slice(1) : rows;

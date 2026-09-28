@@ -927,7 +927,11 @@
       "language": "Ngôn ngữ",
       "customCssPlaceholder": ":root {\n  --accent: #e74c3c;\n}",
       "customCssSave": "Lưu",
-      "customCssSaved": "Đã lưu"
+      "customCssSaved": "Đã lưu",
+      "defaultTheme": "Theme mặc định cho người dùng mới",
+      "defaultThemeDescription": "Chọn theme được gán cho người dùng tạo sau khi lưu cài đặt này. Người dùng hiện tại giữ nguyên theme của họ.",
+      "setDefaultTheme": "Đặt làm mặc định",
+      "defaultThemeSaved": "Đã lưu theme mặc định"
     },
     "messageList": {
       "title": "Danh sách tin nhắn",
@@ -1432,7 +1436,10 @@
       "owner": "Chủ sở hữu",
       "removeMember": "Xóa",
       "activated": "Đã kích hoạt",
-      "statsTitle": "Thống kê"
+      "statsTitle": "Thống kê",
+      "mailboxRole": "Vai trò MailFlow",
+      "roleUser": "Người dùng",
+      "roleMod": "Mod — quản lý mailbox"
     },
     "systemEmail": {
       "tabUsers": "Người dùng & Lời mời",

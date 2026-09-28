@@ -585,7 +585,10 @@ oidcBrowserRouter.get('/:slug/callback', async (req, res) => {
           // be created through local registration.
           const isAdmin = adminFromClaim === true;
           const newUser = await client.query(
-            'INSERT INTO users (username, password_hash, is_admin) VALUES ($1, NULL, $2) RETURNING id, username, is_admin',
+            `INSERT INTO users (username, password_hash, is_admin, preferences)
+             VALUES ($1, NULL, $2,
+                     jsonb_build_object('theme', COALESCE((SELECT value FROM system_settings WHERE key = 'default_theme'), 'dark')))
+             RETURNING id, username, is_admin`,
             [email.toLowerCase(), isAdmin]
           );
           user = newUser.rows[0];
