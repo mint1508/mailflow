@@ -6970,7 +6970,7 @@ function AboutTab() {
   );
 }
 
-function HelpTab({ onStartTour }) {
+function HelpTab({ onStartTour, onNavigate }) {
   const { t } = useTranslation();
   const { user } = useStore();
   const isMobile = useMobile();
@@ -6978,26 +6978,58 @@ function HelpTab({ onStartTour }) {
   const isAdmin = !!user?.isAdmin;
 
   const sections = [
-    ['gettingStarted', false],
-    ['compose', false],
-    ['organize', false],
-    ['search', false],
-    ['appearance', false],
-    ['security', false],
-    ['mailboxes', false],
-    ['mod', !canManageMailboxes],
-    ['admin', !isAdmin],
-    ['troubleshooting', false],
-  ].filter(([, hidden]) => !hidden);
+    { id: 'gettingStarted', group: 'basics' },
+    { id: 'compose', group: 'basics' },
+    { id: 'organize', group: 'basics' },
+    { id: 'search', group: 'basics' },
+    { id: 'appearance', group: 'personal' },
+    { id: 'security', group: 'personal' },
+    { id: 'mailboxes', group: 'management' },
+    { id: 'mod', group: 'management', hidden: !canManageMailboxes },
+    { id: 'admin', group: 'support', hidden: !isAdmin },
+    { id: 'troubleshooting', group: 'support' },
+  ].filter(section => !section.hidden);
+
+  const [selectedId, setSelectedId] = useState('gettingStarted');
+  const [query, setQuery] = useState('');
 
   const itemsFor = (id) => {
     const value = t(`admin.help.sections.${id}.items`, { returnObjects: true });
     return Array.isArray(value) ? value : [];
   };
 
+  const tipsFor = (id) => {
+    const value = t(`admin.help.tips.${id}`, { returnObjects: true });
+    return Array.isArray(value) ? value : [];
+  };
+
+  const filteredSections = sections.filter(section => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return true;
+    const haystack = [t(`admin.help.sections.${section.id}.title`), ...itemsFor(section.id), ...tipsFor(section.id)].join(' ').toLowerCase();
+    return haystack.includes(needle);
+  });
+  const selected = filteredSections.find(section => section.id === selectedId) || filteredSections[0] || null;
+  const selectedItems = selected ? itemsFor(selected.id) : [];
+  const selectedTips = selected ? tipsFor(selected.id) : [];
+  const roleLabel = selected?.id === 'admin'
+    ? t('admin.help.wiki.roleAdmin')
+    : selected?.id === 'mod'
+      ? t('admin.help.wiki.roleMod')
+      : t('admin.help.wiki.roleUser');
+  const settingsTargets = {
+    compose: ['accounts'], organize: ['rules'], appearance: ['appearance'], security: ['security'],
+    mailboxes: ['accounts'], mod: ['accounts'], admin: ['cpanel'], troubleshooting: ['about'],
+  };
+
+  const grouped = ['basics', 'personal', 'management', 'support'].map(group => ({
+    id: group,
+    items: filteredSections.filter(section => section.group === group),
+  })).filter(group => group.items.length);
+
   return (
-    <div style={{ maxWidth: 720 }}>
-      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 22 }}>
+    <div style={{ maxWidth: 980, minHeight: isMobile ? undefined : 540 }}>
+      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 16 }}>
         <div>
           <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 5px' }}>{t('admin.help.title')}</h2>
           <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>{t('admin.help.intro')}</p>
@@ -7011,18 +7043,60 @@ function HelpTab({ onStartTour }) {
         </button>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {sections.map(([id]) => {
-          const items = itemsFor(id);
-          return (
-            <section key={id} style={{ border: '1px solid var(--border-subtle)', borderRadius: 10, background: 'var(--bg-primary)', padding: '14px 16px' }}>
-              <h3 style={{ fontSize: 14, fontWeight: 650, color: 'var(--text-primary)', margin: '0 0 8px' }}>{t(`admin.help.sections.${id}.title`)}</h3>
-              <ul style={{ margin: 0, paddingLeft: 19, color: 'var(--text-secondary)', fontSize: 12.5, lineHeight: 1.65 }}>
-                {items.map((item, index) => <li key={`${id}-${index}`} style={{ marginBottom: index === items.length - 1 ? 0 : 4 }}>{item}</li>)}
+      <div style={{ position: 'relative', marginBottom: 14 }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" strokeWidth="2" style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input
+          value={query}
+          onChange={event => setQuery(event.target.value)}
+          placeholder={t('admin.help.wiki.searchPlaceholder')}
+          style={{ ...inputStyle, paddingLeft: 34 }}
+        />
+        {query && <button type="button" onClick={() => setQuery('')} style={{ position: 'absolute', right: 9, top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'transparent', color: 'var(--text-tertiary)', cursor: 'pointer', fontSize: 16 }}>×</button>}
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 16, minHeight: isMobile ? undefined : 470 }}>
+        <aside style={{ width: isMobile ? '100%' : 220, flexShrink: 0, border: '1px solid var(--border-subtle)', borderRadius: 10, background: 'var(--bg-primary)', padding: 10, alignSelf: 'flex-start' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '3px 6px 9px', color: 'var(--text-tertiary)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 700 }}>
+            <span>{t('admin.help.wiki.allArticles')}</span>
+            <span>{t('admin.help.wiki.articleCount', { count: sections.length })}</span>
+          </div>
+          <div style={{ color: 'var(--text-tertiary)', fontSize: 11, lineHeight: 1.45, padding: '0 7px 7px' }}>{t('admin.help.wiki.menuHint')}</div>
+          {grouped.map(group => (
+            <div key={group.id} style={{ marginTop: 8 }}>
+              <div style={{ padding: '4px 7px', color: 'var(--text-tertiary)', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t(`admin.help.wiki.group${group.id[0].toUpperCase()}${group.id.slice(1)}`)}</div>
+              {group.items.map(section => {
+                const active = selected?.id === section.id;
+                return <button key={section.id} type="button" onClick={() => setSelectedId(section.id)} style={{ width: '100%', display: 'block', textAlign: 'left', border: 'none', borderRadius: 7, padding: '8px 9px', background: active ? 'var(--accent-dim)' : 'transparent', color: active ? 'var(--accent)' : 'var(--text-secondary)', cursor: 'pointer', fontSize: 12.5, fontWeight: active ? 600 : 400 }}>{t(`admin.help.sections.${section.id}.title`)}</button>;
+              })}
+            </div>
+          ))}
+          {!filteredSections.length && <div style={{ padding: '20px 7px', color: 'var(--text-tertiary)', fontSize: 12 }}>{t('admin.help.wiki.noResults')}</div>}
+        </aside>
+
+        <article style={{ flex: 1, minWidth: 0, border: '1px solid var(--border-subtle)', borderRadius: 10, background: 'var(--bg-primary)', padding: isMobile ? 16 : 22 }}>
+          {selected ? (
+            <>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, paddingBottom: 15, borderBottom: '1px solid var(--border-subtle)', marginBottom: 18 }}>
+                <div>
+                  <div style={{ fontSize: 10, color: 'var(--accent)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>{roleLabel}</div>
+                  <h3 style={{ fontSize: 20, lineHeight: 1.25, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>{t(`admin.help.sections.${selected.id}.title`)}</h3>
+                </div>
+                <span style={{ color: 'var(--text-tertiary)', fontSize: 11, whiteSpace: 'nowrap' }}>{selectedItems.length} {t('admin.help.wiki.stepsTitle').toLowerCase()}</span>
+              </div>
+              <h4 style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '0 0 9px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('admin.help.wiki.stepsTitle')}</h4>
+              <ol style={{ margin: '0 0 24px', paddingLeft: 22, color: 'var(--text-secondary)', fontSize: 13, lineHeight: 1.7 }}>
+                {selectedItems.map((item, index) => <li key={`${selected.id}-step-${index}`} style={{ paddingLeft: 5, marginBottom: 8 }}>{item}</li>)}
+              </ol>
+              <h4 style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '0 0 9px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('admin.help.wiki.tipsTitle')}</h4>
+              <ul style={{ margin: 0, paddingLeft: 19, color: 'var(--text-secondary)', fontSize: 13, lineHeight: 1.7 }}>
+                {selectedTips.map((tip, index) => <li key={`${selected.id}-tip-${index}`} style={{ marginBottom: 8 }}>{tip}</li>)}
               </ul>
-            </section>
-          );
-        })}
+              {settingsTargets[selected.id] && <button type="button" onClick={() => onNavigate(...settingsTargets[selected.id])} style={{ marginTop: 20, padding: '8px 11px', border: '1px solid var(--border)', borderRadius: 7, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 12, cursor: 'pointer' }}>{t('admin.help.wiki.openSettings')} →</button>}
+            </>
+          ) : <div style={{ color: 'var(--text-tertiary)', fontSize: 13 }}>{t('admin.help.wiki.noResults')}</div>}
+        </article>
       </div>
     </div>
   );
@@ -10074,7 +10148,7 @@ export default function AdminPanel() {
       {adminTab === 'plugins' && <PluginsSection onNavigate={navigateTo} />}
       {adminTab === 'cpanel' && <CpanelTab />}
       {adminTab === 'branding' && canManageMailboxes && <BrandingSection />}
-      {adminTab === 'help' && <HelpTab onStartTour={() => { setShowAdmin(false); window.setTimeout(() => window.dispatchEvent(new CustomEvent('mailflow:start_first_use_tour')), 80); }} />}
+      {adminTab === 'help' && <HelpTab onNavigate={navigateTo} onStartTour={() => { setShowAdmin(false); window.setTimeout(() => window.dispatchEvent(new CustomEvent('mailflow:start_first_use_tour')), 80); }} />}
       {adminTab === 'about' && <AboutTab />}
     </>
   );
@@ -10177,7 +10251,7 @@ export default function AdminPanel() {
     >
       <div className="admin-panel admin-window" style={{
         background: 'var(--bg-secondary)', border: '1px solid var(--border)',
-        borderRadius: 16, width: '100%', maxWidth: 740,
+        borderRadius: 16, width: '100%', maxWidth: adminTab === 'help' ? 1040 : 740,
         height: '82vh', maxHeight: 700, display: 'flex', overflow: 'hidden',
         boxShadow: 'var(--shadow-modal)',
         animation: 'modal-enter var(--motion-normal) var(--ease-emphasized) both',

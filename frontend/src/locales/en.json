@@ -1718,8 +1718,8 @@
       "githubSponsors": "GitHub Sponsors"
     },
     "help": {
-      "title": "Help & user guide",
-      "intro": "Learn the main MailFlow workflows. The guide only shows management sections that your role can access.",
+      "title": "Help wiki & user guide",
+      "intro": "Browse the MailFlow knowledge base by topic, search every article, and follow step-by-step instructions. Management articles appear only when your role can access them.",
       "startTour": "Start UI tour",
       "sections": {
         "gettingStarted": {
@@ -1728,7 +1728,10 @@
             "Sign in with your mailbox email address and MailFlow password. You do not need to open cPanel.",
             "Choose an account or folder in the left sidebar. All Inboxes combines mail when you have more than one account.",
             "Select a message in the list to open it. On mobile, use the back button to return to the message list.",
-            "The profile menu at the bottom left contains your profile, settings, Help, screen lock, and sign out."
+            "The profile menu at the bottom left contains your profile, settings, Help, screen lock, and sign out.",
+            "Use the refresh action when you need an immediate sync; normal background sync follows your configured interval.",
+            "Open Contacts from the sidebar to find saved recipients when composing mail.",
+            "On desktop, press ? to view keyboard shortcuts and customize them in Settings > Shortcuts."
           ]
         },
         "compose": {
@@ -1737,7 +1740,10 @@
             "Select Compose, choose the sending account, add To/Cc/Bcc recipients, a subject, and your message.",
             "Attach files from the composer. Wait for attachments to finish loading before sending.",
             "Drafts are saved automatically. Open the Drafts folder to continue an unfinished message.",
-            "Open a message to Reply, Reply all, or Forward. Check the sender account before sending from a shared mailbox."
+            "Open a message to Reply, Reply all, or Forward. Check the sender account before sending from a shared mailbox.",
+            "Use rich-text controls for emphasis, links, lists, tables, and inline images, or switch to plain text when required.",
+            "Configure a signature and sending aliases under Settings > Accounts; the selected identity determines the sender name, address, and signature.",
+            "If sending fails, keep the composer open, read the error, verify the SMTP connection, and retry after correcting recipients or attachments."
           ]
         },
         "organize": {
@@ -1746,7 +1752,10 @@
             "Archive removes mail from Inbox while keeping it searchable. Delete moves mail to Trash before permanent deletion.",
             "Use Star, mark read or unread, Spam, Move, labels, and bulk selection to process several messages quickly.",
             "Right-click a folder or account on desktop for sync, folder, and account actions. On mobile, press and hold where available.",
-            "Rules can automatically move, mark, delete, or forward matching incoming mail. Review a rule carefully before running it on existing mail."
+            "Rules can automatically move, mark, delete, or forward matching incoming mail. Review a rule carefully before running it on existing mail.",
+            "Create, rename, hide, reorder, and favorite folders from the sidebar. Protected provider folders such as Inbox, Sent, Drafts, Spam, and Trash cannot be removed.",
+            "Use Cleanup to find high-volume bulk senders and archive or trash their inbox mail in batches.",
+            "Categories and optional GTD views can separate newsletters, promotions, automated mail, tasks, delegated items, and reference messages."
           ]
         },
         "search": {
@@ -1754,7 +1763,10 @@
           "items": [
             "Type words in the search box to search the selected account and folder. Enable Search all folders in the profile menu for a wider search.",
             "Use filters such as from:sender, to:person, subject:invoice, has:attachment, is:unread, is:starred, after:2026-01-01, or in:all.",
-            "Combine filters and words, for example: from:vendor invoice has:attachment. Prefix a filter with - to exclude it."
+            "Combine filters and words, for example: from:vendor invoice has:attachment. Prefix a filter with - to exclude it.",
+            "Search results respect the selected account unless you use unified scope or in:all.",
+            "Clear the search box to return to the normal folder view; changing folders while searching changes the search scope.",
+            "Date filters use YYYY-MM-DD. Combine after: and before: to search a specific date range."
           ]
         },
         "appearance": {
@@ -1762,7 +1774,10 @@
           "items": [
             "Open Settings > Appearance to choose your own theme, layout, font, text size, and language.",
             "Your personal appearance settings stay with your account. The administrator's default theme only applies to new users.",
-            "Open Notifications to configure sounds, browser push notifications, and unread badges. Your browser may ask for permission."
+            "Open Notifications to configure sounds, browser push notifications, and unread badges. Your browser may ask for permission.",
+            "Layout settings control the message-list width, reading-pane direction, threading, pagination, hover actions, and mobile swipe actions.",
+            "Notification settings control sounds, push permission, favicon badges, and app-icon unread counts.",
+            "If a theme makes a control difficult to read, switch themes first, then report the affected theme and screen."
           ]
         },
         "security": {
@@ -1771,7 +1786,10 @@
             "Never share your password, activation link, API token, or copied first-login credentials with an unintended recipient.",
             "Enable the screen-lock PIN when using a shared computer, and sign out when you finish.",
             "Remote images may track when a message is opened. Keep image blocking enabled and allow trusted senders only when needed.",
-            "If a login or mailbox connection looks suspicious, contact an administrator and change the mailbox password."
+            "If a login or mailbox connection looks suspicious, contact an administrator and change the mailbox password.",
+            "Enable two-factor authentication when available and store recovery information outside the mailbox.",
+            "Linked SSO identities can simplify login, but your administrator controls which provider is trusted.",
+            "Review account activity when you suspect unauthorized access, then sign out other sessions and rotate credentials if needed."
           ]
         },
         "mailboxes": {
@@ -1779,7 +1797,10 @@
           "items": [
             "A normal user sees only mailboxes assigned to their MailFlow account. Shared or alias mailboxes appear only when an administrator grants access.",
             "Settings > Accounts lists connected mailboxes, connection status, signatures, aliases, and available account actions.",
-            "A sync error usually means the mailbox password or mail-server connection changed. Use Reconnect or ask a moderator or administrator for help."
+            "A sync error usually means the mailbox password or mail-server connection changed. Use Reconnect or ask a moderator or administrator for help.",
+            "Aliases change the visible sender address but do not create a separate inbox unless the provider delivers that alias to a mailbox.",
+            "Shared-mailbox access can be added or removed without revealing the mailbox password to the user.",
+            "Quota shows the provider storage limit and usage. A full mailbox may reject new mail even when MailFlow itself is healthy."
           ]
         },
         "mod": {
@@ -1788,7 +1809,10 @@
             "Open Settings > Accounts to view cPanel mailboxes, quota usage, activation state, and connected MailFlow accounts.",
             "Create one mailbox, create several in bulk, or import CSV rows. Set the mailbox quota and copy, save, or share the generated first-login details immediately.",
             "When system email is configured, send an activation link to the user's personal contact email. Otherwise securely deliver the copied email and first password.",
-            "Moderators create regular users. Only an administrator can assign moderator or administrator privileges and manage global server settings."
+            "Moderators create regular users. Only an administrator can assign moderator or administrator privileges and manage global server settings.",
+            "For bulk or CSV creation, review every row before submitting; failed rows are reported separately and successful rows remain created.",
+            "For an existing cPanel mailbox, create or resend activation from its row instead of creating the mailbox again.",
+            "Deleting a mailbox from Accounts removes provider mail data; confirm the exact address and communicate the impact before deletion."
           ]
         },
         "admin": {
@@ -1797,7 +1821,10 @@
             "Configure the cPanel host, username, domain, and API token in the cPanel section. MailFlow checks the connection and token status on a schedule.",
             "Use Users to manage roles, mailbox access, activation, system email, and temporary login-as-user sessions.",
             "Use Branding to change the app name, PWA logo, and SEO text. Set a default theme for new users without overwriting existing users' choices.",
-            "Keep API tokens private, grant only the required cPanel permissions, rotate exposed tokens, and review authentication activity."
+            "Keep API tokens private, grant only the required cPanel permissions, rotate exposed tokens, and review authentication activity.",
+            "Configure system email before relying on activation delivery; without it, moderators must securely copy the initial credentials.",
+            "Branding controls the app name, PWA short name, logo, SEO title, and description for the whole installation.",
+            "Manage integrations, SSO, plugins, AI configuration, global security policy, and the default theme from their dedicated settings sections."
           ]
         },
         "troubleshooting": {
@@ -1807,9 +1834,72 @@
             "Mail does not refresh: check the connection indicator, refresh the app, then use Sync now or Reconnect. Report the exact error message if it continues.",
             "Activation was not sent: verify the personal contact email and system-email configuration, or copy the first-login credentials and deliver them securely.",
             "cPanel rejected a request: an administrator should verify the cPanel username, API token permissions, configured domain, port 2083 access, and provider availability.",
-            "For persistent problems, open Settings > About and generate a diagnostics report. It excludes message content, passwords, addresses, and API secrets."
+            "For persistent problems, open Settings > About and generate a diagnostics report. It excludes message content, passwords, addresses, and API secrets.",
+            "Duplicate mailbox rows: refresh the inventory first and verify whether one row is the provider mailbox while another is a pending MailFlow link.",
+            "Quota or delivery failures: check cPanel disk usage, mailbox suspension, domain DNS/MX configuration, and provider service status.",
+            "UI problems: reload once, note the device, browser, theme, language, and exact steps, then attach a screenshot with secrets hidden."
           ]
         }
+      },
+      "wiki": {
+        "allArticles": "All articles",
+        "searchPlaceholder": "Search Help articles…",
+        "noResults": "No articles match your search.",
+        "stepsTitle": "Step-by-step",
+        "tipsTitle": "Practical tips",
+        "roleUser": "For everyone",
+        "roleMod": "Moderator",
+        "roleAdmin": "Administrator",
+        "articleCount": "{{count}} articles",
+        "menuHint": "Choose an article to read the full guide.",
+        "backToArticles": "Back to articles",
+        "groupBasics": "Core email",
+        "groupPersonal": "Personal settings",
+        "groupManagement": "Mailbox management",
+        "groupSupport": "Support",
+        "openSettings": "Open related settings"
+      },
+      "tips": {
+        "gettingStarted": [
+          "Start with the mailbox and folder you use most; MailFlow remembers your last view.",
+          "If you use a shared computer, enable Screen lock before leaving the desk."
+        ],
+        "compose": [
+          "Confirm the From account and recipients before sending, especially for shared mailboxes.",
+          "Keep large attachments below your provider limit and wait for the upload indicator to finish."
+        ],
+        "organize": [
+          "Archive first when you may need a message later; use Trash only when it is no longer needed.",
+          "Use bulk actions after checking the selection count and the current folder."
+        ],
+        "search": [
+          "Start with one distinctive word, then add filters to narrow the results.",
+          "Use in:all when you cannot remember which folder contains the message."
+        ],
+        "appearance": [
+          "Choose a comfortable layout before changing font size; both settings work together.",
+          "Language and theme changes apply to your account and do not affect other users."
+        ],
+        "security": [
+          "Use a unique mailbox password and never paste credentials into chat or tickets.",
+          "Allow remote images only for senders you trust because images can contain tracking pixels."
+        ],
+        "mailboxes": [
+          "A mailbox can exist on cPanel without being connected to a MailFlow user yet.",
+          "Ask a moderator to reconnect after a provider password or quota change."
+        ],
+        "mod": [
+          "Copy or save generated credentials immediately; the first password may not be shown again.",
+          "Check quota and activation status after bulk creation, and resolve failed rows one at a time."
+        ],
+        "admin": [
+          "Use a least-privilege cPanel API token and rotate it after any suspected exposure.",
+          "Use login-as-user only for support, record the reason, and end the session when finished."
+        ],
+        "troubleshooting": [
+          "Copy the exact error and the affected mailbox address when asking for help.",
+          "Do not include passwords, activation tokens, or API tokens in screenshots or diagnostics."
+        ]
       }
     },
     "search": {

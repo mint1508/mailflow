@@ -1685,8 +1685,8 @@
       "kofi": "Ko-fi"
     },
     "help": {
-      "title": "Trợ giúp & hướng dẫn sử dụng",
-      "intro": "Hướng dẫn các quy trình chính trong MailFlow. Các mục quản lý chỉ xuất hiện khi vai trò của bạn có quyền sử dụng.",
+      "title": "Wiki trợ giúp & hướng dẫn sử dụng",
+      "intro": "Duyệt kho kiến thức MailFlow theo chủ đề, tìm kiếm toàn bộ bài viết và làm theo từng bước. Bài quản trị chỉ hiện khi vai trò của bạn có quyền.",
       "startTour": "Xem hướng dẫn giao diện",
       "sections": {
         "gettingStarted": {
@@ -1695,7 +1695,10 @@
             "Đăng nhập bằng địa chỉ email hộp thư và mật khẩu MailFlow. Bạn không cần mở hoặc biết cách dùng cPanel.",
             "Chọn tài khoản hoặc thư mục ở thanh bên trái. Tất cả hộp thư đến sẽ gộp thư khi bạn có nhiều tài khoản.",
             "Chọn một thư trong danh sách để đọc. Trên điện thoại, dùng nút quay lại để trở về danh sách thư.",
-            "Menu hồ sơ ở góc dưới bên trái chứa hồ sơ, cài đặt, Trợ giúp, khóa màn hình và đăng xuất."
+            "Menu hồ sơ ở góc dưới bên trái chứa hồ sơ, cài đặt, Trợ giúp, khóa màn hình và đăng xuất.",
+            "Dùng thao tác làm mới khi cần đồng bộ ngay; đồng bộ nền thông thường chạy theo khoảng thời gian đã cấu hình.",
+            "Mở Danh bạ từ thanh bên để tìm người nhận đã lưu khi soạn thư.",
+            "Trên máy tính, nhấn ? để xem phím tắt và tùy chỉnh tại Cài đặt > Phím tắt."
           ]
         },
         "compose": {
@@ -1704,7 +1707,10 @@
             "Chọn Soạn thư, chọn tài khoản gửi, nhập người nhận To/Cc/Bcc, tiêu đề và nội dung.",
             "Đính kèm tệp trong cửa sổ soạn thư. Chờ tệp tải xong trước khi gửi.",
             "Bản nháp được lưu tự động. Mở thư mục Bản nháp để tiếp tục một thư chưa hoàn thành.",
-            "Mở thư để Trả lời, Trả lời tất cả hoặc Chuyển tiếp. Kiểm tra đúng tài khoản gửi khi dùng hộp thư chung."
+            "Mở thư để Trả lời, Trả lời tất cả hoặc Chuyển tiếp. Kiểm tra đúng tài khoản gửi khi dùng hộp thư chung.",
+            "Dùng công cụ rich text để in đậm, chèn liên kết, danh sách, bảng và ảnh; chuyển sang văn bản thuần khi cần.",
+            "Cấu hình chữ ký và alias gửi tại Cài đặt > Tài khoản; danh tính được chọn quyết định tên, địa chỉ gửi và chữ ký.",
+            "Nếu gửi thất bại, giữ cửa sổ soạn thư, đọc lỗi, kiểm tra SMTP rồi thử lại sau khi sửa người nhận hoặc tệp đính kèm."
           ]
         },
         "organize": {
@@ -1713,7 +1719,10 @@
             "Lưu trữ đưa thư ra khỏi Hộp thư đến nhưng vẫn có thể tìm kiếm. Xóa sẽ chuyển thư vào Thùng rác trước khi xóa vĩnh viễn.",
             "Dùng đánh dấu sao, đã đọc/chưa đọc, Spam, Di chuyển, nhãn và chọn hàng loạt để xử lý nhiều thư nhanh hơn.",
             "Trên máy tính, nhấp chuột phải vào thư mục hoặc tài khoản để đồng bộ và quản lý. Trên điện thoại, nhấn giữ tại nơi được hỗ trợ.",
-            "Quy tắc có thể tự động di chuyển, đánh dấu, xóa hoặc chuyển tiếp thư phù hợp. Hãy kiểm tra kỹ trước khi chạy quy tắc trên thư cũ."
+            "Quy tắc có thể tự động di chuyển, đánh dấu, xóa hoặc chuyển tiếp thư phù hợp. Hãy kiểm tra kỹ trước khi chạy quy tắc trên thư cũ.",
+            "Tạo, đổi tên, ẩn, sắp xếp và đánh dấu thư mục yêu thích từ thanh bên. Các thư mục hệ thống như Inbox, Sent, Drafts, Spam và Trash không thể xóa.",
+            "Dùng Dọn dẹp để tìm người gửi số lượng lớn và lưu trữ hoặc xóa hàng loạt thư trong Inbox.",
+            "Danh mục và chế độ GTD tùy chọn có thể tách bản tin, khuyến mãi, thư tự động, việc cần làm, việc đã giao và tài liệu tham khảo."
           ]
         },
         "search": {
@@ -1721,7 +1730,10 @@
           "items": [
             "Nhập từ khóa vào ô tìm kiếm để tìm trong tài khoản và thư mục đang chọn. Bật Tìm kiếm tất cả thư mục trong menu hồ sơ để tìm rộng hơn.",
             "Dùng bộ lọc như from:sender, to:person, subject:invoice, has:attachment, is:unread, is:starred, after:2026-01-01 hoặc in:all.",
-            "Có thể kết hợp bộ lọc và từ khóa, ví dụ: from:vendor invoice has:attachment. Thêm dấu - trước bộ lọc để loại trừ."
+            "Có thể kết hợp bộ lọc và từ khóa, ví dụ: from:vendor invoice has:attachment. Thêm dấu - trước bộ lọc để loại trừ.",
+            "Kết quả tìm kiếm chỉ áp dụng cho tài khoản đang chọn, trừ khi dùng phạm vi gộp hoặc in:all.",
+            "Xóa nội dung ô tìm kiếm để quay lại thư mục bình thường; đổi thư mục khi đang tìm sẽ đổi phạm vi tìm kiếm.",
+            "Bộ lọc ngày dùng định dạng YYYY-MM-DD. Kết hợp after: và before: để tìm trong một khoảng ngày."
           ]
         },
         "appearance": {
@@ -1729,7 +1741,10 @@
           "items": [
             "Mở Cài đặt > Giao diện để chọn theme, bố cục, phông chữ, cỡ chữ và ngôn ngữ riêng của bạn.",
             "Cài đặt giao diện cá nhân được lưu theo tài khoản. Theme mặc định của admin chỉ áp dụng cho người dùng mới.",
-            "Mở Thông báo để cấu hình âm thanh, thông báo đẩy của trình duyệt và huy hiệu thư chưa đọc. Trình duyệt có thể yêu cầu cấp quyền."
+            "Mở Thông báo để cấu hình âm thanh, thông báo đẩy của trình duyệt và huy hiệu thư chưa đọc. Trình duyệt có thể yêu cầu cấp quyền.",
+            "Cài đặt bố cục điều khiển độ rộng danh sách, hướng khung đọc, nhóm hội thoại, phân trang, nút thao tác nhanh và vuốt trên mobile.",
+            "Cài đặt Thông báo điều khiển âm thanh, quyền push, huy hiệu favicon và số thư chưa đọc trên icon app.",
+            "Nếu một theme làm nút hoặc chữ khó đọc, hãy đổi theme trước rồi báo chính xác theme và màn hình bị lỗi."
           ]
         },
         "security": {
@@ -1738,7 +1753,10 @@
             "Không chia sẻ mật khẩu, liên kết kích hoạt, API token hoặc thông tin đăng nhập lần đầu cho người không liên quan.",
             "Bật PIN khóa màn hình khi dùng máy tính chung và đăng xuất sau khi sử dụng.",
             "Ảnh từ xa có thể theo dõi lúc bạn mở thư. Nên giữ chặn ảnh và chỉ cho phép người gửi đáng tin khi cần.",
-            "Nếu phát hiện đăng nhập hoặc kết nối hộp thư đáng ngờ, hãy báo admin và đổi mật khẩu hộp thư."
+            "Nếu phát hiện đăng nhập hoặc kết nối hộp thư đáng ngờ, hãy báo admin và đổi mật khẩu hộp thư.",
+            "Bật xác thực hai lớp khi có thể và lưu thông tin khôi phục ở nơi khác ngoài mailbox.",
+            "Danh tính SSO đã liên kết có thể giúp đăng nhập nhanh hơn, nhưng admin quyết định nhà cung cấp nào được tin cậy.",
+            "Kiểm tra lịch sử hoạt động khi nghi ngờ truy cập trái phép, sau đó đăng xuất phiên khác và thay thông tin đăng nhập nếu cần."
           ]
         },
         "mailboxes": {
@@ -1746,7 +1764,10 @@
           "items": [
             "User thường chỉ thấy hộp thư được gán cho tài khoản MailFlow của mình. Hộp thư chung hoặc alias chỉ xuất hiện khi admin cấp quyền.",
             "Cài đặt > Tài khoản hiển thị hộp thư đã kết nối, trạng thái kết nối, chữ ký, alias và các thao tác được phép.",
-            "Lỗi đồng bộ thường xảy ra khi mật khẩu hộp thư hoặc kết nối máy chủ mail thay đổi. Dùng Kết nối lại hoặc nhờ mod/admin hỗ trợ."
+            "Lỗi đồng bộ thường xảy ra khi mật khẩu hộp thư hoặc kết nối máy chủ mail thay đổi. Dùng Kết nối lại hoặc nhờ mod/admin hỗ trợ.",
+            "Alias thay đổi địa chỉ người gửi hiển thị nhưng không tự tạo inbox riêng, trừ khi nhà cung cấp chuyển thư alias vào một mailbox.",
+            "Có thể thêm hoặc gỡ quyền hộp thư chung mà không cần tiết lộ mật khẩu mailbox cho user.",
+            "Quota hiển thị giới hạn và dung lượng đã dùng ở nhà cung cấp. Mailbox đầy có thể từ chối thư mới dù MailFlow vẫn hoạt động bình thường."
           ]
         },
         "mod": {
@@ -1755,7 +1776,10 @@
             "Mở Cài đặt > Tài khoản để xem hộp thư cPanel, quota đã dùng, trạng thái kích hoạt và tài khoản MailFlow đã liên kết.",
             "Có thể tạo một hộp thư, tạo hàng loạt hoặc nhập CSV. Đặt quota rồi sao chép, lưu tệp hoặc chia sẻ thông tin đăng nhập lần đầu ngay sau khi tạo.",
             "Khi đã cấu hình system email, gửi liên kết kích hoạt đến email cá nhân của người dùng. Nếu chưa có, hãy gửi email và mật khẩu đầu tiên bằng kênh an toàn.",
-            "Mod chỉ tạo user thường. Chỉ admin được cấp quyền mod/admin và quản lý cấu hình máy chủ chung."
+            "Mod chỉ tạo user thường. Chỉ admin được cấp quyền mod/admin và quản lý cấu hình máy chủ chung.",
+            "Khi tạo hàng loạt hoặc CSV, kiểm tra từng dòng trước khi gửi; dòng lỗi được báo riêng và dòng thành công vẫn được tạo.",
+            "Với mailbox đã tồn tại trên cPanel, hãy tạo hoặc gửi lại kích hoạt từ chính dòng đó thay vì tạo mailbox lần nữa.",
+            "Xóa mailbox trong Tài khoản sẽ xóa dữ liệu mail phía nhà cung cấp; kiểm tra đúng địa chỉ và thông báo ảnh hưởng trước khi xóa."
           ]
         },
         "admin": {
@@ -1764,7 +1788,10 @@
             "Cấu hình host, username, domain và API token cPanel trong mục cPanel. MailFlow kiểm tra kết nối và trạng thái token theo lịch.",
             "Dùng Người dùng để quản lý vai trò, quyền hộp thư, kích hoạt, system email và phiên đăng nhập tạm thời dưới danh nghĩa user.",
             "Dùng Thương hiệu để đổi tên app, logo PWA và nội dung SEO. Đặt theme mặc định cho user mới mà không ghi đè lựa chọn của user cũ.",
-            "Giữ kín API token, chỉ cấp quyền cPanel cần thiết, thay token đã lộ và kiểm tra lịch sử xác thực."
+            "Giữ kín API token, chỉ cấp quyền cPanel cần thiết, thay token đã lộ và kiểm tra lịch sử xác thực.",
+            "Cấu hình system email trước khi dựa vào gửi activation; nếu chưa có, mod phải sao chép thông tin đăng nhập đầu tiên và gửi an toàn.",
+            "Thương hiệu điều khiển tên app, tên ngắn PWA, logo, tiêu đề SEO và mô tả cho toàn bộ hệ thống.",
+            "Quản lý tích hợp, SSO, plugin, AI, chính sách bảo mật chung và theme mặc định tại các mục cài đặt tương ứng."
           ]
         },
         "troubleshooting": {
@@ -1774,9 +1801,72 @@
             "Thư không cập nhật: kiểm tra trạng thái kết nối, tải lại app, sau đó dùng Đồng bộ ngay hoặc Kết nối lại. Nếu còn lỗi, gửi nguyên văn thông báo lỗi.",
             "Không gửi được kích hoạt: kiểm tra email cá nhân và cấu hình system email, hoặc sao chép thông tin đăng nhập lần đầu rồi gửi qua kênh an toàn.",
             "cPanel từ chối yêu cầu: admin cần kiểm tra username cPanel, quyền API token, domain cấu hình, truy cập cổng 2083 và trạng thái nhà cung cấp.",
-            "Nếu lỗi kéo dài, mở Cài đặt > Giới thiệu và tạo báo cáo chẩn đoán. Báo cáo không chứa nội dung thư, mật khẩu, địa chỉ email hoặc API secret."
+            "Nếu lỗi kéo dài, mở Cài đặt > Giới thiệu và tạo báo cáo chẩn đoán. Báo cáo không chứa nội dung thư, mật khẩu, địa chỉ email hoặc API secret.",
+            "Danh sách mailbox trùng: đồng bộ inventory trước và kiểm tra một dòng có phải mailbox provider, dòng còn lại là liên kết MailFlow đang chờ hay không.",
+            "Lỗi quota hoặc nhận thư: kiểm tra dung lượng cPanel, trạng thái suspend, DNS/MX của domain và tình trạng dịch vụ nhà cung cấp.",
+            "Lỗi giao diện: tải lại một lần, ghi thiết bị, trình duyệt, theme, ngôn ngữ và các bước tái hiện; ảnh chụp phải che thông tin bí mật."
           ]
         }
+      },
+      "wiki": {
+        "allArticles": "Tất cả bài viết",
+        "searchPlaceholder": "Tìm trong trang trợ giúp…",
+        "noResults": "Không có bài viết nào khớp với tìm kiếm.",
+        "stepsTitle": "Các bước thực hiện",
+        "tipsTitle": "Mẹo thực tế",
+        "roleUser": "Mọi người dùng",
+        "roleMod": "Mod",
+        "roleAdmin": "Admin",
+        "articleCount": "{{count}} bài viết",
+        "menuHint": "Chọn một bài viết để xem hướng dẫn đầy đủ.",
+        "backToArticles": "Quay lại danh sách",
+        "groupBasics": "Sử dụng email",
+        "groupPersonal": "Cài đặt cá nhân",
+        "groupManagement": "Quản lý mailbox",
+        "groupSupport": "Hỗ trợ",
+        "openSettings": "Mở cài đặt liên quan"
+      },
+      "tips": {
+        "gettingStarted": [
+          "Bắt đầu bằng hộp thư và thư mục bạn dùng thường xuyên; MailFlow sẽ ghi nhớ màn hình gần nhất.",
+          "Nếu dùng máy tính chung, hãy bật Khóa màn hình trước khi rời máy."
+        ],
+        "compose": [
+          "Kiểm tra tài khoản gửi và người nhận trước khi gửi, đặc biệt với hộp thư chung.",
+          "Giữ tệp đính kèm dưới giới hạn của nhà cung cấp và chờ trạng thái tải lên hoàn tất."
+        ],
+        "organize": [
+          "Nên Lưu trữ khi còn có thể cần lại thư; chỉ dùng Thùng rác khi không còn cần.",
+          "Sau khi chọn hàng loạt, kiểm tra số lượng và thư mục hiện tại trước khi thao tác."
+        ],
+        "search": [
+          "Bắt đầu với một từ khóa đặc trưng, sau đó thêm bộ lọc để thu hẹp kết quả.",
+          "Dùng in:all khi không nhớ thư đang nằm ở thư mục nào."
+        ],
+        "appearance": [
+          "Chọn bố cục dễ đọc trước khi chỉnh cỡ chữ; hai thiết lập này hỗ trợ lẫn nhau.",
+          "Thay đổi ngôn ngữ và theme chỉ áp dụng cho tài khoản của bạn, không ảnh hưởng user khác."
+        ],
+        "security": [
+          "Dùng mật khẩu hộp thư riêng biệt và không dán thông tin đăng nhập vào chat hoặc ticket.",
+          "Chỉ cho phép ảnh từ xa với người gửi đáng tin vì ảnh có thể chứa pixel theo dõi."
+        ],
+        "mailboxes": [
+          "Mailbox có thể đã tồn tại trên cPanel nhưng chưa được liên kết với user MailFlow.",
+          "Nhờ mod kết nối lại sau khi mật khẩu hoặc quota của nhà cung cấp thay đổi."
+        ],
+        "mod": [
+          "Sao chép hoặc lưu thông tin đăng nhập ngay sau khi tạo; mật khẩu đầu tiên có thể không hiện lại.",
+          "Kiểm tra quota và trạng thái kích hoạt sau khi tạo hàng loạt, xử lý từng dòng lỗi."
+        ],
+        "admin": [
+          "Dùng API token cPanel với quyền tối thiểu và thay token nếu nghi ngờ bị lộ.",
+          "Chỉ dùng đăng nhập dưới danh nghĩa user để hỗ trợ, ghi rõ lý do và kết thúc phiên sau khi xong."
+        ],
+        "troubleshooting": [
+          "Khi nhờ hỗ trợ, gửi nguyên văn lỗi và địa chỉ mailbox bị ảnh hưởng.",
+          "Không đưa mật khẩu, activation token hoặc API token vào ảnh chụp hay báo cáo chẩn đoán."
+        ]
       }
     },
     "search": {
