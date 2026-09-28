@@ -6920,14 +6920,6 @@ function AboutTab() {
       <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 24 }}>
         {t('admin.about.subtitle')}
       </div>
-      <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border-subtle)', marginBottom: 12 }}>
-        {infoRows.map(([label, value], i) => (
-          <div key={label} style={rowStyle(i === infoRows.length - 1)}>
-            <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{label}</span>
-            <span style={{ fontSize: 12, color: 'var(--text-primary)', fontFamily: 'monospace', letterSpacing: '0.02em' }}>{value}</span>
-          </div>
-        ))}
-      </div>
       <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border-subtle)', marginBottom: 16 }}>
         {generalRows.map(([label, href], i) => (
           <div key={label} style={rowStyle(i === generalRows.length - 1)}>
@@ -6941,13 +6933,21 @@ function AboutTab() {
       <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 8px 4px' }}>
         {t('admin.about.sponsor')}
       </div>
-      <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border-subtle)' }}>
+      <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border-subtle)', marginBottom: 16 }}>
         {supportRows.map(([label, href], i) => (
           <div key={label} style={rowStyle(i === supportRows.length - 1)}>
             <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{label}</span>
             <a href={href} target="_blank" rel="noopener noreferrer"
               style={{ fontSize: 13, color: 'var(--accent)', textDecoration: 'none' }}
             >{href.replace('https://', '')}</a>
+          </div>
+        ))}
+      </div>
+      <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border-subtle)', marginBottom: 12 }}>
+        {infoRows.map(([label, value], i) => (
+          <div key={label} style={rowStyle(i === infoRows.length - 1)}>
+            <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{label}</span>
+            <span style={{ fontSize: 12, color: 'var(--text-primary)', fontFamily: 'monospace', letterSpacing: '0.02em' }}>{value}</span>
           </div>
         ))}
       </div>
