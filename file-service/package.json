@@ -1,0 +1,21 @@
+{
+  "name": "@hippy/file-service",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "FILE_AUTH_MODE=mock node --watch src/server.js",
+    "authorize:google-drive": "node scripts/google-drive-authorize.mjs",
+    "lint": "node --check src/*.js test/*.js",
+    "test": "node --test --test-concurrency=1",
+    "check": "npm run lint && npm test"
+  },
+  "dependencies": {
+    "pg": "^8.23.0",
+    "redis": "^4.7.1"
+  }
+}

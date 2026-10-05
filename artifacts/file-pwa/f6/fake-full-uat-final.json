@@ -1,0 +1,242 @@
+{
+  "schema_version": 1,
+  "ok": true,
+  "suite": "full",
+  "provider": "fake-disk",
+  "started_at": "2026-10-04T15:55:19.753Z",
+  "checks": [
+    {
+      "name": "health",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "name": "provider type",
+      "ok": true,
+      "detail": "expected=fake-disk actual=fake-disk"
+    },
+    {
+      "name": "GET /api/files/me",
+      "ok": true,
+      "status": 200,
+      "request_id": "req_9eb9b342-c9f9-46e7-9499-ae884415c969"
+    },
+    {
+      "name": "POST /api/files/folders",
+      "ok": true,
+      "status": 201,
+      "request_id": "req_f33ce798-499b-4ac8-a8a2-4e43619ae14b"
+    },
+    {
+      "name": "POST /api/files/uploads",
+      "ok": true,
+      "status": 201,
+      "request_id": "req_4137042d-107f-4f29-a0e5-471fd213b966"
+    },
+    {
+      "name": "PATCH /api/files/uploads/:id",
+      "ok": true,
+      "status": 200,
+      "request_id": "req_19ec3f92-1b63-4453-9896-43a8fbb89b3a"
+    },
+    {
+      "name": "GET /api/files/uploads/:id",
+      "ok": true,
+      "status": 200,
+      "request_id": "req_c1ceffcc-db16-48a2-9fb3-e503688ef03e"
+    },
+    {
+      "name": "resumable upload status",
+      "ok": true,
+      "detail": "offset=22"
+    },
+    {
+      "name": "PATCH /api/files/uploads/:id",
+      "ok": true,
+      "status": 200,
+      "request_id": "req_d962c988-b93f-4d49-978e-bf79bdf31dff"
+    },
+    {
+      "name": "provider-confirmed finalize",
+      "ok": true,
+      "detail": "size=44"
+    },
+    {
+      "name": "GET /api/files/nodes/:id/download",
+      "ok": true,
+      "status": 200,
+      "request_id": "req_16fb1668-b7fa-487d-ac86-1f202386a87e"
+    },
+    {
+      "name": "download checksum",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "GET /api/files/nodes/:id/preview",
+      "ok": true,
+      "status": 200,
+      "request_id": "req_fe4bf823-1685-49c3-a73c-6d6b4c756a37"
+    },
+    {
+      "name": "authorized preview checksum",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "PATCH /api/files/nodes/:id/star",
+      "ok": true,
+      "status": 200,
+      "request_id": "req_c1c40fff-697d-412e-a2f0-7e473de3a201"
+    },
+    {
+      "name": "GET /api/files/nodes",
+      "ok": true,
+      "status": 200,
+      "request_id": "req_75f02e60-cc43-46ba-8411-0760cd995aa6"
+    },
+    {
+      "name": "durable star",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "GET /api/files/nodes/:id/activity",
+      "ok": true,
+      "status": 200,
+      "request_id": "req_250ff87e-300a-408a-807c-e53346d0a232"
+    },
+    {
+      "name": "redacted activity",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "GET /api/files/nodes",
+      "ok": true,
+      "status": 200,
+      "request_id": "req_c150c5af-77a1-4554-8954-3afe85ddd45c"
+    },
+    {
+      "name": "cursor page shape",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "POST /api/files/nodes/:id",
+      "ok": true,
+      "status": 200,
+      "request_id": "req_1eb22fa3-aca5-4942-bf05-21e90d7af591"
+    },
+    {
+      "name": "bulk partial outcomes",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "POST /api/files/nodes/:id",
+      "ok": true,
+      "status": 200,
+      "request_id": "req_39bbe1f4-7348-46f2-9b0f-e67ea003abce"
+    },
+    {
+      "name": "GET /api/files/nodes/:id/download",
+      "ok": true,
+      "status": 404,
+      "request_id": "req_7f656096-7e4f-4084-b55f-8ce006f8f23c"
+    },
+    {
+      "name": "GET /api/files/nodes/:id/preview",
+      "ok": true,
+      "status": 404,
+      "request_id": "req_0127404b-9a5c-4ae2-9ac3-17997ed58d28"
+    },
+    {
+      "name": "cross-user isolation",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "POST /api/files/uploads",
+      "ok": true,
+      "status": 409,
+      "request_id": "req_f82cb117-03d2-46be-8d00-0981a146f130"
+    },
+    {
+      "name": "hard quota",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "POST /api/files/uploads",
+      "ok": true,
+      "status": 201,
+      "request_id": "req_8f4037cf-5afe-4dab-8df2-aa7f56279ea6"
+    },
+    {
+      "name": "POST /api/files/uploads/:id/cancel",
+      "ok": true,
+      "status": 200,
+      "request_id": "req_165f1b50-9a5e-4a79-bc10-5d3deb843ec4"
+    },
+    {
+      "name": "POST /api/files/uploads/:id/cancel",
+      "ok": true,
+      "status": 200,
+      "request_id": "req_7072e78f-6698-4b7f-8f04-6a08d01db140"
+    },
+    {
+      "name": "idempotent upload cancel",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "POST /api/admin/file-maintenance",
+      "ok": true,
+      "status": 200,
+      "request_id": "req_2b078f2e-14b0-4bb0-9bc3-78b51de0abb5"
+    },
+    {
+      "name": "maintenance accepted",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "POST /api/admin/file-reconcile",
+      "ok": true,
+      "status": 200,
+      "request_id": "req_23073b7d-8e85-4deb-94dd-4b8749755f0d"
+    },
+    {
+      "name": "reconcile non-destructive",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "POST /api/files/nodes/:id/trash",
+      "ok": true,
+      "status": 200,
+      "request_id": "req_f0a37e6d-3485-4f81-9d22-0784fd39d370"
+    }
+  ],
+  "contracts": {
+    "health": true,
+    "provider type": true,
+    "resumable upload status": true,
+    "provider-confirmed finalize": true,
+    "download checksum": true,
+    "authorized preview checksum": true,
+    "durable star": true,
+    "redacted activity": true,
+    "cursor page shape": true,
+    "bulk partial outcomes": true,
+    "cross-user isolation": true,
+    "hard quota": true,
+    "idempotent upload cancel": true,
+    "maintenance accepted": true,
+    "reconcile non-destructive": true
+  },
+  "evidence_policy": "redacted-no-identities-tokens-provider-ids-or-content",
+  "cleanup": "attempted",
+  "finished_at": "2026-10-04T15:55:19.818Z"
+}

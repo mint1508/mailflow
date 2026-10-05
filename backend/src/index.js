@@ -49,7 +49,8 @@ import { ImapManager } from './services/imapManager.js';
 import { getUpdateStatus } from './services/updateCheck.js';
 import { recordHttp } from './services/performanceMetrics.js';
 import { readSchemaVersion } from './services/versionInfo.js';
-import { startCpanelTokenMonitor } from './services/cpanelClient.js';
+import { startCpanelTokenMonitor, startFileStorageLifecycleMonitor, syncCpanelMailboxes } from './services/cpanelClient.js';
+import { startAuthentikLifecycleMonitor } from './services/authentikLifecycle.js';
 import { expireImpersonation } from './middleware/auth.js';
 
 const packageMeta = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf-8'));
@@ -312,6 +313,10 @@ startSpamScheduler();
 
 // Refresh cPanel API token metadata at startup and every 12 hours.
 startCpanelTokenMonitor();
+// Keep file-service access aligned with cPanel mailbox presence/suspension.
+startFileStorageLifecycleMonitor();
+// Refresh cPanel inventory and reconcile Hippy SSO access at least every five minutes.
+startAuthentikLifecycleMonitor({ syncInventory: () => syncCpanelMailboxes() });
 
 // Re-connect all enabled IMAP accounts on startup with bounded concurrency so a
 // large user base doesn't hammer IMAP servers and the DB connection pool at once.

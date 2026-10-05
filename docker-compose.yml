@@ -44,6 +44,16 @@ services:
         NODE_BASE: ${NODE_BASE:-node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402}
     container_name: ${COMPOSE_PROJECT_NAME:-mailflow}-backend
     restart: unless-stopped
+    extra_hosts:
+      # Let server-side OIDC calls reach Authentik on the same VPS without
+      # relying on unsupported public-IP hairpin routing.
+      - "auth.hippy.vn:host-gateway"
+      # File lifecycle sync reaches the host Nginx route before public DNS/TLS
+      # are available, while keeping the Files API port bound to loopback.
+      - "files-api.hippy.vn:host-gateway"
+      # Keep system SMTP reachable if the VPS resolver temporarily cannot
+      # resolve the cPanel mail hostname; TLS still validates mail.hippy.vn.
+      - "mail.hippy.vn:103.200.23.49"
     environment:
       NODE_ENV: production
       PORT: 3000
@@ -64,6 +74,13 @@ services:
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
       VAPID_SUBJECT: ${VAPID_SUBJECT:-}
       IMAP_MAX_PERSISTENT_PER_HOST: ${IMAP_MAX_PERSISTENT_PER_HOST:-}
+      AUTHENTIK_API_URL: ${AUTHENTIK_API_URL:-}
+      AUTHENTIK_API_TOKEN: ${AUTHENTIK_API_TOKEN:-}
+      AUTHENTIK_MANAGED_DOMAIN: ${AUTHENTIK_MANAGED_DOMAIN:-}
+      AUTHENTIK_LIFECYCLE_SYNC_INTERVAL_MS: ${AUTHENTIK_LIFECYCLE_SYNC_INTERVAL_MS:-300000}
+      FILE_SERVICE_LIFECYCLE_URL: ${FILE_SERVICE_LIFECYCLE_URL:-}
+      FILE_LIFECYCLE_SYNC_SECRET: ${FILE_LIFECYCLE_SYNC_SECRET:-}
+      FILE_LIFECYCLE_SYNC_INTERVAL_MS: ${FILE_LIFECYCLE_SYNC_INTERVAL_MS:-60000}
     depends_on:
       postgres:
         condition: service_healthy

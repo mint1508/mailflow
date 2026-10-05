@@ -1,5 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import { generateMailboxPassword, getCpanelTokenStatus, normalizeBulkMailboxInput, normalizeCpanelApiError, normalizeCpanelConfig, normalizeCpanelToken, normalizeMailbox } from './cpanelClient.js';
+import { buildFileLifecycleProjection, generateMailboxPassword, getCpanelTokenStatus, normalizeBulkMailboxInput, normalizeCpanelApiError, normalizeCpanelConfig, normalizeCpanelToken, normalizeMailbox } from './cpanelClient.js';
+
+describe('file storage lifecycle projection', () => {
+  it('projects only linked users and revokes when no active cPanel mailbox remains', () => {
+    const rows = [
+      { app_user_id: 'u1', email: 'active@hippy.vn', is_present: true, suspended: false, quota_bytes: 10 },
+      { app_user_id: 'u1', email: 'suspended@hippy.vn', is_present: true, suspended: true, quota_bytes: 20 },
+      { app_user_id: 'u2', email: 'gone@hippy.vn', is_present: false, suspended: false, quota_bytes: 30 },
+      { app_user_id: null, email: 'unlinked@hippy.vn', is_present: true, suspended: false, quota_bytes: 40 },
+    ];
+    expect(buildFileLifecycleProjection(rows)).toEqual([
+      { id: 'u1', email: 'active@hippy.vn', source: 'cpanel', status: 'active', file_quota_bytes: 20 },
+      { id: 'u2', email: 'gone@hippy.vn', source: 'cpanel', status: 'deleted', file_quota_bytes: 30 },
+    ]);
+  });
+});
 
 describe('cPanel mailbox normalization', () => {
   it('normalizes the list_pops_with_disk shape', () => {

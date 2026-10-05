@@ -1,0 +1,92 @@
+name: File PWA
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            file-service/package-lock.json
+            file-web/package-lock.json
+      - name: Verify tracked release source
+        run: node scripts/verify-file-pwa-source-manifest.mjs --root .
+      - name: Install and check file service
+        working-directory: file-service
+        run: npm ci && npm run check
+      - name: Install, lint, test, and build file web
+        working-directory: file-web
+        env:
+          FILE_BUILD_SHA: ${{ github.sha }}
+          FILE_RELEASE_VERSION: ${{ github.ref_name }}
+          NEXT_PUBLIC_FILE_BUILD_SHA: ${{ github.sha }}
+        run: npm ci && npm run lint && npm test && npm run build
+      - name: Validate production Compose model
+        env:
+          FILE_DB_NAME: file_storage
+          FILE_DB_USER: file_storage
+          FILE_DB_PASSWORD: ci_only
+          FILE_SERVICE_PORT: '14310'
+          FILE_WEB_PORT: '14300'
+          FILE_BUILD_SHA: ${{ github.sha }}
+        run: |
+          docker compose -f docs/file-storage/docker-compose.production.yml config --quiet
+      - name: Set registry names
+        run: echo "FILE_IMAGE_PREFIX=ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
+      - uses: docker/setup-buildx-action@v3
+      - name: Build immutable file images from checkout
+        env:
+          FILE_BUILD_SHA: ${{ github.sha }}
+          FILE_RELEASE_VERSION: ${{ github.ref_name }}
+        run: |
+          docker buildx build --load --iidfile /tmp/file-service.iid \
+            --build-arg FILE_BUILD_SHA="$FILE_BUILD_SHA" --build-arg FILE_RELEASE_VERSION="$FILE_RELEASE_VERSION" \
+            -t "$FILE_IMAGE_PREFIX-file-service:$FILE_BUILD_SHA" file-service
+          docker buildx build --load --iidfile /tmp/file-web.iid \
+            --build-arg FILE_BUILD_SHA="$FILE_BUILD_SHA" --build-arg FILE_RELEASE_VERSION="$FILE_RELEASE_VERSION" \
+            --build-arg NEXT_PUBLIC_FILE_API_URL=https://files-api.hippy.vn \
+            --build-arg NEXT_PUBLIC_FILE_DEV_ADMIN=false --build-arg NEXT_PUBLIC_DEMO_MODE=false \
+            --build-arg NEXT_PUBLIC_OIDC_LOGIN_URL=https://files-api.hippy.vn/auth/oidc/login \
+            --build-arg NEXT_PUBLIC_OIDC_LOGOUT_URL=https://files-api.hippy.vn/auth/logout \
+            -t "$FILE_IMAGE_PREFIX-file-web:$FILE_BUILD_SHA" file-web
+      - name: Verify exact built image IDs and revision labels
+        env:
+          FILE_BUILD_SHA: ${{ github.sha }}
+        run: |
+          for component in file-service file-web; do
+            image="$FILE_IMAGE_PREFIX-$component:$FILE_BUILD_SHA"
+            test "$(cat "/tmp/$component.iid")" = "$(docker image inspect --format '{{.Id}}' "$image")"
+            test "$FILE_BUILD_SHA" = "$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$image")"
+          done
+      - name: Log in to GHCR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish and verify immutable registry digests
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          FILE_BUILD_SHA: ${{ github.sha }}
+        run: |
+          for component in file-service file-web; do
+            image="$FILE_IMAGE_PREFIX-$component:$FILE_BUILD_SHA"
+            docker push "$image"
+            digest="$(docker buildx imagetools inspect "$image" --format '{{.Manifest.Digest}}')"
+            test -n "$digest"
+            docker pull "$FILE_IMAGE_PREFIX-$component@$digest"
+            test "$FILE_BUILD_SHA" = "$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$FILE_IMAGE_PREFIX-$component@$digest")"
+            echo "$component=$FILE_IMAGE_PREFIX-$component@$digest" >> "$GITHUB_STEP_SUMMARY"
+          done

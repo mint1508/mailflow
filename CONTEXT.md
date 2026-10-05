@@ -54,3 +54,36 @@ The organization controlled app name, short name, logo, and primary color shown 
 **Storage Lite**:
 The retention policy that keeps mail metadata on the VPS while limiting cached message bodies by age and total size.
 
+## File storage context
+
+**File User**:
+An App User who is entitled to use the file-management PWA. File access follows the App User's active Mailflow/cPanel lifecycle; it is not a second identity.
+_Avoid_: Storage account, Google account
+
+**File Home**:
+The private logical root of one File User's files. It is represented by a dedicated folder in the configured Google Drive storage account, but users access it only through the PWA.
+_Avoid_: Drive account, shared folder
+
+**Storage Account**:
+The dedicated Google account whose Drive holds the organization's pilot file bytes. It is an infrastructure credential, never an end-user identity.
+_Avoid_: User account, File User
+
+**Storage Adapter**:
+The backend boundary that translates file operations into the configured storage provider's API while enforcing authorization, quota, idempotency and audit rules.
+_Avoid_: Drive client in the browser
+
+**File Usage**:
+The committed logical bytes owned by a File User, including items in Trash until purge. In-flight upload reservations are tracked separately and count against available quota.
+_Avoid_: Google Drive total, disk usage
+
+**File Quota**:
+The storage allowance assigned by a File administrator to a File User. It is separate from the cPanel Mailbox quota, even though mailbox lifecycle status gates file access.
+_Avoid_: Mailbox quota, Google quota
+
+**File Reservation**:
+Temporary quota held for an upload or restore that has not yet been committed by the storage provider. Reservations prevent concurrent operations from crossing a user's hard quota.
+_Avoid_: Upload progress
+
+**File Lifecycle**:
+The file state sequence `active -> trashed -> purged`, with restore allowed from `trashed` during retention. It is independent from the cPanel mailbox lifecycle, although access is gated by that lifecycle.
+_Avoid_: Google Drive lifecycle

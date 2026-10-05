@@ -7,6 +7,13 @@ on:
     branches: ["main"]
 
 jobs:
+  file-pwa:
+    name: File PWA release integrity
+    uses: ./.github/workflows/file-pwa.yml
+    permissions:
+      contents: read
+      packages: write
+
   backend:
     name: Backend
     runs-on: ubuntu-latest

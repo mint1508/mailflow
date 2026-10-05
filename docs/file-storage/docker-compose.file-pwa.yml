@@ -1,0 +1,113 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${FILE_DB_NAME:-file_storage}
+      POSTGRES_USER: ${FILE_DB_USER:-file_storage}
+      POSTGRES_PASSWORD: ${FILE_DB_PASSWORD:-file_storage_dev_only}
+    volumes:
+      - file_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${FILE_DB_USER:-file_storage} -d ${FILE_DB_NAME:-file_storage}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec"]
+    restart: unless-stopped
+    volumes:
+      - file_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  file-service:
+    build:
+      context: ../../file-service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ./file-pwa.env.example
+    environment:
+      FILE_AUTH_MODE: ${FILE_AUTH_MODE:-mock}
+      FILE_DATA_DIR: /data
+      FILE_WEB_ORIGIN: http://localhost:${FILE_WEB_PORT:-4300}
+      PORT: 4310
+      FILE_STORAGE_PROVIDER: ${FILE_STORAGE_PROVIDER:-fake-disk}
+      FILE_GOOGLE_CLIENT_ID: ${FILE_GOOGLE_CLIENT_ID:-}
+      FILE_GOOGLE_CLIENT_SECRET: ${FILE_GOOGLE_CLIENT_SECRET:-}
+      FILE_GOOGLE_REFRESH_TOKEN: ${FILE_GOOGLE_REFRESH_TOKEN:-}
+      FILE_GOOGLE_ROOT_FOLDER_ID: ${FILE_GOOGLE_ROOT_FOLDER_ID:-}
+      FILE_GOOGLE_ROOT_FOLDER_NAME: ${FILE_GOOGLE_ROOT_FOLDER_NAME:-Hippy Files}
+      FILE_DB_URL: ${FILE_DB_URL:-postgres://file_storage:file_storage_dev_only@postgres:5432/file_storage}
+      FILE_REDIS_URL: ${FILE_REDIS_URL:-redis://redis:6379}
+      FILE_DEBUG_ERRORS: ${FILE_DEBUG_ERRORS:-false}
+    ports:
+      - "${FILE_SERVICE_PORT:-4310}:4310"
+    volumes:
+      - file_service_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:4310/health >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+
+  file-worker:
+    build:
+      context: ../../file-service
+      dockerfile: Dockerfile
+    command: ["node", "src/worker.js"]
+    restart: unless-stopped
+    env_file:
+      - ./file-pwa.env.example
+    environment:
+      FILE_AUTH_MODE: ${FILE_AUTH_MODE:-mock}
+      FILE_DATA_DIR: /data
+      FILE_STORAGE_PROVIDER: ${FILE_STORAGE_PROVIDER:-fake-disk}
+      FILE_GOOGLE_CLIENT_ID: ${FILE_GOOGLE_CLIENT_ID:-}
+      FILE_GOOGLE_CLIENT_SECRET: ${FILE_GOOGLE_CLIENT_SECRET:-}
+      FILE_GOOGLE_REFRESH_TOKEN: ${FILE_GOOGLE_REFRESH_TOKEN:-}
+      FILE_GOOGLE_ROOT_FOLDER_ID: ${FILE_GOOGLE_ROOT_FOLDER_ID:-}
+      FILE_GOOGLE_ROOT_FOLDER_NAME: ${FILE_GOOGLE_ROOT_FOLDER_NAME:-Hippy Files}
+      FILE_DB_URL: ${FILE_DB_URL:-postgres://file_storage:file_storage_dev_only@postgres:5432/file_storage}
+      FILE_REDIS_URL: ${FILE_REDIS_URL:-redis://redis:6379}
+    volumes:
+      - file_service_data:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  file-web:
+    build:
+      context: ../../file-web
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_FILE_API_URL: ${NEXT_PUBLIC_FILE_API_URL:-http://localhost:4310}
+        NEXT_PUBLIC_FILE_DEV_USER_ID: ${NEXT_PUBLIC_FILE_DEV_USER_ID:-pilot-admin}
+        NEXT_PUBLIC_FILE_DEV_EMAIL: ${NEXT_PUBLIC_FILE_DEV_EMAIL:-pilot-admin@hippy.vn}
+        NEXT_PUBLIC_FILE_DEV_ADMIN: ${NEXT_PUBLIC_FILE_DEV_ADMIN:-true}
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_FILE_API_URL: ${NEXT_PUBLIC_FILE_API_URL:-http://localhost:4310}
+    ports:
+      - "${FILE_WEB_PORT:-4300}:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      file-service:
+        condition: service_healthy
+
+volumes:
+  file_service_data:
+  file_postgres_data:
+  file_redis_data:

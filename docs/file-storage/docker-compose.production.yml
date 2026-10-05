@@ -37,7 +37,6 @@ services:
       FILE_DATA_DIR: /data
       FILE_AUTH_MODE: oidc
       FILE_STORAGE_PROVIDER: google-drive
-      FILE_WEB_ORIGIN: https://files.hippy.vn
       FILE_WEB_REDIRECT_URL: https://files.hippy.vn/
       FILE_WEB_ORIGIN: https://files.hippy.vn
       FILE_OIDC_ISSUER: ${FILE_OIDC_ISSUER:-https://auth.hippy.vn/application/o/files/}
@@ -86,7 +85,6 @@ services:
       FILE_DATA_DIR: /data
       FILE_AUTH_MODE: oidc
       FILE_STORAGE_PROVIDER: google-drive
-      FILE_WEB_ORIGIN: https://files.hippy.vn
       FILE_WEB_REDIRECT_URL: https://files.hippy.vn/
       FILE_WEB_ORIGIN: https://files.hippy.vn
       FILE_OIDC_ISSUER: ${FILE_OIDC_ISSUER:-https://auth.hippy.vn/application/o/files/}

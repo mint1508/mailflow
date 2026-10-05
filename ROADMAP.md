@@ -3,6 +3,10 @@
 Trang thai: Phase 0 hoan thanh. Nen tang repository/local cua Phase 1 hoan thanh
 ngay 2026-09-24; dang cho domain va thong tin VPS de dong gate staging that.
 
+> File PWA: product brief, threat model, architecture and delivery roadmap are
+> recorded in `docs/file-storage/`. File phases are intentionally separate from
+> the mailbox roadmap and must not reduce Mailflow reliability.
+
 ## 1. Muc tieu
 
 Fork Mailflow thanh mot ung dung mail noi bo cho mot to chuc, ket noi mot tai

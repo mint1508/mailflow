@@ -1,0 +1,55 @@
+-- Expand-only schema. JSON record remains canonical until the F6-06 cutover.
+ALTER TABLE file_users ADD COLUMN IF NOT EXISTS app_user_id text;
+ALTER TABLE file_users ADD COLUMN IF NOT EXISTS mailbox_id text;
+ALTER TABLE file_users ADD COLUMN IF NOT EXISTS status text;
+ALTER TABLE file_users ADD COLUMN IF NOT EXISTS quota_bytes bigint;
+ALTER TABLE file_users ADD COLUMN IF NOT EXISTS created_at timestamptz;
+ALTER TABLE file_users ADD COLUMN IF NOT EXISTS updated_at timestamptz;
+ALTER TABLE file_users ADD COLUMN IF NOT EXISTS revoked_at timestamptz;
+ALTER TABLE file_nodes ADD COLUMN IF NOT EXISTS kind text;
+ALTER TABLE file_nodes ADD COLUMN IF NOT EXISTS name text;
+ALTER TABLE file_nodes ADD COLUMN IF NOT EXISTS mime_type text;
+ALTER TABLE file_nodes ADD COLUMN IF NOT EXISTS provider_file_id text;
+ALTER TABLE file_nodes ADD COLUMN IF NOT EXISTS size_bytes bigint;
+ALTER TABLE file_nodes ADD COLUMN IF NOT EXISTS checksum text;
+ALTER TABLE file_nodes ADD COLUMN IF NOT EXISTS state text;
+ALTER TABLE file_nodes ADD COLUMN IF NOT EXISTS starred_at timestamptz;
+ALTER TABLE file_nodes ADD COLUMN IF NOT EXISTS created_at timestamptz;
+ALTER TABLE file_nodes ADD COLUMN IF NOT EXISTS updated_at timestamptz;
+ALTER TABLE file_nodes ADD COLUMN IF NOT EXISTS trashed_at timestamptz;
+ALTER TABLE file_nodes ADD COLUMN IF NOT EXISTS purged_at timestamptz;
+ALTER TABLE file_uploads ADD COLUMN IF NOT EXISTS idempotency_key text;
+ALTER TABLE file_uploads ADD COLUMN IF NOT EXISTS state text;
+ALTER TABLE file_uploads ADD COLUMN IF NOT EXISTS expected_bytes bigint;
+ALTER TABLE file_uploads ADD COLUMN IF NOT EXISTS received_bytes bigint;
+ALTER TABLE file_uploads ADD COLUMN IF NOT EXISTS provider_file_id text;
+ALTER TABLE file_uploads ADD COLUMN IF NOT EXISTS provider_session_ref text;
+ALTER TABLE file_uploads ADD COLUMN IF NOT EXISTS last_error text;
+ALTER TABLE file_uploads ADD COLUMN IF NOT EXISTS created_at timestamptz;
+ALTER TABLE file_uploads ADD COLUMN IF NOT EXISTS updated_at timestamptz;
+ALTER TABLE file_reservations ADD COLUMN IF NOT EXISTS upload_id text;
+ALTER TABLE file_reservations ADD COLUMN IF NOT EXISTS bytes_reserved bigint;
+ALTER TABLE file_reservations ADD COLUMN IF NOT EXISTS state text;
+ALTER TABLE file_reservations ADD COLUMN IF NOT EXISTS expires_at timestamptz;
+ALTER TABLE file_reservations ADD COLUMN IF NOT EXISTS created_at timestamptz;
+ALTER TABLE file_reservations ADD COLUMN IF NOT EXISTS committed_at timestamptz;
+ALTER TABLE file_audits ADD COLUMN IF NOT EXISTS actor_app_user_id text;
+ALTER TABLE file_audits ADD COLUMN IF NOT EXISTS subject_file_user_id text;
+ALTER TABLE file_audits ADD COLUMN IF NOT EXISTS file_node_id text;
+ALTER TABLE file_audits ADD COLUMN IF NOT EXISTS action text;
+ALTER TABLE file_audits ADD COLUMN IF NOT EXISTS result text;
+ALTER TABLE file_audits ADD COLUMN IF NOT EXISTS request_id text;
+ALTER TABLE file_audits ADD COLUMN IF NOT EXISTS source_ip text;
+ALTER TABLE file_audits ADD COLUMN IF NOT EXISTS metadata_json jsonb;
+ALTER TABLE file_idempotency ADD COLUMN IF NOT EXISTS created_at timestamptz;
+ALTER TABLE file_idempotency ADD COLUMN IF NOT EXISTS status integer;
+ALTER TABLE file_idempotency ADD COLUMN IF NOT EXISTS response_json jsonb;
+CREATE TABLE IF NOT EXISTS file_metadata_migration_checkpoint (
+  table_name text PRIMARY KEY, last_id text, processed bigint NOT NULL DEFAULT 0,
+  updated_at timestamptz NOT NULL DEFAULT now(), last_error text
+);
+CREATE INDEX IF NOT EXISTS file_nodes_typed_owner_state_idx ON file_nodes(file_user_id, state, parent_id, updated_at DESC, id DESC);
+CREATE INDEX IF NOT EXISTS file_nodes_typed_starred_idx ON file_nodes(file_user_id, starred_at DESC, id DESC);
+CREATE INDEX IF NOT EXISTS file_uploads_typed_owner_state_idx ON file_uploads(file_user_id, state, updated_at DESC);
+CREATE INDEX IF NOT EXISTS file_reservations_typed_owner_state_idx ON file_reservations(file_user_id, state, expires_at);
+CREATE INDEX IF NOT EXISTS file_audits_typed_subject_created_idx ON file_audits(subject_file_user_id, created_at DESC, id DESC);

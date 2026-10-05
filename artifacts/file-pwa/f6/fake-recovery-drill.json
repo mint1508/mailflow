@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "ok": true,
+  "phase": "backup",
+  "archive": "file-pwa-20261004T162228Z.tar.gz",
+  "sha256": "eb3d13417f799d9c9e61e6dd5418afb254809c58bc16e343ed1f84b847659ee3",
+  "started_at": "2026-10-04T16:22:28Z",
+  "finished_at": "2026-10-04T16:22:28Z",
+  "duration_seconds": 0,
+  "restore_verified": true,
+  "restore_finished_at": "2026-10-04T16:22:28.208Z",
+  "rto_hours": 0.000057777777777777776,
+  "freshness_verified": true,
+  "backup_age_seconds": 0,
+  "max_age_seconds": 86400,
+  "rpo_hours": 0
+}

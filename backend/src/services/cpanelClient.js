@@ -3,6 +3,7 @@ import { query, withTransaction } from './db.js';
 import { decrypt, encrypt } from './encryption.js';
 import { validateHost } from './hostValidation.js';
 import { safeFetch } from './safeFetch.js';
+import { syncAuthentikLifecycle } from './authentikLifecycle.js';
 
 export const CPANEL_SETTINGS_KEY = 'cpanel_connector';
 export const CPANEL_TOKEN_INVENTORY_KEY = 'cpanel_token_inventory';
@@ -613,5 +614,56 @@ export async function syncCpanelMailboxes(actorUserId = null) {
       [actorUserId, JSON.stringify({ domain, mailboxCount: mailboxes.length })],
     );
   });
+  await syncFileStorageLifecycle().catch(error => {
+    console.warn('File storage lifecycle projection failed:', error.message);
+  });
+  await syncAuthentikLifecycle().catch(error => {
+    console.warn('Authentik lifecycle projection failed:', error.message);
+  });
   return mailboxes;
+}
+
+// Project Mailflow's cPanel inventory into file-service. The secret and endpoint
+// are server-only; no browser route is involved. A periodic run keeps revokes
+// bounded even when nobody opens the cPanel admin page.
+export async function syncFileStorageLifecycle() {
+  const endpoint = process.env.FILE_SERVICE_LIFECYCLE_URL || process.env.FILE_SERVICE_URL;
+  const secret = process.env.FILE_LIFECYCLE_SYNC_SECRET;
+  if (!endpoint || !secret) return { skipped: true };
+  const { rows } = await query(`
+    SELECT cm.email, cm.is_present, cm.suspended, cm.quota_bytes,
+           ea.user_id AS app_user_id
+      FROM cpanel_mailboxes cm
+      LEFT JOIN email_accounts ea ON lower(ea.email_address) = lower(cm.email)
+     ORDER BY cm.email`);
+  const users = buildFileLifecycleProjection(rows);
+  const response = await fetch(endpoint.replace(/\/$/, ''), {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-lifecycle-sync-secret': secret },
+    body: JSON.stringify({ users }),
+    signal: AbortSignal.timeout(Number(process.env.FILE_LIFECYCLE_SYNC_TIMEOUT_MS || 10000)),
+  });
+  if (!response.ok) throw new Error(`file-service lifecycle sync returned HTTP ${response.status}`);
+  return response.json();
+}
+
+export function buildFileLifecycleProjection(rows) {
+  const grouped = new Map();
+  for (const row of rows) {
+    if (!row.app_user_id) continue;
+    const list = grouped.get(row.app_user_id) || []; list.push(row); grouped.set(row.app_user_id, list);
+  }
+  return [...grouped.entries()].map(([userId, mailboxes]) => {
+    const active = mailboxes.find(row => row.is_present && !row.suspended); const present = mailboxes.find(row => row.is_present); const selected = active || present || mailboxes[0]
+    return { id: userId, email: selected.email, source: 'cpanel', status: active ? 'active' : present ? 'suspended' : 'deleted', file_quota_bytes: Math.max(0, ...mailboxes.map(row => Number(row.quota_bytes || 0))) }
+  })
+}
+
+export function startFileStorageLifecycleMonitor() {
+  const interval = Number(process.env.FILE_LIFECYCLE_SYNC_INTERVAL_MS || 60_000);
+  const run = () => syncFileStorageLifecycle().catch(error => console.warn('File lifecycle monitor failed:', error.message));
+  run();
+  const timer = setInterval(run, Math.min(interval, 300_000));
+  timer.unref?.();
+  return timer;
 }
