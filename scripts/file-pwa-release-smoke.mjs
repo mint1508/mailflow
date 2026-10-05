@@ -41,6 +41,9 @@ try {
   for (const asset of [...new Set(assetUrls)]) { const chunk = await get(baseUrl + asset); check(`chunk ${asset}`, chunk.response.ok, `${chunk.response.status}`); check(`chunk ${asset} immutable`, /immutable/i.test(chunk.response.headers.get('cache-control') || '') && /max-age=31536000/i.test(chunk.response.headers.get('cache-control') || ''), chunk.response.headers.get('cache-control') || 'missing'); }
   const health = await get(apiUrl + '/health');
   check('API health', health.response.ok, `${health.response.status}`);
+  let healthBody = null;
+  try { healthBody = JSON.parse(health.body); } catch { /* status check below reports the useful failure */ }
+  check('API readiness', healthBody?.ok === true, healthBody ? JSON.stringify({ status: healthBody.status, queue: healthBody.queue }) : 'health response was not JSON');
   const apiCache = health.response.headers.get('cache-control') || '';
   const directApi = ['localhost', '127.0.0.1'].includes(new URL(apiUrl).hostname);
   check('API no-store', /no-store/i.test(apiCache) || (directApi && !apiCache), apiCache || 'direct local service');
