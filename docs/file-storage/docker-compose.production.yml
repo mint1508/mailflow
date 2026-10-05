@@ -38,6 +38,8 @@ services:
       FILE_AUTH_MODE: oidc
       FILE_STORAGE_PROVIDER: google-drive
       FILE_WEB_ORIGIN: https://files.hippy.vn
+      FILE_WEB_REDIRECT_URL: https://files.hippy.vn/
+      FILE_WEB_ORIGIN: https://files.hippy.vn
       FILE_OIDC_ISSUER: ${FILE_OIDC_ISSUER:-https://auth.hippy.vn/application/o/files/}
       FILE_OIDC_AUDIENCE: ${FILE_OIDC_AUDIENCE:-hippy-files}
       FILE_OIDC_USERINFO_URL: ${FILE_OIDC_USERINFO_URL:-https://auth.hippy.vn/application/o/userinfo/}
@@ -84,6 +86,9 @@ services:
       FILE_DATA_DIR: /data
       FILE_AUTH_MODE: oidc
       FILE_STORAGE_PROVIDER: google-drive
+      FILE_WEB_ORIGIN: https://files.hippy.vn
+      FILE_WEB_REDIRECT_URL: https://files.hippy.vn/
+      FILE_WEB_ORIGIN: https://files.hippy.vn
       FILE_OIDC_ISSUER: ${FILE_OIDC_ISSUER:-https://auth.hippy.vn/application/o/files/}
       FILE_OIDC_AUDIENCE: ${FILE_OIDC_AUDIENCE:-hippy-files}
       FILE_OIDC_USERINFO_URL: ${FILE_OIDC_USERINFO_URL:-https://auth.hippy.vn/application/o/userinfo/}
@@ -92,6 +97,7 @@ services:
       FILE_OIDC_CLIENT_ID: ${FILE_OIDC_CLIENT_ID:-hippy-files}
       FILE_OIDC_CLIENT_SECRET: ${FILE_OIDC_CLIENT_SECRET:-}
       FILE_OIDC_REDIRECT_URI: ${FILE_OIDC_REDIRECT_URI:-https://files-api.hippy.vn/auth/oidc/callback}
+      FILE_WEB_REDIRECT_URL: https://files.hippy.vn/
       FILE_SESSION_SECRET: ${FILE_SESSION_SECRET:-}
       FILE_LIFECYCLE_SYNC_SECRET: ${FILE_LIFECYCLE_SYNC_SECRET:-}
       FILE_CURSOR_SECRET: ${FILE_CURSOR_SECRET:-}
