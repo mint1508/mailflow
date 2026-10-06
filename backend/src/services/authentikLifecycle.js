@@ -14,6 +14,7 @@ export function buildAuthentikLifecycleProjection(rows, managedDomain) {
       email: normalizeEmail(row.email),
       name: String(row.display_name || row.email || '').trim(),
       active: row.is_present === true && row.suspended !== true,
+      mailboxManager: row.can_manage_mailboxes === true,
     }))
     .filter(user => user.email && (!domain || user.email.endsWith(`@${domain}`)));
 }
@@ -34,11 +35,16 @@ export function planAuthentikLifecycle(desiredUsers, existingUsers) {
       actions.push({ type: 'create', desired });
       continue;
     }
-    const attributes = { ...(existing.attributes || {}), mailflow_managed: true };
+    const attributes = {
+      ...(existing.attributes || {}),
+      mailflow_managed: true,
+      mailflow_mailbox_manager: desired.mailboxManager === true,
+    };
     const needsUpdate = existing.is_active !== desired.active
       || normalizeEmail(existing.email) !== desired.email
       || existing.username !== desired.email
-      || existing.attributes?.mailflow_managed !== true;
+      || existing.attributes?.mailflow_managed !== true
+      || existing.attributes?.mailflow_mailbox_manager !== (desired.mailboxManager === true);
     if (needsUpdate) actions.push({ type: 'update', existing, desired, attributes });
   }
 
@@ -92,7 +98,8 @@ export async function syncAuthentikLifecycle({ env = process.env, fetchImpl = fe
   if (!config) return { skipped: true };
 
   const { rows } = await queryImpl(
-    `SELECT lower(u.username) AS email, u.display_name, cm.is_present, cm.suspended
+    `SELECT lower(u.username) AS email, u.display_name, u.can_manage_mailboxes,
+            cm.is_present, cm.suspended
        FROM users u
        LEFT JOIN cpanel_mailboxes cm ON lower(cm.email) = lower(u.username)
       WHERE lower(u.username) LIKE $1
@@ -115,7 +122,10 @@ export async function syncAuthentikLifecycle({ env = process.env, fetchImpl = fe
           is_active: action.desired.active,
           type: 'internal',
           path: 'users',
-          attributes: { mailflow_managed: true },
+          attributes: {
+            mailflow_managed: true,
+            mailflow_mailbox_manager: action.desired.mailboxManager === true,
+          },
         }),
       }, fetchImpl);
       result.created++;

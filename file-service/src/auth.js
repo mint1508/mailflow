@@ -48,7 +48,7 @@ export function createAuthenticator(config) {
   function loginUrl() {
     if (config.authMode !== 'oidc' || !config.oidcAuthorizationUrl || !config.oidcClientId || !config.oidcRedirectUri || !config.sessionSecret) throw new Error('OIDC browser flow is not configured.')
     prune(pending); const state = base64url(crypto.randomBytes(32)); const verifier = base64url(crypto.randomBytes(48)); const challenge = base64url(crypto.createHash('sha256').update(verifier).digest()); pending.set(state, { verifier, expiresAt: Date.now() + stateTtlMs })
-    const url = new URL(config.oidcAuthorizationUrl); url.searchParams.set('response_type', 'code'); url.searchParams.set('client_id', config.oidcClientId); url.searchParams.set('redirect_uri', config.oidcRedirectUri); url.searchParams.set('scope', 'openid email profile'); url.searchParams.set('state', state); url.searchParams.set('code_challenge', challenge); url.searchParams.set('code_challenge_method', 'S256'); return url.toString()
+    const url = new URL(config.oidcAuthorizationUrl); url.searchParams.set('response_type', 'code'); url.searchParams.set('client_id', config.oidcClientId); url.searchParams.set('redirect_uri', config.oidcRedirectUri); url.searchParams.set('scope', 'openid email profile permissions'); url.searchParams.set('state', state); url.searchParams.set('code_challenge', challenge); url.searchParams.set('code_challenge_method', 'S256'); return url.toString()
   }
   async function callback(code, state) {
     prune(pending); const request = pending.get(state); pending.delete(state); if (!request || !code) return null

@@ -9,9 +9,9 @@ describe('Authentik lifecycle projection', () => {
       { email: 'missing@hippy.vn', display_name: null, is_present: null, suspended: null },
       { email: 'external@example.com', display_name: 'External', is_present: true, suspended: false },
     ], 'hippy.vn')).toEqual([
-      { email: 'active@hippy.vn', name: 'Active', active: true },
-      { email: 'suspended@hippy.vn', name: 'suspended@hippy.vn', active: false },
-      { email: 'missing@hippy.vn', name: 'missing@hippy.vn', active: false },
+      { email: 'active@hippy.vn', name: 'Active', active: true, mailboxManager: false },
+      { email: 'suspended@hippy.vn', name: 'suspended@hippy.vn', active: false, mailboxManager: false },
+      { email: 'missing@hippy.vn', name: 'missing@hippy.vn', active: false, mailboxManager: false },
     ]);
   });
 
@@ -27,7 +27,7 @@ describe('Authentik lifecycle projection', () => {
     ];
     expect(planAuthentikLifecycle(desired, existing)).toEqual([
       { type: 'create', desired: desired[0] },
-      { type: 'update', existing: existing[0], desired: desired[1], attributes: { note: 'keep', mailflow_managed: true } },
+      { type: 'update', existing: existing[0], desired: desired[1], attributes: { note: 'keep', mailflow_managed: true, mailflow_mailbox_manager: false } },
       { type: 'deactivate', existing: existing[1] },
     ]);
   });
@@ -44,12 +44,12 @@ describe('Authentik lifecycle sync', () => {
     const result = await syncAuthentikLifecycle({
       env: { AUTHENTIK_API_URL: 'https://auth.test/api/v3', AUTHENTIK_API_TOKEN: 'secret', AUTHENTIK_MANAGED_DOMAIN: 'hippy.vn' },
       fetchImpl,
-      queryImpl: vi.fn(async () => ({ rows: [{ email: 'user@hippy.vn', display_name: 'User', is_present: true, suspended: false }] })),
+      queryImpl: vi.fn(async () => ({ rows: [{ email: 'user@hippy.vn', display_name: 'User', can_manage_mailboxes: true, is_present: true, suspended: false }] })),
     });
     expect(result).toMatchObject({ created: 1, updated: 0, deactivated: 0 });
     expect(calls[1].options.headers.authorization).toBe('Bearer secret');
     const body = JSON.parse(calls[1].options.body);
-    expect(body).toMatchObject({ username: 'user@hippy.vn', is_active: true, attributes: { mailflow_managed: true } });
+    expect(body).toMatchObject({ username: 'user@hippy.vn', is_active: true, attributes: { mailflow_managed: true, mailflow_mailbox_manager: true } });
     expect(JSON.stringify(body)).not.toContain('password');
   });
 });
