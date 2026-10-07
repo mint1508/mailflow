@@ -83,6 +83,20 @@ export class GoogleDriveAdapter {
     return response.status === 204 ? null : response.json()
   }
 
+  async storageQuota() {
+    const params = new URLSearchParams({ fields: 'storageQuota(limit,usage,usageInDrive,usageInDriveTrash)' })
+    const body = await this.jsonRequest(`${DRIVE_API}/about?${params}`)
+    const quota = body.storageQuota || {}
+    const number = value => value == null ? null : Number(value)
+    const limit = number(quota.limit)
+    const usage = number(quota.usage)
+    return {
+      limit_bytes: Number.isFinite(limit) ? limit : null,
+      usage_bytes: Number.isFinite(usage) ? usage : 0,
+      available_bytes: Number.isFinite(limit) && Number.isFinite(usage) ? Math.max(0, limit - usage) : null,
+    }
+  }
+
   async findOne(query, fields = 'files(id,name,size,md5Checksum)') {
     const params = new URLSearchParams({ q: query, spaces: 'drive', pageSize: '1', fields })
     const body = await this.jsonRequest(`${DRIVE_API}/files?${params}`)

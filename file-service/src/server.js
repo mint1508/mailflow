@@ -156,14 +156,18 @@ export async function createApp(config = loadConfig()) {
         return send(res, 200, { upload: { ...upload, expected_offset: upload.received_bytes, provider_progress: live?.progress ?? null, provider_phase: live?.phase ?? null } })
       }
       if (route.startsWith('/api/admin/') && !admin) fail('file_forbidden', 403, 'Admin permission required.')
-      if (route === '/api/admin/file-users' && req.method === 'GET') return await store.transaction(state => {
+      if (route === '/api/admin/file-users' && req.method === 'GET') {
+        let storageQuota = null
+        try { storageQuota = await provider.storageQuota?.() || null } catch {}
+        return await store.transaction(state => {
         const allUsers = state.users.map(user => ({ ...user, source: inferredUserSource(user), usage_bytes: usage(state, user) }))
         const users = allUsers.filter(adminMailboxUser)
         const excluded = allUsers.filter(user => !adminMailboxUser(user))
         const excludedBySource = excluded.reduce((counts, user) => { counts[user.source] = (counts[user.source] || 0) + 1; return counts }, {})
         audit(state, actor, null, 'admin_list_users', 'success', requestId, req, { returned: users.length, excluded: excluded.length })
-        return send(res, 200, { users, total: users.length, source: 'cpanel', excluded: { total: excluded.length, by_source: excludedBySource } })
+        return send(res, 200, { users, total: users.length, source: 'cpanel', storage_quota: storageQuota, excluded: { total: excluded.length, by_source: excludedBySource } })
       })
+      }
       if (route.startsWith('/api/admin/file-users/') && req.method === 'PATCH') {
         const targetId = route.split('/').pop(); if (targetId === actor.id) fail('file_forbidden', 403, 'Self-administration is not allowed.')
         const body = await readJson(req); return await store.transaction(state => { const user = state.users.find(u => u.id === targetId); if (!user) fail('file_not_found', 404, 'User not found.'); if (body.locked !== undefined) { user.status = body.locked ? 'locked' : 'active'; user.revoked_at = body.locked ? now() : null }; if (body.status === 'suspended' || body.status === 'deleted') { user.status = body.status; user.revoked_at = now() }; if (body.quota_bytes !== undefined) { if (!Number.isSafeInteger(body.quota_bytes) || body.quota_bytes < 0) fail('file_validation_failed', 422, 'Invalid quota.'); user.quota_bytes = body.quota_bytes }; user.updated_at = now(); audit(state, actor, user.id, 'admin_user_update', 'success', requestId, req, { fields: Object.keys(body) }); return send(res, 200, { user, usage_bytes: usage(state, user) }) })

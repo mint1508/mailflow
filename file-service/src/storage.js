@@ -73,6 +73,7 @@ export class FakeDriveAdapter {
   async discard(uploadId) { await fs.rm(this.tempPath(uploadId), { force: true }) }
   async exists(providerId) { try { await fs.access(this.blobPath(providerId)); return true } catch { return false } }
   async inspect(providerId) { const stat = await fs.stat(this.blobPath(providerId)); return { size: stat.size } }
+  async storageQuota() { return null }
   async listRevisions(providerId) {
     let names
     try { names = await fs.readdir(this.revisionDir(providerId)) } catch (error) { if (error.code === 'ENOENT') return []; throw error }

@@ -20,6 +20,7 @@ test('google drive adapter refreshes server token and completes a resumable uplo
   const fetchImpl = async (input, options = {}) => {
     const url = String(input); calls.push({ url, options })
     if (url.includes('oauth2.googleapis.com/token')) return json({ access_token: 'server-token', expires_in: 3600 })
+    if (url.includes('/about?')) return json({ storageQuota: { limit: '5000000000000', usage: '1234' } })
     if (url.includes('upload/drive/v3/files?uploadType=resumable')) return json({}, { headers: { location: 'https://upload.example/session-1' } })
     if (url === 'https://upload.example/session-1') { const chunks = []; for await (const chunk of options.body) chunks.push(chunk); uploaded = Buffer.concat(chunks); return json({ id: 'drive-file-1', size: String(uploaded.length), md5Checksum: 'abc123' }) }
     if (url.includes('alt=media')) return new Response(uploaded, { headers: { 'content-length': String(uploaded.length) } })
@@ -40,6 +41,7 @@ test('google drive adapter refreshes server token and completes a resumable uplo
   const initiate = calls.find(call => call.url.includes('uploadType=resumable')); assert.equal(initiate.options.headers['x-upload-content-length'], '11')
   const upload = calls.find(call => call.url === 'https://upload.example/session-1'); assert.equal(upload.options.headers['content-range'], 'bytes 0-10/11')
   assert.deepEqual(progress.at(-1), [11, 11])
+  assert.deepEqual(await provider.storageQuota(), { limit_bytes: 5000000000000, usage_bytes: 1234, available_bytes: 4999999998766 })
 })
 
 test('google drive adapter normalizes provider rate limits', async () => {

@@ -95,8 +95,9 @@ test('quota details control has a real action contract', () => {
 });
 
 test('admin users view displays total allocated file quota', () => {
-  assert.match(source, /Tổng quota Files/);
-  assert.match(source, /users\.reduce\(\(n, u\) => n \+ \(Number\(u\.quota_bytes\) \|\| 0\), 0\)/);
+  assert.match(source, /Tổng dung lượng Drive/);
+  assert.match(source, /data\.storage_quota\?\.limit_bytes/);
+  assert.match(source, /data\.storage_quota\?\.available_bytes/);
 });
 
 test('file actions preserve trash/restore and undo semantics', () => {

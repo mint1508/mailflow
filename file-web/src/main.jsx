@@ -1931,9 +1931,9 @@ function Admin({onBack, notify, setDialog}) {
             </div>
             <div className="stat">
               <HardDrive />
-              <span>Tổng quota Files</span>
-              <b>{bytes(users.reduce((n, u) => n + (Number(u.quota_bytes) || 0), 0))}</b>
-              <small>Tổng dung lượng đã cấp</small>
+              <span>Tổng dung lượng Drive</span>
+              <b>{data.storage_quota?.limit_bytes ? bytes(data.storage_quota.limit_bytes) : '—'}</b>
+              <small>{data.storage_quota?.available_bytes != null ? `Còn lại ${bytes(data.storage_quota.available_bytes)}` : 'Google Drive API'}</small>
             </div>
             <div className="stat">
               <ShieldCheck />
