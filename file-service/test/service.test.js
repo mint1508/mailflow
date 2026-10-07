@@ -303,7 +303,7 @@ test('secure lifecycle sync idempotently creates, updates and revokes users', as
   const created = await call('POST', '/api/internal/lifecycle-sync', { users: [{ id: 'mail-1', email: 'mail@hippy.vn', status: 'active', file_quota_bytes: 99 }] }, secret); assert.equal(created.json.created, 1)
   const projectedLogin = await call('GET', '/api/files/me', undefined, { 'x-dev-user-id': 'mail-1', 'x-dev-email': 'mail@hippy.vn' }); assert.equal(projectedLogin.status, 200); assert.ok(projectedLogin.json.home.id)
   const updated = await call('POST', '/api/internal/lifecycle-sync', { users: [{ id: 'mail-1', email: 'new@hippy.vn', status: 'suspended', file_quota_bytes: 50 }] }, secret); assert.equal(updated.json.updated, 1)
-  const users = await call('GET', '/api/admin/file-users', undefined, { 'x-dev-user-id': 'admin', 'x-dev-admin': 'true' }); const user = users.json.users.find(u => u.id === 'mail-1'); assert.equal(user.status, 'suspended'); assert.equal(user.quota_bytes, 50); assert.ok(user.revoked_at)
+  const users = await call('GET', '/api/admin/file-users', undefined, { 'x-dev-user-id': 'admin', 'x-dev-admin': 'true' }); const user = users.json.users.find(u => u.id === 'mail-1'); assert.equal(user.status, 'suspended'); assert.equal(user.quota_bytes, 99); assert.ok(user.revoked_at)
 })
 
 test('admin mailbox inventory excludes synthetic and test identities', async () => {
@@ -327,7 +327,17 @@ test('binds a provisioned mailbox to its first OIDC subject without duplicating 
   const login = await call('GET', '/api/files/me', undefined, { 'x-dev-user-id': 'authentik-oidc-sub', 'x-dev-email': 'bind@hippy.vn' })
   assert.equal(login.status, 200); assert.equal(login.json.user.id, 'authentik-oidc-sub'); assert.equal(app.store.state.users.length, 1); assert.equal(app.store.state.users[0].app_user_id, 'mailflow-user-id')
   const sync = await call('POST', '/api/internal/lifecycle-sync', { users: [{ id: 'mailflow-user-id', email: 'bind@hippy.vn', status: 'active', file_quota_bytes: 123 }] }, secret)
-  assert.equal(sync.json.created, 0); assert.equal(app.store.state.users[0].id, 'authentik-oidc-sub'); assert.equal(app.store.state.users[0].quota_bytes, 123)
+  assert.equal(sync.json.created, 0); assert.equal(app.store.state.users[0].id, 'authentik-oidc-sub'); assert.equal(app.store.state.users[0].quota_bytes, 99)
+})
+
+test('admin quota survives later cPanel lifecycle sync', async () => {
+  const { call } = await fixture(); const secret = { 'x-lifecycle-sync-secret': 'sync-test-secret', 'x-dev-user-id': '' }
+  await call('POST', '/api/internal/lifecycle-sync', { users: [{ id: 'mail-1', email: 'mail@hippy.vn', status: 'active', file_quota_bytes: 99 }] }, secret)
+  const admin = { 'x-dev-user-id': 'admin', 'x-dev-admin': 'true' }
+  assert.equal((await call('PATCH', '/api/admin/file-users/mail-1', { quota_bytes: 2048 }, admin)).status, 200)
+  await call('POST', '/api/internal/lifecycle-sync', { users: [{ id: 'mail-1', email: 'mail@hippy.vn', status: 'active', file_quota_bytes: 50 }] }, secret)
+  const users = await call('GET', '/api/admin/file-users', undefined, admin)
+  assert.equal(users.json.users.find(user => user.id === 'mail-1').quota_bytes, 2048)
 })
 
 test('retries transient provider operations and releases reservation on terminal outage', async () => {
