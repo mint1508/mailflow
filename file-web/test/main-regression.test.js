@@ -94,6 +94,11 @@ test('quota details control has a real action contract', () => {
   assert.match(button, /onClick=/, 'quota detail control must not be a dead button');
 });
 
+test('admin users view displays total allocated file quota', () => {
+  assert.match(source, /Tổng quota Files/);
+  assert.match(source, /users\.reduce\(\(n, u\) => n \+ \(Number\(u\.quota_bytes\) \|\| 0\), 0\)/);
+});
+
 test('file actions preserve trash/restore and undo semantics', () => {
   assert.match(source, /active==='trash'/);
   assert.match(source, /Khôi phục/);

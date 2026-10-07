@@ -1930,6 +1930,12 @@ function Admin({onBack, notify, setDialog}) {
               <small>Usage đã xác nhận</small>
             </div>
             <div className="stat">
+              <HardDrive />
+              <span>Tổng quota Files</span>
+              <b>{bytes(users.reduce((n, u) => n + (Number(u.quota_bytes) || 0), 0))}</b>
+              <small>Tổng dung lượng đã cấp</small>
+            </div>
+            <div className="stat">
               <ShieldCheck />
               <span>Trạng thái dịch vụ</span>
               <b className="ok">Hoạt động</b>
